@@ -37,7 +37,7 @@ Benjamin ist der Gründer und einzige Entwickler. Er hat Erfahrung mit Swift/iOS
 ## Tech-Stack (festgelegt)
 
 ### Frontend & Backend
-- **Next.js 15** mit App Router (nicht Pages Router)
+- **Next.js 16** mit App Router (nicht Pages Router)
 - **TypeScript** durchgängig (kein plain JS)
 - **React Server Components** als Default, Client Components nur wenn nötig
 - **Tailwind CSS 4** für Styling
@@ -222,6 +222,9 @@ Hier werden zentrale Architektur- und Produktentscheidungen dokumentiert, damit 
 
 ### 2026-04-18: Inter als einzige Schrift, self-hosted via `@fontsource-variable/inter`
 **Grund:** Google Fonts per CDN ist DSGVO-kritisch (IP-Übertragung an Google). `@fontsource-variable/inter` liefert die Schrift als npm-Package, die Dateien werden vom eigenen Server ausgeliefert — kein externer Request. Variable Font erspart separate Dateien pro Weight. Nur Weights 400 (Body) und 500 (Medium für Headlines/Buttons) werden verwendet.
+
+### 2026-04-18: Next.js 16 statt 15
+**Grund:** `create-next-app@latest` hat bei Initialisierung am 18.04.2026 Next.js 16.2.4 installiert. Kein inhaltlicher Grund, auf 15 zu downgraden — App Router, Tailwind 4, TypeScript-Setup identisch, Breaking Changes gegenüber 15 für unsere Anwendungsfälle minimal. Dokumentation in CLAUDE.md entsprechend angepasst.
 
 ---
 
