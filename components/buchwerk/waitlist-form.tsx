@@ -69,9 +69,9 @@ export function WaitlistForm({ source, className }: Props) {
       setStatus({
         kind: "success",
         message:
-          data.message ?? "Danke — wir melden uns, sobald Buchwerk startet.",
+          data.message ??
+          "Check deine Mailbox — wir haben dir einen Bestätigungslink geschickt.",
       });
-      setEmail("");
     } catch {
       setStatus({
         kind: "error",
@@ -102,9 +102,11 @@ export function WaitlistForm({ source, className }: Props) {
           value={email}
           onChange={(event) => {
             setEmail(event.target.value);
-            if (isError) setStatus({ kind: "idle" });
+            if (status.kind !== "idle" && status.kind !== "submitting") {
+              setStatus({ kind: "idle" });
+            }
           }}
-          disabled={isSubmitting || isSuccess}
+          disabled={isSubmitting}
           aria-invalid={isError || undefined}
           aria-describedby={
             isError ? `${inputId}-error` : `${inputId}-hint`

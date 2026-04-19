@@ -18,6 +18,9 @@ export interface Database {
           source: string | null;
           user_agent: string | null;
           created_at: string;
+          confirmation_token: string | null;
+          confirmed_at: string | null;
+          confirmation_sent_at: string | null;
         };
         Insert: {
           id?: string;
@@ -25,6 +28,9 @@ export interface Database {
           source?: string | null;
           user_agent?: string | null;
           created_at?: string;
+          confirmation_token?: string | null;
+          confirmed_at?: string | null;
+          confirmation_sent_at?: string | null;
         };
         Update: {
           id?: string;
@@ -32,6 +38,9 @@ export interface Database {
           source?: string | null;
           user_agent?: string | null;
           created_at?: string;
+          confirmation_token?: string | null;
+          confirmed_at?: string | null;
+          confirmation_sent_at?: string | null;
         };
         Relationships: [];
       };

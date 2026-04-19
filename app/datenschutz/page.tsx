@@ -174,6 +174,52 @@ export default function DatenschutzPage() {
               <h4 className={labelClass}>Auftragsverarbeitung</h4>
               <p>Ein AVV gemäß Art. 28 DSGVO wurde abgeschlossen.</p>
             </div>
+
+            <div className="space-y-2 pt-4">
+              <h3 className={subTitleClass}>E-Mail-Versand: Resend</h3>
+              <p>
+                Transaktionale E-Mails (z. B. Bestätigungslinks der
+                Warteliste) werden über Resend, Inc., 2261 Market Street #5039,
+                San Francisco, CA 94114, USA, versendet. Die Zustellung erfolgt
+                über die EU-Region (Irland).
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className={labelClass}>Verarbeitete Daten</h4>
+              <p>E-Mail-Adresse, Zustellungsstatus, Bounce-Informationen.</p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className={labelClass}>Rechtsgrundlage</h4>
+              <p>
+                Art. 6 Abs. 1 lit. a DSGVO (Einwilligung durch Absenden des
+                Formulars).
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className={labelClass}>Datenschutz</h4>
+              <p>
+                <a
+                  href="https://resend.com/legal/privacy-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkClass}
+                >
+                  https://resend.com/legal/privacy-policy
+                </a>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className={labelClass}>Datenübertragung</h4>
+              <p>
+                Resend, Inc. hat Sitz in den USA. Die Datenübertragung erfolgt
+                auf Basis der Standardvertragsklauseln der EU-Kommission. Ein
+                AVV nach Art. 28 DSGVO wurde abgeschlossen.
+              </p>
+            </div>
           </section>
 
           {/* 3 */}
@@ -351,12 +397,32 @@ export default function DatenschutzPage() {
             </div>
 
             <div className="space-y-2">
+              <h3 className={subTitleClass}>
+                Bestätigungsverfahren (Double-Opt-In)
+              </h3>
+              <p>
+                Nach Absenden des Formulars schicken wir Ihnen einen
+                Bestätigungslink per E-Mail. Erst mit dem Klick auf diesen
+                Link gilt Ihre Einwilligung als erteilt. Einträge ohne
+                Bestätigung werden spätestens nach 48 Stunden automatisch
+                gelöscht.
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <h3 className={subTitleClass}>Erhobene Daten</h3>
               <ul className="ml-5 list-disc space-y-1">
                 <li>E-Mail-Adresse</li>
                 <li>Zeitpunkt der Eintragung</li>
                 <li>Herkunft des Formulars (Hero/Footer)</li>
                 <li>User-Agent (Browser, Betriebssystem)</li>
+                <li>
+                  Zeitpunkt der Bestätigungs-E-Mail und der Bestätigung
+                </li>
+                <li>
+                  Einmaliger Bestätigungs-Token (nur für den Link, nicht
+                  auslesbar)
+                </li>
               </ul>
             </div>
 
@@ -385,8 +451,9 @@ export default function DatenschutzPage() {
             <div className="space-y-2">
               <h3 className={subTitleClass}>Speicherdauer</h3>
               <p>
-                Bis Versand der Start-Benachrichtigung oder Widerruf der
-                Einwilligung.
+                Bestätigte Einträge: bis Versand der Start-Benachrichtigung
+                oder Widerruf der Einwilligung. Nicht bestätigte Einträge:
+                automatische Löschung spätestens nach 48 Stunden.
               </p>
             </div>
           </section>
