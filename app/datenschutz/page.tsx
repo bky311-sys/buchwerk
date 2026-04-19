@@ -31,11 +31,11 @@ export default function DatenschutzPage() {
               Verantwortlicher
             </h2>
             <p>
-              [NAME]
+              Benjamin Koch
               <br />
-              [STRASSE HAUSNUMMER]
+              Friedrichstraße 33
               <br />
-              [PLZ ORT]
+              58791 Werdohl
               <br />
               Email: welcome@buchwerk.info
             </p>

@@ -29,11 +29,11 @@ export default function ImpressumPage() {
               Anbieter nach §5 TMG
             </h2>
             <p>
-              [NAME]
+              Benjamin Koch
               <br />
-              [STRASSE HAUSNUMMER]
+              Friedrichstraße 33
               <br />
-              [PLZ ORT]
+              58791 Werdohl
               <br />
               Deutschland
             </p>
@@ -41,25 +41,24 @@ export default function ImpressumPage() {
 
           <section className="space-y-2">
             <h2 className="text-lg font-medium text-foreground">Kontakt</h2>
+            <p>Email: welcome@buchwerk.info</p>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="text-lg font-medium text-foreground">
+              Verantwortlich für den Inhalt nach §18 Abs. 2 MStV
+            </h2>
+            <p>Benjamin Koch, Anschrift wie oben.</p>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="text-lg font-medium text-foreground">
+              Umsatzsteuer
+            </h2>
             <p>
-              Email: welcome@buchwerk.info
-              <br />
-              Telefon: [TELEFONNUMMER]
+              Kleinunternehmer gemäß §19 UStG — es wird keine Umsatzsteuer
+              ausgewiesen.
             </p>
-          </section>
-
-          <section className="space-y-2">
-            <h2 className="text-lg font-medium text-foreground">
-              Verantwortlich für den Inhalt nach §55 Abs. 2 RStV
-            </h2>
-            <p>[NAME], Anschrift wie oben.</p>
-          </section>
-
-          <section className="space-y-2">
-            <h2 className="text-lg font-medium text-foreground">
-              Umsatzsteuer-ID
-            </h2>
-            <p>[USt-ID oder Hinweis auf Kleinunternehmerregelung §19 UStG]</p>
           </section>
 
           <section className="space-y-2">
