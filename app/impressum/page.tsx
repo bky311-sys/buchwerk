@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   description: "Anbieterkennzeichnung und Kontakt für Buchwerk.info.",
 };
 
+const sectionTitleClass = "text-lg font-medium text-foreground";
+const linkClass =
+  "underline underline-offset-4 hover:text-foreground break-words";
+
 export default function ImpressumPage() {
   return (
     <main className="flex-1">
@@ -17,16 +21,28 @@ export default function ImpressumPage() {
           Impressum
         </h1>
 
-        <div className="mt-10 space-y-6 text-base leading-relaxed text-muted-foreground">
-          <p className="rounded-lg border border-border bg-muted p-4 text-sm text-foreground">
-            Dieses Impressum wird vor dem öffentlichen Launch final erstellt
-            und durch einen juristisch geprüften Text ersetzt. Bis dahin
-            befindet sich Buchwerk.info im Platzhalter-Betrieb.
-          </p>
+        <div className="mt-10 space-y-8 text-base leading-relaxed text-muted-foreground">
+          <section className="space-y-2">
+            <h2 className={sectionTitleClass}>Angaben gemäß § 5 TMG</h2>
+            <p>
+              Benjamin Koch
+              <br />
+              Friedrichstraße 33
+              <br />
+              58791 Werdohl
+              <br />
+              Deutschland
+            </p>
+          </section>
 
           <section className="space-y-2">
-            <h2 className="text-lg font-medium text-foreground">
-              Anbieter nach §5 TMG
+            <h2 className={sectionTitleClass}>Kontakt</h2>
+            <p>E-Mail: welcome@buchwerk.info</p>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className={sectionTitleClass}>
+              Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV
             </h2>
             <p>
               Benjamin Koch
@@ -40,33 +56,53 @@ export default function ImpressumPage() {
           </section>
 
           <section className="space-y-2">
-            <h2 className="text-lg font-medium text-foreground">Kontakt</h2>
-            <p>Email: welcome@buchwerk.info</p>
+            <h2 className={sectionTitleClass}>EU-Streitschlichtung</h2>
+            <p>
+              Die Europäische Kommission stellt eine Plattform zur
+              Online-Streitbeilegung (OS) bereit:{" "}
+              <a
+                href="https://ec.europa.eu/consumers/odr/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={linkClass}
+              >
+                https://ec.europa.eu/consumers/odr/
+              </a>
+            </p>
+            <p>Unsere E-Mail-Adresse finden Sie oben im Impressum.</p>
           </section>
 
           <section className="space-y-2">
-            <h2 className="text-lg font-medium text-foreground">
-              Verantwortlich für den Inhalt nach §18 Abs. 2 MStV
-            </h2>
-            <p>Benjamin Koch, Anschrift wie oben.</p>
-          </section>
-
-          <section className="space-y-2">
-            <h2 className="text-lg font-medium text-foreground">
-              Umsatzsteuer
+            <h2 className={sectionTitleClass}>
+              Verbraucherstreitbeilegung / Universalschlichtungsstelle
             </h2>
             <p>
-              Kleinunternehmer gemäß §19 UStG — es wird keine Umsatzsteuer
-              ausgewiesen.
+              Wir sind nicht verpflichtet und nicht bereit, an
+              Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
+              teilzunehmen.
             </p>
           </section>
 
           <section className="space-y-2">
-            <h2 className="text-lg font-medium text-foreground">Haftung</h2>
+            <h2 className={sectionTitleClass}>Haftung für Inhalte</h2>
             <p>
-              Die Inhalte dieser Seite wurden mit größter Sorgfalt erstellt.
-              Für Richtigkeit, Vollständigkeit und Aktualität kann jedoch
-              keine Gewähr übernommen werden.
+              Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene
+              Inhalte auf diesen Seiten nach den allgemeinen Gesetzen
+              verantwortlich.
+            </p>
+            <p>
+              Nach §§ 8 bis 10 TMG sind wir als Diensteanbieter jedoch nicht
+              verpflichtet, übermittelte oder gespeicherte fremde Informationen
+              zu überwachen.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className={sectionTitleClass}>Haftung für Links</h2>
+            <p>
+              Unser Angebot enthält ggf. Links zu externen Websites Dritter,
+              auf deren Inhalte wir keinen Einfluss haben. Für diese Inhalte
+              ist stets der jeweilige Anbieter verantwortlich.
             </p>
           </section>
         </div>
