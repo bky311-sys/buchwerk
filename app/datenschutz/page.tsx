@@ -220,6 +220,53 @@ export default function DatenschutzPage() {
                 AVV nach Art. 28 DSGVO wurde abgeschlossen.
               </p>
             </div>
+
+            <div className="space-y-2 pt-4">
+              <h3 className={subTitleClass}>Fehler-Monitoring: Sentry</h3>
+              <p>
+                Zur frühen Erkennung und Behebung technischer Fehler nutzen
+                wir Sentry (Functional Software, Inc., 45 Fremont Street
+                8th Floor, San Francisco, CA 94105, USA). Die Verarbeitung
+                erfolgt in der EU-Region Frankfurt; Fehlerdaten verlassen den
+                Rechenzentrumsverbund innerhalb der EU nicht.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className={labelClass}>Verarbeitete Daten</h4>
+              <p>
+                Fehlermeldungen mit Stack-Traces, aufgerufene URLs,
+                Browser- und Betriebssystem-Informationen. IP-Adressen werden
+                in der Standardkonfiguration nicht übertragen.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className={labelClass}>Rechtsgrundlage</h4>
+              <p>
+                Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an stabilem
+                und sicherem Betrieb).
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className={labelClass}>Datenschutz</h4>
+              <p>
+                <a
+                  href="https://sentry.io/privacy/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkClass}
+                >
+                  https://sentry.io/privacy/
+                </a>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className={labelClass}>Auftragsverarbeitung</h4>
+              <p>Ein AVV nach Art. 28 DSGVO wurde abgeschlossen.</p>
+            </div>
           </section>
 
           {/* 3 */}
