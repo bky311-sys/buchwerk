@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
+import { ChapterContent } from "@/components/buchwerk/chapter-content";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
 import { OutlineActions } from "@/components/buchwerk/outline-actions";
 
@@ -80,9 +81,7 @@ export default async function ProjektPage({
             />
 
             {chapter.content ? (
-              <div className="mt-5 whitespace-pre-wrap text-base leading-relaxed">
-                {chapter.content}
-              </div>
+              <ChapterContent chapterId={chapter.id} content={chapter.content} />
             ) : (
               <p className="mt-5 text-sm text-muted-foreground">
                 Dieses Kapitel ist noch nicht geschrieben.
