@@ -2,7 +2,11 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Bundle the /prompts Markdown files into the serverless functions so
+  // loadPrompt() can read them at runtime (lib/ai/prompts.ts).
+  outputFileTracingIncludes: {
+    "/**": ["./prompts/**/*"],
+  },
 };
 
 export default withSentryConfig(nextConfig, {
