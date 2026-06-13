@@ -62,7 +62,7 @@ export async function generateCoverAction(
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) throw new Error("Bild-Download fehlgeschlagen.");
     const contentType =
-      imageResponse.headers.get("content-type") ?? "image/webp";
+      imageResponse.headers.get("content-type") ?? "image/png";
     const ext = contentType.includes("png")
       ? "png"
       : contentType.includes("jpeg")
@@ -150,5 +150,20 @@ export async function deleteCoverAction(coverId: string): Promise<CoverResult> {
   await supabase.from("covers").delete().eq("id", coverId);
 
   revalidatePath(`/projekte/${cover.project_id}/cover`);
+  return { ok: true };
+}
+
+export async function updateProjectAuthorAction(
+  projectId: string,
+  author: string,
+): Promise<CoverResult> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ author: author.trim() || null })
+    .eq("id", projectId);
+  if (error) return { ok: false, error: "Konnte nicht gespeichert werden." };
+
+  revalidatePath(`/projekte/${projectId}/cover`);
   return { ok: true };
 }
