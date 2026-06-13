@@ -30,5 +30,19 @@ export const registerSchema = z
     path: ["passwortWiederholen"],
   });
 
+export const resetRequestSchema = z.object({ email });
+
+export const newPasswordSchema = z
+  .object({
+    password,
+    passwortWiederholen: z.string().min(1, "Bitte wiederhole dein Passwort."),
+  })
+  .refine((data) => data.password === data.passwortWiederholen, {
+    message: "Die Passwörter stimmen nicht überein.",
+    path: ["passwortWiederholen"],
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
+export type ResetRequestInput = z.infer<typeof resetRequestSchema>;
+export type NewPasswordInput = z.infer<typeof newPasswordSchema>;

@@ -3,7 +3,12 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { loginSchema, registerSchema } from "@/lib/auth/schema";
+import {
+  loginSchema,
+  registerSchema,
+  resetRequestSchema,
+  newPasswordSchema,
+} from "@/lib/auth/schema";
 
 export type AuthState = {
   error: string | null;
@@ -105,4 +110,65 @@ export async function signOutAction(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/anmelden");
+}
+
+export async function requestPasswordResetAction(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const parsed = resetRequestSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Bitte prüfe deine Eingabe.",
+    };
+  }
+
+  const supabase = await createClient();
+  const origin = await getOrigin();
+  // We ignore the error on purpose and always report success, so the form
+  // cannot be used to probe which addresses have an account.
+  await supabase.auth.resetPasswordForEmail(parsed.data.email.toLowerCase(), {
+    redirectTo: `${origin}/auth/callback?next=/passwort-neu`,
+  });
+
+  return { error: null, success: true };
+}
+
+export async function updatePasswordAction(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const parsed = newPasswordSchema.safeParse({
+    password: formData.get("password"),
+    passwortWiederholen: formData.get("passwortWiederholen"),
+  });
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Bitte prüfe deine Eingabe.",
+    };
+  }
+
+  const supabase = await createClient();
+  // Requires the recovery session set by /auth/callback after the email link.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      error:
+        "Dein Link ist abgelaufen. Fordere einen neuen Link zum Zurücksetzen an.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+  if (error) {
+    return {
+      error:
+        "Das Passwort konnte nicht gesetzt werden. Versuch es in einem Moment noch einmal.",
+    };
+  }
+
+  redirect("/dashboard");
 }
