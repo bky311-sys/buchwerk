@@ -3,12 +3,14 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   suggestCoverPromptAction,
   generateCoverAction,
   selectCoverAction,
   deleteCoverAction,
+  updateProjectAuthorAction,
 } from "@/lib/books/cover-actions";
 import type { CoverModel } from "@/lib/ai/replicate";
 
@@ -24,16 +26,21 @@ type Cover = {
 
 export function CoverStudio({
   projectId,
+  author,
   covers,
 }: {
   projectId: string;
+  author: string;
   covers: Cover[];
 }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState<CoverModel>("schnell");
+  const [authorValue, setAuthorValue] = useState(author);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const hasSelected = covers.some((c) => c.is_selected);
 
   function suggest() {
     setError(null);
@@ -48,6 +55,15 @@ export function CoverStudio({
     setError(null);
     startTransition(async () => {
       const result = await generateCoverAction(projectId, prompt, model);
+      if (result.ok) router.refresh();
+      else setError(result.error ?? "Etwas ist schiefgelaufen.");
+    });
+  }
+
+  function saveAuthor() {
+    setError(null);
+    startTransition(async () => {
+      const result = await updateProjectAuthorAction(projectId, authorValue);
       if (result.ok) router.refresh();
       else setError(result.error ?? "Etwas ist schiefgelaufen.");
     });
@@ -193,6 +209,51 @@ export function CoverStudio({
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="border-t border-border pt-6">
+        <h2 className="text-lg font-medium">Fertiges Cover-PDF</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Vorderseite mit Titel + Autor, Rückseite mit Klappentext aus dem
+          KDP-Listing.
+        </p>
+
+        <div className="mt-4 max-w-sm space-y-1">
+          <Label htmlFor="author">Autor (erscheint auf dem Cover)</Label>
+          <div className="flex gap-2">
+            <Input
+              id="author"
+              value={authorValue}
+              onChange={(event) => setAuthorValue(event.target.value)}
+              disabled={isPending}
+              placeholder="Dein Name"
+              className="h-10"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={saveAuthor}
+              disabled={isPending}
+            >
+              Speichern
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-5">
+          {hasSelected ? (
+            <Button asChild size="lg">
+              <a href={`/projekte/${projectId}/cover/pdf`} download>
+                Cover-PDF herunterladen
+              </a>
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Wähle oben einen Entwurf als Cover, dann kannst du das PDF
+              herunterladen.
+            </p>
+          )}
+        </div>
       </section>
     </div>
   );

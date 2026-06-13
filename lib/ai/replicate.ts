@@ -26,7 +26,7 @@ export async function generateCoverImage(
   const input: Record<string, unknown> = {
     prompt,
     aspect_ratio: "2:3", // portrait book cover
-    output_format: "webp",
+    output_format: "png", // PNG embeds reliably into the cover PDF (pdf-lib)
   };
   if (model === "schnell") {
     input.num_outputs = 1;

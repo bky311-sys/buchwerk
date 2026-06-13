@@ -83,6 +83,7 @@ export interface Database {
           title: string | null;
           topic: string;
           audience: string | null;
+          author: string | null;
           status: string;
           created_at: string;
           updated_at: string;
@@ -93,6 +94,7 @@ export interface Database {
           title?: string | null;
           topic: string;
           audience?: string | null;
+          author?: string | null;
           status?: string;
           created_at?: string;
           updated_at?: string;
@@ -103,6 +105,7 @@ export interface Database {
           title?: string | null;
           topic?: string;
           audience?: string | null;
+          author?: string | null;
           status?: string;
           created_at?: string;
           updated_at?: string;

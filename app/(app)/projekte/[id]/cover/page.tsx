@@ -21,7 +21,7 @@ export default async function CoverPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, topic")
+    .select("id, title, topic, author")
     .eq("id", id)
     .single();
   if (!project) notFound();
@@ -48,11 +48,16 @@ export default async function CoverPage({
         {project.title ?? project.topic}
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
-        Generiere Cover-Motive mit Flux, probiere Varianten und wähle eins aus.
-        Der Titel kommt bewusst nicht ins Bild — das Motiv bleibt sauber.
+        Generiere Cover-Motive mit Flux, wähle eins aus und lade ein
+        Cover-PDF mit Vorder- und Rückseite herunter. Titel und Autor kommen
+        beim PDF sauber als Text aufs Motiv.
       </p>
 
-      <CoverStudio projectId={id} covers={covers ?? []} />
+      <CoverStudio
+        projectId={id}
+        author={project.author ?? ""}
+        covers={covers ?? []}
+      />
     </div>
   );
 }
