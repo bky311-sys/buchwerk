@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { WaitlistForm } from "@/components/buchwerk/waitlist-form";
 
 export default function Home() {
   return (
     <>
+      <SiteHeader />
       <main className="flex-1">
         <HeroSection />
         <ProblemSection />
@@ -13,6 +15,26 @@ export default function Home() {
       </main>
       <SiteFooter />
     </>
+  );
+}
+
+function SiteHeader() {
+  return (
+    <header className="border-b border-border">
+      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <Link href="/" className="text-sm font-medium tracking-tight">
+          Buchwerk
+        </Link>
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <Button asChild variant="ghost" size="lg">
+            <Link href="/anmelden">Anmelden</Link>
+          </Button>
+          <Button asChild size="lg">
+            <Link href="/registrieren">Registrieren</Link>
+          </Button>
+        </nav>
+      </div>
+    </header>
   );
 }
 
