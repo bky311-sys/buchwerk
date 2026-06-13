@@ -161,6 +161,53 @@ export interface Database {
           },
         ];
       };
+      kdp_listings: {
+        Row: {
+          project_id: string;
+          title: string | null;
+          subtitle: string | null;
+          description: string | null;
+          keywords: string[] | null;
+          categories: string[] | null;
+          price_eur: number | null;
+          price_note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          project_id: string;
+          title?: string | null;
+          subtitle?: string | null;
+          description?: string | null;
+          keywords?: string[] | null;
+          categories?: string[] | null;
+          price_eur?: number | null;
+          price_note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          project_id?: string;
+          title?: string | null;
+          subtitle?: string | null;
+          description?: string | null;
+          keywords?: string[] | null;
+          categories?: string[] | null;
+          price_eur?: number | null;
+          price_note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "kdp_listings_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: true;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

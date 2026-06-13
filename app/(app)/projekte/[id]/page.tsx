@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
 import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
@@ -58,6 +59,12 @@ export default async function ProjektPage({
       <p className="mt-4 text-sm text-muted-foreground">
         {done} von {list.length} Kapiteln geschrieben
       </p>
+
+      <div className="mt-6">
+        <Button asChild variant="outline">
+          <Link href={`/projekte/${project.id}/kdp`}>KDP-Listing</Link>
+        </Button>
+      </div>
 
       <div className="mt-12 space-y-12">
         {list.map((chapter, index) => (
