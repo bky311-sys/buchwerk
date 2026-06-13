@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { generateCoverImage, type CoverModel } from "@/lib/ai/replicate";
+import { gateProduction } from "@/lib/billing/access";
 
 export type CoverResult = { ok: boolean; error?: string };
 export type SuggestResult = { ok: boolean; prompt?: string; error?: string };
@@ -56,6 +57,9 @@ export async function generateCoverAction(
     .single();
   if (!project) return { ok: false, error: "Projekt nicht gefunden." };
 
+  const gate = await gateProduction(supabase, projectId);
+  if (!gate.ok) return { ok: false, error: gate.error };
+
   try {
     const imageUrl = await generateCoverImage(trimmed, model);
 
@@ -95,7 +99,7 @@ export async function generateCoverAction(
       image_url: publicUrl,
       prompt: trimmed,
       model,
-      is_selected: (count ?? 0) === 0, // first cover is auto-selected
+      is_selected: (count ?? 0) === 0,
     });
     if (insertError) throw new Error("Speichern fehlgeschlagen.");
 

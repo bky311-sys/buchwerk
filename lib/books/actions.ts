@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { claudeJson, claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
+import { gateProduction } from "@/lib/billing/access";
 import {
   newProjectSchema,
   outlineSchema,
@@ -37,7 +38,6 @@ async function generateOutline(
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
-// Renumber a project's chapters to 1..N in the given id order.
 async function persistOrder(
   supabase: SupabaseClient,
   ids: string[],
@@ -62,7 +62,7 @@ async function orderedChapterIds(
   return (data ?? []).map((row) => row.id);
 }
 
-// --- project + chapter creation -------------------------------------------
+// --- project + chapter creation (free: topic + outline) --------------------
 
 export async function createProjectAction(
   _prev: ProjectFormState,
@@ -138,6 +138,10 @@ export async function generateChapterAction(
     return { ok: false, error: "Kapitel nicht gefunden." };
   }
 
+  // Production is gated behind payment.
+  const gate = await gateProduction(supabase, chapter.project_id);
+  if (!gate.ok) return { ok: false, error: gate.error };
+
   const { data: project } = await supabase
     .from("projects")
     .select("title, topic, audience")
@@ -188,7 +192,7 @@ export async function generateChapterAction(
   }
 }
 
-// --- outline editing -------------------------------------------------------
+// --- outline editing (free) ------------------------------------------------
 
 export async function updateProjectTitleAction(
   projectId: string,
@@ -301,7 +305,7 @@ export async function moveChapterAction(
   const index = ids.indexOf(chapterId);
   const target = direction === "up" ? index - 1 : index + 1;
   if (index < 0 || target < 0 || target >= ids.length) {
-    return { ok: true }; // already at the edge — no-op
+    return { ok: true };
   }
 
   [ids[index], ids[target]] = [ids[target], ids[index]];

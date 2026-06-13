@@ -50,6 +50,7 @@ export interface Database {
           email: string | null;
           display_name: string | null;
           plan: string;
+          stripe_customer_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -58,6 +59,7 @@ export interface Database {
           email?: string | null;
           display_name?: string | null;
           plan?: string;
+          stripe_customer_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -66,6 +68,7 @@ export interface Database {
           email?: string | null;
           display_name?: string | null;
           plan?: string;
+          stripe_customer_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -250,6 +253,114 @@ export interface Database {
             foreignKeyName: "covers_project_id_fkey";
             columns: ["project_id"];
             isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      subscriptions: {
+        Row: {
+          user_id: string;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          status: string;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          status?: string;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          status?: string;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      purchases: {
+        Row: {
+          id: string;
+          user_id: string;
+          project_id: string | null;
+          stripe_checkout_session_id: string | null;
+          amount_cents: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          project_id?: string | null;
+          stripe_checkout_session_id?: string | null;
+          amount_cents?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          project_id?: string | null;
+          stripe_checkout_session_id?: string | null;
+          amount_cents?: number | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "purchases_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      book_unlocks: {
+        Row: {
+          id: string;
+          project_id: string;
+          user_id: string;
+          source: string;
+          period_start: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          user_id: string;
+          source: string;
+          period_start?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          user_id?: string;
+          source?: string;
+          period_start?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "book_unlocks_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: true;
             referencedRelation: "projects";
             referencedColumns: ["id"];
           },
