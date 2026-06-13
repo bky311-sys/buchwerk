@@ -20,6 +20,9 @@ export async function isProjectUnlocked(
 
 type GateResult = { ok: boolean; error?: string };
 
+const LOCKED_MESSAGE =
+  "Dieses Buch ist noch nicht freigeschaltet. Schalte es frei, um die Produktion zu nutzen.";
+
 // Ensures the project may use production features. If the user has an active
 // subscription and the project isn't unlocked yet, consumes one monthly slot.
 export async function gateProduction(
@@ -41,20 +44,20 @@ export async function gateProduction(
 
   const now = Date.now();
   const active =
-    sub &&
+    !!sub &&
     (sub.status === "active" || sub.status === "trialing") &&
-    sub.current_period_end &&
+    !!sub.current_period_end &&
     new Date(sub.current_period_end).getTime() > now;
 
-  if (!active) {
-    return {
-      ok: false,
-      error:
-        "Dieses Buch ist noch nicht freigeschaltet. Schalte es frei, um die Produktion zu nutzen.",
-    };
+  if (!active || !sub) {
+    return { ok: false, error: LOCKED_MESSAGE };
   }
 
   const periodStart = sub.current_period_start;
+  if (!periodStart) {
+    return { ok: false, error: LOCKED_MESSAGE };
+  }
+
   const { count } = await supabase
     .from("book_unlocks")
     .select("id", { count: "exact", head: true })
