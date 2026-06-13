@@ -3,12 +3,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
+import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
+import { EditableTitle } from "@/components/buchwerk/editable-title";
+import { OutlineActions } from "@/components/buchwerk/outline-actions";
 
 export const metadata: Metadata = {
   title: "Projekt — Buchwerk",
 };
 
-// Chapter generation runs inside a server action invoked from this route.
+// Chapter + outline generation run inside server actions invoked from here.
 export const maxDuration = 60;
 
 export default async function ProjektPage({
@@ -34,6 +37,7 @@ export default async function ProjektPage({
 
   const list = chapters ?? [];
   const done = list.filter((c) => c.status === "fertig").length;
+  const hasWrittenChapters = list.some((c) => Boolean(c.content));
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -44,30 +48,29 @@ export default async function ProjektPage({
         ← Alle Projekte
       </Link>
 
-      <h1 className="mt-6 text-3xl font-medium tracking-tight sm:text-4xl">
-        {project.title ?? project.topic}
-      </h1>
+      <div className="mt-6">
+        <EditableTitle
+          projectId={project.id}
+          title={project.title ?? project.topic}
+        />
+      </div>
       <p className="mt-3 text-base text-muted-foreground">{project.topic}</p>
       <p className="mt-4 text-sm text-muted-foreground">
         {done} von {list.length} Kapiteln geschrieben
       </p>
 
       <div className="mt-12 space-y-12">
-        {list.map((chapter) => (
+        {list.map((chapter, index) => (
           <article key={chapter.id} className="border-t border-border pt-6">
-            <header className="space-y-2">
-              <span className="text-sm font-medium text-muted-foreground tabular-nums">
-                Kapitel {chapter.position}
-              </span>
-              <h2 className="text-xl font-medium tracking-tight">
-                {chapter.heading}
-              </h2>
-              {chapter.summary ? (
-                <p className="text-sm text-muted-foreground">
-                  {chapter.summary}
-                </p>
-              ) : null}
-            </header>
+            <ChapterEditor
+              chapterId={chapter.id}
+              number={index + 1}
+              heading={chapter.heading}
+              summary={chapter.summary ?? ""}
+              isFirst={index === 0}
+              isLast={index === list.length - 1}
+              hasContent={Boolean(chapter.content)}
+            />
 
             {chapter.content ? (
               <div className="mt-5 whitespace-pre-wrap text-base leading-relaxed">
@@ -87,6 +90,13 @@ export default async function ProjektPage({
             </div>
           </article>
         ))}
+      </div>
+
+      <div className="mt-12 border-t border-border pt-6">
+        <OutlineActions
+          projectId={project.id}
+          hasWrittenChapters={hasWrittenChapters}
+        />
       </div>
     </div>
   );
