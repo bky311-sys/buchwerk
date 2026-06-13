@@ -61,9 +61,12 @@ export default async function ProjektPage({
         {done} von {list.length} Kapiteln geschrieben
       </p>
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-wrap gap-2">
         <Button asChild variant="outline">
           <Link href={`/projekte/${project.id}/kdp`}>KDP-Listing</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href={`/projekte/${project.id}/cover`}>Cover</Link>
         </Button>
       </div>
 
