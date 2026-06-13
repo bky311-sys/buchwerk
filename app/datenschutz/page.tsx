@@ -504,6 +504,139 @@ export default function DatenschutzPage() {
               </p>
             </div>
           </section>
+
+          {/* 6 */}
+          <section className="space-y-6">
+            <h2 className={sectionTitleClass}>6. Nutzerkonto und Anmeldung</h2>
+
+            <div className="space-y-2">
+              <h3 className={subTitleClass}>Registrierung</h3>
+              <p>
+                Für die Nutzung des Dienstes legen Sie ein Konto an. Dabei
+                verarbeiten wir Ihre E-Mail-Adresse und ein (verschlüsselt
+                gespeichertes) Passwort. Die Daten werden bei Supabase (siehe
+                Abschnitt 2) gespeichert. Rechtsgrundlage ist Art. 6 Abs. 1
+                lit. b DSGVO (Vertragsanbahnung und -erfüllung).
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className={subTitleClass}>Anmeldung mit Google</h3>
+              <p>
+                Optional können Sie sich mit Ihrem Google-Konto anmelden
+                (Google OAuth, Anbieter: Google Ireland Limited, Gordon House,
+                Barrow Street, Dublin 4, Irland). Dabei erhalten wir Ihre
+                E-Mail-Adresse zur Konto-Identifikation. Es werden nur die für
+                die Anmeldung erforderlichen Daten übertragen. Rechtsgrundlage
+                ist Art. 6 Abs. 1 lit. b DSGVO. Datenschutzhinweise von Google:{" "}
+                <a
+                  href="https://policies.google.com/privacy"
+                  className={linkClass}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  policies.google.com/privacy
+                </a>
+                .
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className={subTitleClass}>Speicherdauer</h3>
+              <p>
+                Kontodaten werden bis zur Löschung des Kontos gespeichert. Sie
+                können die Löschung jederzeit verlangen (welcome@buchwerk.info);
+                gesetzliche Aufbewahrungspflichten bleiben unberührt.
+              </p>
+            </div>
+          </section>
+
+          {/* 7 */}
+          <section className="space-y-6">
+            <h2 className={sectionTitleClass}>
+              7. Buchprojekte und KI-Verarbeitung
+            </h2>
+
+            <div className="space-y-2">
+              <h3 className={subTitleClass}>Verarbeitete Inhalte</h3>
+              <p>
+                Zur Erbringung der Leistung verarbeiten wir die von Ihnen
+                eingegebenen und erstellten Inhalte (z. B. Thema, Zielgruppe,
+                Gliederung, Kapiteltexte, Cover-Beschreibungen, KDP-Listing). Diese
+                werden bei Supabase gespeichert (Cover-Bilder in einem
+                Speicher-Bucket). Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className={subTitleClass}>
+                Textgenerierung: Anthropic (Claude)
+              </h3>
+              <p>
+                Zur Erstellung von Gliederung, Kapiteltexten und KDP-Listing
+                übermitteln wir die dafür nötigen Eingaben an Anthropic, PBC,
+                San Francisco, USA. Anthropic verarbeitet die Inhalte zur
+                Erzeugung der Antwort. Bitte geben Sie keine sensiblen
+                personenbezogenen Daten Dritter in die Eingabefelder ein.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className={subTitleClass}>Coverbilder: Replicate (Flux)</h3>
+              <p>
+                Zur Erzeugung von Cover-Motiven übermitteln wir den Bildprompt
+                an Replicate, Inc., San Francisco, USA, das das Modell „Flux"
+                betreibt.
+              </p>
+            </div>
+          </section>
+
+          {/* 8 */}
+          <section className="space-y-6">
+            <h2 className={sectionTitleClass}>8. Zahlungsabwicklung (Stripe)</h2>
+
+            <div className="space-y-2">
+              <p>
+                Kostenpflichtige Käufe und Abonnements werden über Stripe
+                Payments Europe, Ltd., 1 Grand Canal Street Lower, Dublin,
+                Irland, abgewickelt. Bei einer Zahlung verarbeitet Stripe die
+                Zahlungs- und Vertragsdaten (z. B. Name, E-Mail, Zahlungsmittel-
+                bzw. Kartendaten). Die Kartendaten werden direkt von Stripe
+                erhoben; wir selbst erhalten und speichern keine vollständigen
+                Kartendaten, sondern nur Kauf- und Abo-Status sowie eine
+                Stripe-Kundenkennung. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b
+                DSGVO. Datenschutzhinweise von Stripe:{" "}
+                <a
+                  href="https://stripe.com/de/privacy"
+                  className={linkClass}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  stripe.com/de/privacy
+                </a>
+                .
+              </p>
+            </div>
+          </section>
+
+          {/* 9 */}
+          <section className="space-y-6">
+            <h2 className={sectionTitleClass}>
+              9. Übermittlung in Drittländer
+            </h2>
+            <div className="space-y-2">
+              <p>
+                Einige der eingesetzten Dienste verarbeiten Daten (auch) in den
+                USA: Vercel (Hosting), Anthropic (Textgenerierung), Replicate
+                (Coverbilder) und Resend (E-Mail-Versand). Soweit ein
+                Drittlandtransfer stattfindet, erfolgt dieser auf Grundlage der
+                EU-Standardvertragsklauseln (Art. 46 DSGVO) bzw. — soweit
+                einschlägig — eines Angemessenheitsbeschlusses (EU-US Data
+                Privacy Framework). Supabase und Stripe verarbeiten die Daten in
+                der EU (Irland).
+              </p>
+            </div>
+          </section>
         </div>
 
         <p className="mt-12 text-sm">
