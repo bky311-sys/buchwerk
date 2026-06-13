@@ -94,7 +94,7 @@ export function CoverStudio({
             onChange={(event) => setPrompt(event.target.value)}
             disabled={isPending}
             rows={4}
-            placeholder="Englischer Bildprompt — oder klick auf „Vorschlag von der KI"."
+            placeholder="Englischer Bildprompt – oder lass dir oben einen Vorschlag erstellen."
             className={TEXTAREA_CLASS}
           />
         </div>
