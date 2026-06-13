@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -18,9 +20,14 @@ export default async function DashboardPage() {
       </h1>
       <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
         Du bist als{" "}
-        <span className="text-foreground">{user?.email}</span> angemeldet. Hier
-        entsteht dein Arbeitsbereich — die ersten Buchprojekte folgen in Kürze.
+        <span className="text-foreground">{user?.email}</span> angemeldet.
+        Starte dein erstes Buch oder arbeite an einem bestehenden Projekt weiter.
       </p>
+      <div className="mt-8">
+        <Button asChild size="lg">
+          <Link href="/projekte">Meine Projekte</Link>
+        </Button>
+      </div>
     </div>
   );
 }
