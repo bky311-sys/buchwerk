@@ -49,6 +49,7 @@ export interface Database {
           id: string;
           email: string | null;
           display_name: string | null;
+          plan: string;
           created_at: string;
           updated_at: string;
         };
@@ -56,6 +57,7 @@ export interface Database {
           id: string;
           email?: string | null;
           display_name?: string | null;
+          plan?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -63,6 +65,7 @@ export interface Database {
           id?: string;
           email?: string | null;
           display_name?: string | null;
+          plan?: string;
           created_at?: string;
           updated_at?: string;
         };
