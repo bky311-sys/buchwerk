@@ -7,21 +7,20 @@ import {
   type PDFPage,
 } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
+import { isProjectUnlocked } from "@/lib/billing/access";
 
 export const runtime = "nodejs";
 
 const PAGE_W = 600;
-const PAGE_H = 900; // 2:3, matches the generated cover aspect
+const PAGE_H = 900;
 
-// pdf-lib's standard fonts use WinAnsi (CP1252). Map smart punctuation to ASCII,
-// keep newlines + printable Latin-1, drop the rest so drawText never throws.
 function safe(text: string): string {
   const mapped = text
     .replace(/[‘’‚]/g, "'")
     .replace(/[“”„]/g, '"')
     .replace(/[–—]/g, "-")
     .replace(/…/g, "...")
-    .replace(/ /g, " ");
+    .replace(/ /g, " ");
   let out = "";
   for (const ch of mapped) {
     const code = ch.charCodeAt(0);
@@ -92,6 +91,11 @@ export async function GET(
     .single();
   if (!project) return new NextResponse("Nicht gefunden", { status: 404 });
 
+  // PDF download is part of production — only for unlocked projects.
+  if (!(await isProjectUnlocked(supabase, id))) {
+    return new NextResponse("Bitte zuerst freischalten", { status: 402 });
+  }
+
   const { data: cover } = await supabase
     .from("covers")
     .select("image_url")
@@ -135,7 +139,6 @@ export async function GET(
   const author = project.author?.trim() ?? "";
   const blurb = listing?.description?.trim() ?? "";
 
-  // --- Front: full-bleed image + bottom scrim + title + author ---
   const front = pdf.addPage([PAGE_W, PAGE_H]);
   front.drawImage(image, { x: 0, y: 0, width: PAGE_W, height: PAGE_H });
   front.drawRectangle({
@@ -165,14 +168,13 @@ export async function GET(
     });
   }
 
-  // --- Back: brand-sand background + title + blurb + author ---
   const back = pdf.addPage([PAGE_W, PAGE_H]);
   back.drawRectangle({
     x: 0,
     y: 0,
     width: PAGE_W,
     height: PAGE_H,
-    color: rgb(0.961, 0.945, 0.922), // #F5F1EB
+    color: rgb(0.961, 0.945, 0.922),
   });
   drawWrapped(back, title, {
     font: helveticaBold,

@@ -6,7 +6,6 @@ export const metadata: Metadata = {
   title: "Admin — Buchwerk",
 };
 
-// Always read fresh data for the admin view.
 export const dynamic = "force-dynamic";
 
 function Stat({ label, value }: { label: string; value: string | number }) {
@@ -23,29 +22,36 @@ function fmtDate(iso: string | null): string {
 }
 
 export default async function AdminPage() {
-  // Service-role client — bypasses RLS to read all signups/users. The layout
-  // has already verified the requester is an admin.
   const supabase = createAdminClient();
 
-  const [{ data: waitlist }, { data: profiles }, { data: projects }] =
-    await Promise.all([
-      supabase
-        .from("waitlist")
-        .select("email, source, confirmed_at, created_at")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("profiles")
-        .select("id, email, plan, created_at")
-        .order("created_at", { ascending: false }),
-      supabase.from("projects").select("user_id"),
-    ]);
+  const [
+    { data: waitlist },
+    { data: profiles },
+    { data: projects },
+    { count: purchaseCount },
+    { count: activeSubs },
+  ] = await Promise.all([
+    supabase
+      .from("waitlist")
+      .select("email, source, confirmed_at, created_at")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("profiles")
+      .select("id, email, plan, created_at")
+      .order("created_at", { ascending: false }),
+    supabase.from("projects").select("user_id"),
+    supabase.from("purchases").select("id", { count: "exact", head: true }),
+    supabase
+      .from("subscriptions")
+      .select("user_id", { count: "exact", head: true })
+      .in("status", ["active", "trialing"]),
+  ]);
 
   const wl = waitlist ?? [];
   const users = profiles ?? [];
   const prj = projects ?? [];
 
   const wlConfirmed = wl.filter((w) => w.confirmed_at).length;
-  const paidCount = users.filter((u) => u.plan === "paid").length;
 
   const projectsByUser = new Map<string, number>();
   for (const p of prj) {
@@ -59,17 +65,13 @@ export default async function AdminPage() {
           Überblick
         </h1>
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          <Stat label="Warteliste gesamt" value={wl.length} />
-          <Stat label="davon bestätigt" value={wlConfirmed} />
-          <Stat label="offen" value={wl.length - wlConfirmed} />
+          <Stat label="Warteliste" value={wl.length} />
+          <Stat label="bestätigt" value={wlConfirmed} />
           <Stat label="Nutzer" value={users.length} />
-          <Stat label="bezahlt" value={paidCount} />
+          <Stat label="aktive Abos" value={activeSubs ?? 0} />
+          <Stat label="Buch-Käufe" value={purchaseCount ?? 0} />
           <Stat label="Projekte" value={prj.length} />
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          „Bezahlt" wird aktuell manuell gesetzt — automatische Zahlungsdaten
-          folgen mit der Stripe-Integration.
-        </p>
       </section>
 
       <section>
@@ -90,7 +92,7 @@ export default async function AdminPage() {
                   <span className="block text-xs text-muted-foreground">
                     registriert {fmtDate(u.created_at)} ·{" "}
                     {projectsByUser.get(u.id) ?? 0} Projekt(e) ·{" "}
-                    {u.plan === "paid" ? "bezahlt" : "kostenlos"}
+                    {u.plan === "paid" ? "bezahlt/Abo" : "kostenlos"}
                   </span>
                 </span>
                 <PlanToggle userId={u.id} plan={u.plan} />

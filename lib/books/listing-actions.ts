@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { claudeJson } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
+import { gateProduction } from "@/lib/billing/access";
 import { LISTING_JSON_SCHEMA, listingSchema } from "@/lib/books/listing-schema";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
@@ -21,6 +22,9 @@ export async function generateListingAction(
     .eq("id", projectId)
     .single();
   if (!project) return { ok: false, error: "Projekt nicht gefunden." };
+
+  const gate = await gateProduction(supabase, projectId);
+  if (!gate.ok) return { ok: false, error: gate.error };
 
   const { data: chapters } = await supabase
     .from("chapters")

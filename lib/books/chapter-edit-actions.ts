@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
+import { gateProduction } from "@/lib/billing/access";
 
 export type ChapterEditResult = { ok: boolean; error?: string };
 
-// Save manually edited chapter text.
+// Save manually edited chapter text (free — only possible once content exists).
 export async function saveChapterContentAction(
   chapterId: string,
   content: string,
@@ -30,7 +31,7 @@ export async function saveChapterContentAction(
   return { ok: true };
 }
 
-// Rewrite an existing chapter following the author's instruction.
+// AI revision (production — gated behind payment).
 export async function reviseChapterAction(
   chapterId: string,
   instruction: string,
@@ -48,6 +49,9 @@ export async function reviseChapterAction(
   if (!chapter.content) {
     return { ok: false, error: "Dieses Kapitel hat noch keinen Text." };
   }
+
+  const gate = await gateProduction(supabase, chapter.project_id);
+  if (!gate.ok) return { ok: false, error: gate.error };
 
   const { data: project } = await supabase
     .from("projects")

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isProjectUnlocked } from "@/lib/billing/access";
 import { Button } from "@/components/ui/button";
 import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
@@ -13,7 +14,6 @@ export const metadata: Metadata = {
   title: "Projekt — Buchwerk",
 };
 
-// Chapter + outline generation run inside server actions invoked from here.
 export const maxDuration = 60;
 
 export default async function ProjektPage({
@@ -31,11 +31,14 @@ export default async function ProjektPage({
     .single();
   if (!project) notFound();
 
-  const { data: chapters } = await supabase
-    .from("chapters")
-    .select("id, position, heading, summary, content, status")
-    .eq("project_id", id)
-    .order("position");
+  const [{ data: chapters }, unlocked] = await Promise.all([
+    supabase
+      .from("chapters")
+      .select("id, position, heading, summary, content, status")
+      .eq("project_id", id)
+      .order("position"),
+    isProjectUnlocked(supabase, id),
+  ]);
 
   const list = chapters ?? [];
   const done = list.filter((c) => c.status === "fertig").length;
@@ -61,14 +64,32 @@ export default async function ProjektPage({
         {done} von {list.length} Kapiteln geschrieben
       </p>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button asChild variant="outline">
-          <Link href={`/projekte/${project.id}/kdp`}>KDP-Listing</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href={`/projekte/${project.id}/cover`}>Cover</Link>
-        </Button>
-      </div>
+      {!unlocked ? (
+        <div className="mt-6 rounded-lg border border-border bg-muted p-5">
+          <p className="text-sm font-medium">Dieses Buch ist noch nicht freigeschaltet.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Gliederung anpassen ist kostenlos. Zum Kapitel-Schreiben, Cover,
+            KDP-Listing und PDF schalte das Buch frei (einmalig 19,99 € oder im
+            Abo).
+          </p>
+          <div className="mt-4">
+            <Button asChild size="lg">
+              <Link href={`/projekte/${project.id}/freischalten`}>
+                Buch freischalten
+              </Link>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-6 flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/projekte/${project.id}/kdp`}>KDP-Listing</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href={`/projekte/${project.id}/cover`}>Cover</Link>
+          </Button>
+        </div>
+      )}
 
       <div className="mt-12 space-y-12">
         {list.map((chapter, index) => (
@@ -91,12 +112,14 @@ export default async function ProjektPage({
               </p>
             )}
 
-            <div className="mt-5">
-              <ChapterGenerator
-                chapterId={chapter.id}
-                hasContent={Boolean(chapter.content)}
-              />
-            </div>
+            {unlocked ? (
+              <div className="mt-5">
+                <ChapterGenerator
+                  chapterId={chapter.id}
+                  hasContent={Boolean(chapter.content)}
+                />
+              </div>
+            ) : null}
           </article>
         ))}
       </div>
