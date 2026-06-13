@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "@/components/buchwerk/wordmark";
 
 export default function AuthLayout({
   children,
@@ -8,9 +9,10 @@ export default function AuthLayout({
       <div className="w-full max-w-sm">
         <Link
           href="/"
-          className="block text-center text-sm font-medium tracking-tight text-muted-foreground transition-colors hover:text-foreground"
+          className="flex justify-center"
+          aria-label="buchwerk – Startseite"
         >
-          Buchwerk
+          <Wordmark />
         </Link>
         <div className="mt-8">{children}</div>
       </div>

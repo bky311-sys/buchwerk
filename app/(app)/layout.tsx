@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Wordmark } from "@/components/buchwerk/wordmark";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
 
@@ -22,8 +23,8 @@ export default async function AppLayout({
     <>
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link href="/dashboard" className="text-sm font-medium tracking-tight">
-            Buchwerk
+          <Link href="/dashboard" aria-label="buchwerk – Dashboard">
+            <Wordmark />
           </Link>
           <form action={signOutAction}>
             <Button type="submit" variant="ghost" size="lg">
