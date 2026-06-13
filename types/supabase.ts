@@ -208,6 +208,47 @@ export interface Database {
           },
         ];
       };
+      covers: {
+        Row: {
+          id: string;
+          project_id: string;
+          storage_path: string;
+          image_url: string;
+          prompt: string | null;
+          model: string | null;
+          is_selected: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          storage_path: string;
+          image_url: string;
+          prompt?: string | null;
+          model?: string | null;
+          is_selected?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          storage_path?: string;
+          image_url?: string;
+          prompt?: string | null;
+          model?: string | null;
+          is_selected?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "covers_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
