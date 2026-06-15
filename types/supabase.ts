@@ -8,6 +8,14 @@
  * already exist in the remote project.
  */
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export interface Database {
   public: {
     Tables: {
@@ -365,6 +373,54 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      inbound_emails: {
+        Row: {
+          id: string;
+          message_id: string | null;
+          imap_uid: number | null;
+          from_address: string | null;
+          from_name: string | null;
+          to_address: string | null;
+          subject: string | null;
+          text_body: string | null;
+          html_body: string | null;
+          received_at: string | null;
+          is_read: boolean;
+          raw: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id?: string | null;
+          imap_uid?: number | null;
+          from_address?: string | null;
+          from_name?: string | null;
+          to_address?: string | null;
+          subject?: string | null;
+          text_body?: string | null;
+          html_body?: string | null;
+          received_at?: string | null;
+          is_read?: boolean;
+          raw?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          message_id?: string | null;
+          imap_uid?: number | null;
+          from_address?: string | null;
+          from_name?: string | null;
+          to_address?: string | null;
+          subject?: string | null;
+          text_body?: string | null;
+          html_body?: string | null;
+          received_at?: string | null;
+          is_read?: boolean;
+          raw?: Json | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

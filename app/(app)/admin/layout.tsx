@@ -22,6 +22,20 @@ export default async function AdminLayout({
           Zum Dashboard
         </Link>
       </div>
+      <nav className="mt-4 flex flex-wrap gap-4 border-b border-border pb-4 text-sm">
+        {[
+          { href: "/admin", label: "Übersicht" },
+          { href: "/admin/posteingang", label: "Posteingang" },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
       {children}
     </div>
   );
