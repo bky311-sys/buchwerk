@@ -24,7 +24,14 @@ function statusIntent(status: string): "done" | "draft" | "neutral" {
   return "neutral";
 }
 
-export default async function ProjektePage() {
+export default async function ProjektePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ thema?: string }>;
+}) {
+  const { thema } = await searchParams;
+  const defaultTopic =
+    typeof thema === "string" ? thema.trim().slice(0, 300) : undefined;
   const supabase = await createClient();
   const { data: projects } = await supabase
     .from("projects")
@@ -47,7 +54,7 @@ export default async function ProjektePage() {
           Beschreib dein Thema. Buchwerk erstellt daraus eine Kapitel-Gliederung,
           die du anschließend Kapitel für Kapitel ausschreiben lässt.
         </p>
-        <NewProjectForm />
+        <NewProjectForm defaultTopic={defaultTopic} />
       </section>
 
       <section className="mt-12">

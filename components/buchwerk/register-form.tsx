@@ -10,7 +10,13 @@ import { signUpAction, type AuthState } from "@/lib/auth/actions";
 
 const initialState: AuthState = { error: null };
 
-export function RegisterForm() {
+type Props = {
+  // Return target after signup, propagated from the ?weiter= query param
+  // (used by the lead-magnet topic flow).
+  weiter?: string;
+};
+
+export function RegisterForm({ weiter }: Props) {
   const [state, formAction, isPending] = useActionState(
     signUpAction,
     initialState,
@@ -33,7 +39,10 @@ export function RegisterForm() {
 
   return (
     <div className="space-y-4">
-      <GoogleButton next="/dashboard" label="Mit Google registrieren" />
+      <GoogleButton
+        next={weiter ?? "/dashboard"}
+        label="Mit Google registrieren"
+      />
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-border" />
@@ -42,6 +51,7 @@ export function RegisterForm() {
       </div>
 
       <form action={formAction} className="space-y-4" noValidate>
+        {weiter ? <input type="hidden" name="weiter" value={weiter} /> : null}
         <div className="space-y-2">
           <Label htmlFor="email">E-Mail-Adresse</Label>
           <Input

@@ -82,11 +82,14 @@ export async function signUpAction(
 
   const supabase = await createClient();
   const origin = await getOrigin();
+  // Carry an optional return target (e.g. the lead-magnet topic flow) through
+  // the confirmation link and the immediate-login case.
+  const weiter = sanitizeNext(formData.get("weiter"));
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email.toLowerCase(),
     password: parsed.data.password,
     options: {
-      emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(weiter)}`,
     },
   });
   if (error) {
@@ -99,7 +102,7 @@ export async function signUpAction(
   // If email confirmation is disabled in Supabase, signUp returns a session
   // immediately and the user is logged in right away.
   if (data.session) {
-    redirect("/dashboard");
+    redirect(weiter);
   }
 
   // Email confirmation enabled: no session yet, user must click the link.

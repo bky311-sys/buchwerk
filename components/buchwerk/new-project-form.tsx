@@ -11,7 +11,7 @@ import {
 
 const initialState: ProjectFormState = { error: null };
 
-export function NewProjectForm() {
+export function NewProjectForm({ defaultTopic }: { defaultTopic?: string }) {
   const [state, formAction, isPending] = useActionState(
     createProjectAction,
     initialState,
@@ -27,8 +27,9 @@ export function NewProjectForm() {
           required
           disabled={isPending}
           rows={3}
+          defaultValue={defaultTopic}
           placeholder="z. B. Ein Ratgeber für Hundehalter zur stressfreien Autofahrt mit Hund"
-          className="flex w-full rounded-lg border border-input bg-background px-4 py-3 text-base shadow-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full rounded-xl border border-input bg-card px-4 py-3 text-base shadow-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
 
