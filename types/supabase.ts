@@ -99,6 +99,10 @@ export interface Database {
           audience: string | null;
           author: string | null;
           status: string;
+          shop_published: boolean;
+          shop_published_at: string | null;
+          shop_slug: string | null;
+          amazon_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -110,6 +114,10 @@ export interface Database {
           audience?: string | null;
           author?: string | null;
           status?: string;
+          shop_published?: boolean;
+          shop_published_at?: string | null;
+          shop_slug?: string | null;
+          amazon_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -121,6 +129,10 @@ export interface Database {
           audience?: string | null;
           author?: string | null;
           status?: string;
+          shop_published?: boolean;
+          shop_published_at?: string | null;
+          shop_slug?: string | null;
+          amazon_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };

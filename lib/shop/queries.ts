@@ -1,0 +1,74 @@
+import "server-only";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+// A book as shown in the public Buchshop. Assembled automatically from the
+// author's project data: title/author from `projects`, subtitle/description
+// from `kdp_listings`, cover from the selected `covers` row.
+export type ShopBook = {
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  author: string | null;
+  description: string | null;
+  coverUrl: string | null;
+  amazonUrl: string | null;
+};
+
+type ProjectRow = {
+  title: string | null;
+  topic: string;
+  author: string | null;
+  shop_slug: string | null;
+  amazon_url: string | null;
+  covers: { image_url: string; is_selected: boolean }[] | null;
+  kdp_listings: { subtitle: string | null; description: string | null }[] | null;
+};
+
+const SELECT =
+  "title, topic, author, shop_slug, amazon_url, covers(image_url, is_selected), kdp_listings(subtitle, description)";
+
+function toShopBook(row: ProjectRow): ShopBook | null {
+  if (!row.shop_slug) return null;
+  const covers = row.covers ?? [];
+  const cover = covers.find((c) => c.is_selected) ?? covers[0] ?? null;
+  const listing = (row.kdp_listings ?? [])[0] ?? null;
+  return {
+    slug: row.shop_slug,
+    title: row.title ?? row.topic,
+    subtitle: listing?.subtitle ?? null,
+    author: row.author,
+    description: listing?.description ?? null,
+    coverUrl: cover?.image_url ?? null,
+    amazonUrl: row.amazon_url,
+  };
+}
+
+// All published books, newest first. Read via service-role and hard-filtered to
+// shop_published = true, so owner-only RLS stays untouched (no anon policies).
+export async function getPublishedBooks(): Promise<ShopBook[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("projects")
+    .select(SELECT)
+    .eq("shop_published", true)
+    .order("shop_published_at", { ascending: false });
+
+  return ((data ?? []) as unknown as ProjectRow[])
+    .map(toShopBook)
+    .filter((b): b is ShopBook => b !== null);
+}
+
+// A single published book by its slug, or null if not found / not published.
+export async function getPublishedBookBySlug(
+  slug: string,
+): Promise<ShopBook | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("projects")
+    .select(SELECT)
+    .eq("shop_published", true)
+    .eq("shop_slug", slug)
+    .maybeSingle();
+
+  return data ? toShopBook(data as unknown as ProjectRow) : null;
+}

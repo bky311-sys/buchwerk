@@ -26,11 +26,16 @@ export default async function AppLayout({
           <Link href="/dashboard" aria-label="buchwerk – Dashboard">
             <Wordmark />
           </Link>
-          <form action={signOutAction}>
-            <Button type="submit" variant="ghost" size="lg">
-              Abmelden
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <Button asChild variant="ghost" size="lg">
+              <Link href="/buchshop">Buchshop</Link>
             </Button>
-          </form>
+            <form action={signOutAction}>
+              <Button type="submit" variant="ghost" size="lg">
+                Abmelden
+              </Button>
+            </form>
+          </nav>
         </div>
       </header>
       <main className="flex-1">{children}</main>

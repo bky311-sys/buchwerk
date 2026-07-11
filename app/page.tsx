@@ -26,7 +26,10 @@ function SiteHeader() {
         <Link href="/" aria-label="buchwerk – Startseite">
           <Wordmark />
         </Link>
-        <nav className="flex items-center gap-2 sm:gap-3">
+        <nav className="flex items-center gap-1 sm:gap-3">
+          <Button asChild variant="ghost" size="lg" className="hidden sm:inline-flex">
+            <Link href="/buchshop">Buchshop</Link>
+          </Button>
           <Button asChild variant="ghost" size="lg">
             <Link href="/anmelden">Anmelden</Link>
           </Button>
@@ -265,7 +268,13 @@ function SiteFooter() {
     <footer className="bg-background">
       <div className="mx-auto flex max-w-5xl flex-col gap-4 px-6 py-10 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <p>© {new Date().getFullYear()} Buchwerk — Benjamin Koch</p>
-        <nav className="flex gap-6">
+        <nav className="flex flex-wrap gap-6">
+          <Link
+            href="/buchshop"
+            className="hover:text-foreground hover:underline underline-offset-4"
+          >
+            Buchshop
+          </Link>
           <Link
             href="/impressum"
             className="hover:text-foreground hover:underline underline-offset-4"

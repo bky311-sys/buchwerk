@@ -5,6 +5,26 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 // Fair-use limit for the subscription: number of books unlockable per period.
 export const SUBSCRIPTION_MONTHLY_LIMIT = 10;
 
+// True if the user currently has an active (or trialing) subscription that has
+// not yet lapsed. Used to gate subscriber-only features like the Buchshop.
+export async function isSubscriber(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("status, current_period_end")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return (
+    !!sub &&
+    (sub.status === "active" || sub.status === "trialing") &&
+    !!sub.current_period_end &&
+    new Date(sub.current_period_end).getTime() > Date.now()
+  );
+}
+
 // True if the project already has a production unlock (purchase or subscription).
 export async function isProjectUnlocked(
   supabase: SupabaseClient,

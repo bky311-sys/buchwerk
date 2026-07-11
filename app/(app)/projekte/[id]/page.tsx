@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isProjectUnlocked } from "@/lib/billing/access";
+import { isProjectUnlocked, isSubscriber } from "@/lib/billing/access";
 import { Button } from "@/components/ui/button";
 import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
 import { ChapterContent } from "@/components/buchwerk/chapter-content";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
 import { OutlineActions } from "@/components/buchwerk/outline-actions";
+import { ShopPublish } from "@/components/buchwerk/shop-publish";
 
 export const metadata: Metadata = {
   title: "Projekt — Buchwerk",
@@ -31,19 +32,42 @@ export default async function ProjektPage({
     .single();
   if (!project) notFound();
 
-  const [{ data: chapters }, unlocked] = await Promise.all([
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Shop columns are queried separately and best-effort: if the Buchshop
+  // migration hasn't been applied yet, this errors and the section stays hidden
+  // instead of breaking the whole project page.
+  const { data: shopRow } = await supabase
+    .from("projects")
+    .select("shop_published, shop_slug, amazon_url")
+    .eq("id", id)
+    .maybeSingle();
+
+  const [{ data: chapters }, unlocked, subscriber] = await Promise.all([
     supabase
       .from("chapters")
       .select("id, position, heading, summary, content, status")
       .eq("project_id", id)
       .order("position"),
     isProjectUnlocked(supabase, id),
+    user ? isSubscriber(supabase, user.id) : Promise.resolve(false),
   ]);
 
   const list = chapters ?? [];
   const done = list.filter((c) => c.status === "fertig").length;
   const hasWrittenChapters = list.some((c) => Boolean(c.content));
   const progressPct = list.length ? Math.round((done / list.length) * 100) : 0;
+
+  // Buchshop: a finished book can be published by a subscriber.
+  const finished = list.length > 0 && list.every((c) => Boolean(c.content));
+  const canPublish = finished && subscriber;
+  const blockReason = !finished
+    ? ("not_finished" as const)
+    : !subscriber
+      ? ("not_subscriber" as const)
+      : null;
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -139,6 +163,19 @@ export default async function ProjektPage({
           </article>
         ))}
       </div>
+
+      {unlocked && shopRow ? (
+        <div className="mt-6">
+          <ShopPublish
+            projectId={project.id}
+            isPublished={shopRow.shop_published}
+            shopSlug={shopRow.shop_slug}
+            amazonUrl={shopRow.amazon_url}
+            canPublish={canPublish}
+            blockReason={blockReason}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-12 border-t border-border pt-6">
         <OutlineActions
