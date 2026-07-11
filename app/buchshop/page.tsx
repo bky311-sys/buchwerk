@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/buchwerk/wordmark";
-import { getPublishedBooks, type ShopBook } from "@/lib/shop/queries";
+import { StatusBadge } from "@/components/buchwerk/status-badge";
+import {
+  getPublishedBooks,
+  getBoostedBookIds,
+  type ShopBook,
+} from "@/lib/shop/queries";
 
 export const metadata: Metadata = {
   title: "Buchshop — Buchwerk",
@@ -15,7 +20,14 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function BuchshopPage() {
-  const books = await getPublishedBooks();
+  const [books, boostedIds] = await Promise.all([
+    getPublishedBooks(),
+    getBoostedBookIds(),
+  ]);
+  // Boosted books first; order within each group stays as returned.
+  const sorted = [...books].sort(
+    (a, b) => Number(boostedIds.has(b.id)) - Number(boostedIds.has(a.id)),
+  );
 
   return (
     <>
@@ -39,9 +51,9 @@ export default async function BuchshopPage() {
             </p>
           ) : (
             <ul className="mt-12 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-              {books.map((book) => (
+              {sorted.map((book) => (
                 <li key={book.slug}>
-                  <BookCard book={book} />
+                  <BookCard book={book} boosted={boostedIds.has(book.id)} />
                 </li>
               ))}
             </ul>
@@ -53,10 +65,10 @@ export default async function BuchshopPage() {
   );
 }
 
-function BookCard({ book }: { book: ShopBook }) {
+function BookCard({ book, boosted }: { book: ShopBook; boosted: boolean }) {
   return (
     <Link href={`/buchshop/${book.slug}`} className="group block">
-      <div className="overflow-hidden rounded-xl border border-border bg-muted shadow-sm transition-shadow group-hover:shadow-md">
+      <div className="relative overflow-hidden rounded-xl border border-border bg-muted shadow-sm transition-shadow group-hover:shadow-md">
         {book.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -71,6 +83,11 @@ function BookCard({ book }: { book: ShopBook }) {
             </span>
           </div>
         )}
+        {boosted ? (
+          <span className="absolute left-2 top-2">
+            <StatusBadge intent="draft">Sucht Bewertungen</StatusBadge>
+          </span>
+        ) : null}
       </div>
       <h2 className="mt-3 text-sm font-semibold leading-snug text-foreground">
         {book.title}

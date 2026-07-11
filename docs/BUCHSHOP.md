@@ -107,8 +107,10 @@ Amazon-Konto-/KDP-Sperre, UWG-Abmahnung.
 - **Phase 1 — Schaufenster:** ✅ gebaut (Migration ausstehend).
 - **Phase 2 — Bewertungen + Punkte** (Modell A): Erwerbsvermerk, 2h-Sperre,
   Bewertung, Autor-Freigabe, Ø-Anzeige, internes Punktekonto. ⏳ in Arbeit.
-- **Phase 3 — Punkte einlösen** (intern): eigenes Buch boosten / in den
-  Review-Pool geben. Später.
+- **Phase 3 — Punkte einlösen** (intern): ✅ gebaut. Autor setzt Punkte ein, um
+  das eigene veröffentlichte Buch zu „boosten" (Standard: 30 Punkte → 7 Tage
+  hervorgehoben, „Sucht Bewertungen"-Badge, oben im Shop). Verbucht als
+  negativer `point_ledger`-Eintrag; `projects.boosted_until`. Kein Geldwert.
 
 ---
 

@@ -103,6 +103,7 @@ export interface Database {
           shop_published_at: string | null;
           shop_slug: string | null;
           amazon_url: string | null;
+          boosted_until: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -118,6 +119,7 @@ export interface Database {
           shop_published_at?: string | null;
           shop_slug?: string | null;
           amazon_url?: string | null;
+          boosted_until?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -133,6 +135,7 @@ export interface Database {
           shop_published_at?: string | null;
           shop_slug?: string | null;
           amazon_url?: string | null;
+          boosted_until?: string | null;
           created_at?: string;
           updated_at?: string;
         };

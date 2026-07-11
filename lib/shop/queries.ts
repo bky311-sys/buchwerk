@@ -61,6 +61,18 @@ export async function getPublishedBooks(): Promise<ShopBook[]> {
     .filter((b): b is ShopBook => b !== null);
 }
 
+// IDs of published books currently boosted (via points). Best-effort: if the
+// boost column isn't migrated yet, returns an empty set instead of failing.
+export async function getBoostedBookIds(): Promise<Set<string>> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("shop_published", true)
+    .gt("boosted_until", new Date().toISOString());
+  return new Set((data ?? []).map((r) => r.id));
+}
+
 // A single published book by its slug, or null if not found / not published.
 export async function getPublishedBookBySlug(
   slug: string,

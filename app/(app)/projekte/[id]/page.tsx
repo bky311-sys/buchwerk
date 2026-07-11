@@ -12,6 +12,7 @@ import { OutlineActions } from "@/components/buchwerk/outline-actions";
 import { ShopPublish } from "@/components/buchwerk/shop-publish";
 import { ReviewModeration } from "@/components/buchwerk/review-moderation";
 import { getPendingReviewsForAuthor } from "@/lib/shop/reviews";
+import { getPointsBalance } from "@/lib/shop/points";
 
 export const metadata: Metadata = {
   title: "Projekt — Buchwerk",
@@ -52,6 +53,21 @@ export default async function ProjektPage({
   const pendingReviews = shopRow?.shop_published
     ? await getPendingReviewsForAuthor(id)
     : [];
+
+  // Points balance + boost state for the publish section (best-effort: 0 / null
+  // if the reviews/boost migrations aren't applied yet).
+  const pointsBalance =
+    shopRow?.shop_published && user
+      ? await getPointsBalance(supabase, user.id)
+      : 0;
+  const { data: boostRow } = shopRow?.shop_published
+    ? await supabase
+        .from("projects")
+        .select("boosted_until")
+        .eq("id", id)
+        .maybeSingle()
+    : { data: null };
+  const boostedUntil = boostRow?.boosted_until ?? null;
 
   const [{ data: chapters }, unlocked, subscriber] = await Promise.all([
     supabase
@@ -181,6 +197,8 @@ export default async function ProjektPage({
             amazonUrl={shopRow.amazon_url}
             canPublish={canPublish}
             blockReason={blockReason}
+            pointsBalance={pointsBalance}
+            boostedUntil={boostedUntil}
           />
         </div>
       ) : null}

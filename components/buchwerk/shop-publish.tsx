@@ -11,6 +11,8 @@ import {
   publishToShopAction,
   unpublishFromShopAction,
 } from "@/lib/shop/actions";
+import { boostBookAction } from "@/lib/shop/boost";
+import { BOOST_COST, BOOST_DAYS } from "@/lib/shop/boost-config";
 
 type BlockReason = "not_finished" | "not_subscriber" | null;
 
@@ -21,6 +23,8 @@ type Props = {
   amazonUrl: string | null;
   canPublish: boolean;
   blockReason: BlockReason;
+  pointsBalance: number;
+  boostedUntil: string | null;
 };
 
 export function ShopPublish({
@@ -30,29 +34,33 @@ export function ShopPublish({
   amazonUrl,
   canPublish,
   blockReason,
+  pointsBalance,
+  boostedUntil,
 }: Props) {
   const router = useRouter();
   const [amazon, setAmazon] = useState(amazonUrl ?? "");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function publish() {
+  function run(action: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
     startTransition(async () => {
-      const result = await publishToShopAction(projectId, amazon);
+      const result = await action();
       if (result.ok) router.refresh();
       else setError(result.error ?? "Etwas ist schiefgelaufen.");
     });
   }
 
-  function unpublish() {
-    setError(null);
-    startTransition(async () => {
-      const result = await unpublishFromShopAction(projectId);
-      if (result.ok) router.refresh();
-      else setError(result.error ?? "Etwas ist schiefgelaufen.");
-    });
+  function publish() {
+    run(() => publishToShopAction(projectId, amazon));
   }
+
+  function unpublish() {
+    run(() => unpublishFromShopAction(projectId));
+  }
+
+  const boostActive =
+    boostedUntil !== null && new Date(boostedUntil).getTime() > Date.now();
 
   return (
     <section className="rounded-2xl border border-border bg-card p-6 sm:p-7">
@@ -79,6 +87,42 @@ export function ShopPublish({
               Zur Shop-Seite ansehen →
             </Link>
           ) : null}
+
+          <div className="rounded-xl border border-border bg-muted p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-semibold">Buch boosten</span>
+              {boostActive ? (
+                <StatusBadge intent="done">Aktiv im Shop</StatusBadge>
+              ) : null}
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {boostActive
+                ? "Dein Buch wird gerade im Shop hervorgehoben und sucht Bewertungen."
+                : `Setze ${BOOST_COST} Punkte ein, um dein Buch ${BOOST_DAYS} Tage im Shop hervorzuheben.`}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isPending || pointsBalance < BOOST_COST}
+                onClick={() => run(() => boostBookAction(projectId))}
+              >
+                {isPending
+                  ? "…"
+                  : boostActive
+                    ? `Verlängern (${BOOST_COST} Punkte)`
+                    : `Boosten (${BOOST_COST} Punkte)`}
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Du hast{" "}
+                <span className="font-semibold text-foreground">
+                  {pointsBalance}
+                </span>{" "}
+                Punkte
+              </span>
+            </div>
+          </div>
+
           <div>
             <Button
               type="button"
