@@ -3,8 +3,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/buchwerk/wordmark";
+import { Stars } from "@/components/buchwerk/stars";
+import { StatusBadge } from "@/components/buchwerk/status-badge";
+import { ReviewWidget } from "@/components/buchwerk/review-widget";
 import { getPublishedBookBySlug } from "@/lib/shop/queries";
 import { buildAmazonUrl } from "@/lib/shop/amazon";
+import { createClient } from "@/lib/supabase/server";
+import {
+  getApprovedReviews,
+  getUserReviewState,
+  summarize,
+} from "@/lib/shop/reviews";
 
 export async function generateMetadata({
   params,
@@ -34,6 +43,23 @@ export default async function BuchDetailPage({
   const { slug } = await params;
   const book = await getPublishedBookBySlug(slug);
   if (!book) notFound();
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [reviews, ownRow, reviewState] = await Promise.all([
+    getApprovedReviews(book.id),
+    // RLS returns the project row only to its owner → detects the author's own book.
+    user
+      ? supabase.from("projects").select("id").eq("id", book.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    user ? getUserReviewState(supabase, book.id, user.id) : Promise.resolve(null),
+  ]);
+  const summary = summarize(reviews);
+  const isOwnBook = Boolean(ownRow?.data);
+  const loginHref = `/anmelden?weiter=${encodeURIComponent(`/buchshop/${slug}`)}`;
 
   return (
     <>
@@ -80,6 +106,17 @@ export default async function BuchDetailPage({
                 </p>
               ) : null}
 
+              {summary.count > 0 ? (
+                <div className="mt-3 flex items-center gap-2">
+                  <Stars value={summary.average} />
+                  <span className="text-sm text-muted-foreground">
+                    {summary.average.toFixed(1)} ·{" "}
+                    {summary.count}{" "}
+                    {summary.count === 1 ? "Bewertung" : "Bewertungen"}
+                  </span>
+                </div>
+              ) : null}
+
               {book.amazonUrl ? (
                 <div className="mt-6">
                   <Button asChild size="lg">
@@ -108,6 +145,49 @@ export default async function BuchDetailPage({
                 </div>
               ) : null}
             </div>
+          </div>
+
+          <div className="mt-14 space-y-6">
+            <ReviewWidget
+              bookId={book.id}
+              loggedIn={Boolean(user)}
+              isOwnBook={isOwnBook}
+              acquiredAt={reviewState?.acquiredAt ?? null}
+              canReviewAt={reviewState?.canReviewAt ?? null}
+              hasReviewed={reviewState?.hasReviewed ?? false}
+              reviewStatus={reviewState?.reviewStatus ?? null}
+              loginHref={loginHref}
+            />
+
+            {reviews.length > 0 ? (
+              <section>
+                <h2 className="font-display text-lg font-semibold">
+                  Bewertungen
+                </h2>
+                <ul className="mt-4 space-y-4">
+                  {reviews.map((r) => (
+                    <li
+                      key={r.id}
+                      className="rounded-2xl border border-border bg-card p-5"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Stars value={r.rating} />
+                        {r.rewarded ? (
+                          <StatusBadge intent="neutral">
+                            Punkte-Bewertung
+                          </StatusBadge>
+                        ) : null}
+                      </div>
+                      {r.body ? (
+                        <p className="mt-2 text-sm leading-relaxed text-foreground">
+                          {r.body}
+                        </p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </div>
         </div>
       </main>

@@ -64,42 +64,51 @@ Pre-Launch-Gate: `/buchshop` liegt hinter dem bestehenden Gate — bis `SITE_LIV
 
 ---
 
-## 4. Bewertungen & Belohnung (Phase 2/3 — noch offen)
+## 4. Bewertungen & Punkte — Modell A (entschieden 2026-07-11)
 
-Geplante Journey: Erwerbsart (PDF/Kindle/Kauf) angeben → auf buchwerk bewerten →
-Autor gibt frei → Ø-Anzeige. Optional Amazon-Bewertung. Belohnung 1 €/Bewertung
-auf den nächsten Abomonat, Cap 10 €/Monat, Bewerten erst 2 h nach Freischalten.
+Vorbild: Rezenzo. Deren Punkte sind bewusst **kein Geldwert** („Punkte können
+nicht als Geld ausgezahlt werden"), sondern ein rein **internes
+Plattforminstrument**, unabhängig von der Sternebewertung. Genau diese
+Nicht-Monetarisierung hält das Modell Amazon-ToS- und UWG-konform. Buchwerk
+übernimmt dieses Prinzip.
 
-### Rechtlicher Kern — WICHTIG
+**Verworfen:** Punkte/Geld **für Amazon-Bewertungen** und jede Umwandlung
+Punkte → € / Abo-Rabatt. Das wäre wirtschaftlich eine bezahlte Bewertung →
+Amazon-Konto-/KDP-Sperre, UWG-Abmahnung.
 
-„Geld gegen **Amazon**-Bewertung" ist nicht umsetzbar:
-- **Amazon-Richtlinien:** incentivierte Reviews sind ausnahmslos verboten →
-  Löschung, Konto-/KDP-Sperre.
-- **UWG (§ 5b Abs. 3, § 5a):** bezahlte/incentivierte Bewertungen sind
-  offenlegungspflichtig; gekauftes Wohlwollen ist abmahnbar.
+### Regeln (verbindlich)
 
-**Empfohlene, saubere Variante (Default):**
-1. Belohnt wird die **buchwerk-eigene, verifizierte** Bewertung — nicht die
-   Amazon-Bewertung.
-2. **Unabhängig vom Sterne-Ergebnis** (kein Kauf positiver Meinung).
-3. Amazon-Bewertung bleibt ein **unbezahlter**, freiwilliger Link.
-4. Transparente Kennzeichnung belohnter Bewertungen; Cap 10 €/Monat; eine
-   Bewertung pro Buch/Nutzer; verifizierter Bezug + Autor-Freigabe.
+1. **Verdient** werden Punkte nur durch eine **buchwerk-interne** Bewertung
+   eines *fremden* Buchs — nicht des eigenen, nicht auf Amazon.
+2. **Sentiment-neutral:** die Punktzahl hängt **nicht** von den Sternen ab.
+3. **Autor-Freigabe:** Punkte werden erst gutgeschrieben, wenn der Autor die
+   Bewertung freigibt (Qualitäts-/Spam-Schutz).
+4. **2-Stunden-Lesesperre:** Bewerten ist erst 2 h nach dem „Ich lese dieses
+   Buch"-Vermerk (`shop_acquisitions`) möglich.
+5. **Punkte sind nie Geld/Abo-Rabatt.** Einlösen ausschließlich **intern** —
+   das eigene Buch in den Review-Pool geben / im Shop „boosten".
+6. **Transparenz:** belohnte Bewertungen werden gekennzeichnet; eine Bewertung
+   pro Buch/Nutzer.
+7. **Amazon-Bewertung** bleibt ein **freiwilliger, unbezahlter** CTA.
 
-> **Offene Produktentscheidung (blockt Phase 3):** saubere Variante ok — oder
-> bewusst ein anderes Modell mit den o. g. Risiken?
+### Datenmodell (Phase 2)
 
-Datenmodell-Skizze Phase 2/3: `shop_acquisitions` (Bezug + Start der 2h-Sperre),
-`shop_reviews` (rating/body/status, Autor-Moderation), `reward_credits`
-(Cent-Gutschrift, Monats-Cap, Anbindung an Stripe-Guthaben/Coupon).
+- `shop_acquisitions` — „ich lese dieses Buch" (kind: pdf/kindle/kauf),
+  `acquired_at` startet die 2h-Sperre.
+- `shop_reviews` — rating (1..5), body, status (pending/approved/rejected),
+  Autor-Moderation; Unique(book_id, user_id).
+- `point_ledger` — interner Punktestand (delta, reason, ref); Saldo = Summe.
+  **Kein** Cent-/€-Feld, keine Auszahlung.
 
 ---
 
 ## 5. Phasenplan
 
 - **Phase 1 — Schaufenster:** ✅ gebaut (Migration ausstehend).
-- **Phase 2 — Bewertungen** mit Erwerbsart, 2h-Sperre, Autor-Freigabe, Ø-Anzeige.
-- **Phase 3 — Gutschrift-System** (nach Entscheidung Abschnitt 4).
+- **Phase 2 — Bewertungen + Punkte** (Modell A): Erwerbsvermerk, 2h-Sperre,
+  Bewertung, Autor-Freigabe, Ø-Anzeige, internes Punktekonto. ⏳ in Arbeit.
+- **Phase 3 — Punkte einlösen** (intern): eigenes Buch boosten / in den
+  Review-Pool geben. Später.
 
 ---
 

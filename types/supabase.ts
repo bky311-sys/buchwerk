@@ -434,6 +434,93 @@ export interface Database {
         };
         Relationships: [];
       };
+      shop_acquisitions: {
+        Row: {
+          id: string;
+          book_id: string;
+          user_id: string;
+          kind: string;
+          acquired_at: string;
+        };
+        Insert: {
+          id?: string;
+          book_id: string;
+          user_id: string;
+          kind?: string;
+          acquired_at?: string;
+        };
+        Update: {
+          id?: string;
+          book_id?: string;
+          user_id?: string;
+          kind?: string;
+          acquired_at?: string;
+        };
+        Relationships: [];
+      };
+      shop_reviews: {
+        Row: {
+          id: string;
+          book_id: string;
+          user_id: string;
+          rating: number;
+          body: string | null;
+          status: string;
+          rewarded: boolean;
+          created_at: string;
+          approved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          book_id: string;
+          user_id: string;
+          rating: number;
+          body?: string | null;
+          status?: string;
+          rewarded?: boolean;
+          created_at?: string;
+          approved_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          book_id?: string;
+          user_id?: string;
+          rating?: number;
+          body?: string | null;
+          status?: string;
+          rewarded?: boolean;
+          created_at?: string;
+          approved_at?: string | null;
+        };
+        Relationships: [];
+      };
+      point_ledger: {
+        Row: {
+          id: string;
+          user_id: string;
+          delta: number;
+          reason: string;
+          review_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          delta: number;
+          reason: string;
+          review_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          delta?: number;
+          reason?: string;
+          review_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

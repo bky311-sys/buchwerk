@@ -10,6 +10,8 @@ import { ChapterContent } from "@/components/buchwerk/chapter-content";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
 import { OutlineActions } from "@/components/buchwerk/outline-actions";
 import { ShopPublish } from "@/components/buchwerk/shop-publish";
+import { ReviewModeration } from "@/components/buchwerk/review-moderation";
+import { getPendingReviewsForAuthor } from "@/lib/shop/reviews";
 
 export const metadata: Metadata = {
   title: "Projekt — Buchwerk",
@@ -44,6 +46,12 @@ export default async function ProjektPage({
     .select("shop_published, shop_slug, amazon_url")
     .eq("id", id)
     .maybeSingle();
+
+  // Pending reviews the author can moderate (only for a published book; empty
+  // and harmless if the reviews migration isn't applied yet).
+  const pendingReviews = shopRow?.shop_published
+    ? await getPendingReviewsForAuthor(id)
+    : [];
 
   const [{ data: chapters }, unlocked, subscriber] = await Promise.all([
     supabase
@@ -174,6 +182,12 @@ export default async function ProjektPage({
             canPublish={canPublish}
             blockReason={blockReason}
           />
+        </div>
+      ) : null}
+
+      {pendingReviews.length > 0 ? (
+        <div className="mt-4">
+          <ReviewModeration reviews={pendingReviews} />
         </div>
       ) : null}
 

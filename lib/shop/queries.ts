@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // author's project data: title/author from `projects`, subtitle/description
 // from `kdp_listings`, cover from the selected `covers` row.
 export type ShopBook = {
+  id: string;
   slug: string;
   title: string;
   subtitle: string | null;
@@ -15,6 +16,7 @@ export type ShopBook = {
 };
 
 type ProjectRow = {
+  id: string;
   title: string | null;
   topic: string;
   author: string | null;
@@ -25,7 +27,7 @@ type ProjectRow = {
 };
 
 const SELECT =
-  "title, topic, author, shop_slug, amazon_url, covers(image_url, is_selected), kdp_listings(subtitle, description)";
+  "id, title, topic, author, shop_slug, amazon_url, covers(image_url, is_selected), kdp_listings(subtitle, description)";
 
 function toShopBook(row: ProjectRow): ShopBook | null {
   if (!row.shop_slug) return null;
@@ -33,6 +35,7 @@ function toShopBook(row: ProjectRow): ShopBook | null {
   const cover = covers.find((c) => c.is_selected) ?? covers[0] ?? null;
   const listing = (row.kdp_listings ?? [])[0] ?? null;
   return {
+    id: row.id,
     slug: row.shop_slug,
     title: row.title ?? row.topic,
     subtitle: listing?.subtitle ?? null,
