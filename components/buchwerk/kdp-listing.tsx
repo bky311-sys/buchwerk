@@ -21,7 +21,7 @@ type Listing = {
 };
 
 const TEXTAREA_CLASS =
-  "flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50";
+  "flex w-full rounded-xl border border-input bg-muted px-4 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -133,7 +133,7 @@ export function KdpListing({
 
   if (!listing) {
     return (
-      <div className="mt-8 rounded-lg border border-border bg-muted p-6">
+      <div className="mt-8 rounded-2xl border border-border bg-card p-6 sm:p-7">
         <p className="text-sm text-muted-foreground">
           Noch kein Listing. Buchwerk erstellt aus deinem Buch Titel, Untertitel,
           Klappentext, 7 Keywords, Kategorien und eine Preisempfehlung —

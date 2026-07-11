@@ -14,7 +14,7 @@ export default function BaldPage() {
         <div className="flex justify-center">
           <Wordmark />
         </div>
-        <h1 className="mt-8 text-3xl font-medium tracking-tight sm:text-4xl">
+        <h1 className="mt-8 font-display text-3xl font-bold tracking-tight sm:text-4xl">
           Bald verfügbar.
         </h1>
         <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">

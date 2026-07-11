@@ -41,7 +41,7 @@ export default async function CoverPage({
         ← Zurück zum Projekt
       </Link>
 
-      <h1 className="mt-6 text-3xl font-medium tracking-tight sm:text-4xl">
+      <h1 className="font-display mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
         Cover
       </h1>
       <p className="mt-3 text-base text-muted-foreground">

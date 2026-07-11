@@ -10,7 +10,7 @@ const linkClass =
   "underline underline-offset-4 hover:text-foreground break-words";
 const sectionTitleClass =
   "text-base font-medium uppercase tracking-[0.14em] text-foreground";
-const subTitleClass = "text-lg font-medium text-foreground";
+const subTitleClass = "font-display text-lg font-semibold text-foreground";
 const labelClass = "text-base font-medium text-foreground";
 
 export default function DatenschutzPage() {
@@ -20,7 +20,7 @@ export default function DatenschutzPage() {
         <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
           Buchwerk.info
         </p>
-        <h1 className="mt-4 text-3xl font-medium tracking-tight sm:text-4xl">
+        <h1 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
           Datenschutzerklärung
         </h1>
 

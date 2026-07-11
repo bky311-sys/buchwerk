@@ -18,7 +18,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
-      <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+      <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
         Willkommen bei Buchwerk
       </h1>
       <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">

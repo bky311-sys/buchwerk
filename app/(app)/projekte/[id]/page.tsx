@@ -43,6 +43,7 @@ export default async function ProjektPage({
   const list = chapters ?? [];
   const done = list.filter((c) => c.status === "fertig").length;
   const hasWrittenChapters = list.some((c) => Boolean(c.content));
+  const progressPct = list.length ? Math.round((done / list.length) * 100) : 0;
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -60,13 +61,24 @@ export default async function ProjektPage({
         />
       </div>
       <p className="mt-3 text-base text-muted-foreground">{project.topic}</p>
-      <p className="mt-4 text-sm text-muted-foreground">
-        {done} von {list.length} Kapiteln geschrieben
-      </p>
+
+      <div className="mt-5 flex items-center gap-4">
+        <div className="h-2 w-full max-w-[220px] overflow-hidden rounded-full bg-input">
+          <div
+            className="h-full rounded-full bg-primary transition-[width]"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        <span className="text-sm font-semibold text-primary tabular-nums">
+          {done} / {list.length} Kapitel
+        </span>
+      </div>
 
       {!unlocked ? (
-        <div className="mt-6 rounded-lg border border-border bg-muted p-5">
-          <p className="text-sm font-medium">Dieses Buch ist noch nicht freigeschaltet.</p>
+        <div className="mt-6 rounded-2xl border border-border bg-card p-6">
+          <p className="text-sm font-semibold">
+            Dieses Buch ist noch nicht freigeschaltet.
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Gliederung anpassen ist kostenlos. Zum Kapitel-Schreiben, Cover,
             KDP-Listing und PDF schalte das Buch frei (einmalig 19,99 € oder im
@@ -91,14 +103,18 @@ export default async function ProjektPage({
         </div>
       )}
 
-      <div className="mt-12 space-y-12">
+      <div className="mt-10 space-y-5">
         {list.map((chapter, index) => (
-          <article key={chapter.id} className="border-t border-border pt-6">
+          <article
+            key={chapter.id}
+            className="rounded-2xl border border-border bg-card p-6 sm:p-7"
+          >
             <ChapterEditor
               chapterId={chapter.id}
               number={index + 1}
               heading={chapter.heading}
               summary={chapter.summary ?? ""}
+              status={chapter.status}
               isFirst={index === 0}
               isLast={index === list.length - 1}
               hasContent={Boolean(chapter.content)}

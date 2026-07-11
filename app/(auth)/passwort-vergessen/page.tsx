@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 export default function PasswortVergessenPage() {
   return (
     <div>
-      <h1 className="text-2xl font-medium tracking-tight">Passwort vergessen</h1>
+      <h1 className="font-display text-2xl font-bold tracking-tight">Passwort vergessen</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Gib deine E-Mail-Adresse ein. Wir schicken dir einen Link, mit dem du
         ein neues Passwort setzen kannst.

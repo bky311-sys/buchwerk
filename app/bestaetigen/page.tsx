@@ -27,7 +27,7 @@ export default async function BestaetigenPage({ searchParams }: Props) {
         <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
           Buchwerk.info
         </p>
-        <h1 className="mt-4 text-3xl font-medium tracking-tight sm:text-4xl">
+        <h1 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
           {copy.headline}
         </h1>
         <p className="mt-6 text-base leading-relaxed text-muted-foreground">

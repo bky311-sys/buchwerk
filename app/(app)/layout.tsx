@@ -21,7 +21,7 @@ export default async function AppLayout({
 
   return (
     <>
-      <header className="border-b border-border">
+      <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link href="/dashboard" aria-label="buchwerk – Dashboard">
             <Wordmark />

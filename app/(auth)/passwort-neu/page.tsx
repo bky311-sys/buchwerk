@@ -18,7 +18,7 @@ export default async function PasswortNeuPage() {
   if (!user) {
     return (
       <div>
-        <h1 className="text-2xl font-medium tracking-tight">
+        <h1 className="font-display text-2xl font-bold tracking-tight">
           Link abgelaufen
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -39,7 +39,7 @@ export default async function PasswortNeuPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-medium tracking-tight">Neues Passwort</h1>
+      <h1 className="font-display text-2xl font-bold tracking-tight">Neues Passwort</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Wähle ein neues Passwort für dein Buchwerk-Konto.
       </p>

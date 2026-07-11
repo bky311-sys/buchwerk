@@ -6,49 +6,63 @@
 
 /*
   Buchwerk.info — Design-Tokens
-  Palette: "Werkstatt 3b" mit Flaschengrün-Akzent
+  Palette: "Studio" — Paper-Grund, Flaschengrün + Clay-Akzent
+  Typografie: Bricolage Grotesque (Display) + Instrument Sans (Body)
   Single Source of Truth: docs/DESIGN.md
   Dark-Mode ist im MVP bewusst nicht aktiviert.
 */
 
 :root {
   /* Surface */
-  --background: #F5F1EB;
-  --foreground: #1F1B15;
-  --card: #F5F1EB;
-  --card-foreground: #1F1B15;
-  --popover: #F5F1EB;
-  --popover-foreground: #1F1B15;
+  --background: #efede7; /* Paper — Body, große Flächen */
+  --foreground: #17140f; /* Ink — Fließtext, Headlines */
+  --card: #ffffff; /* Surface — weiße Karten auf Paper */
+  --card-foreground: #17140f;
+  --popover: #ffffff;
+  --popover-foreground: #17140f;
 
   /* Text hierarchy */
-  --muted: #EDE7DC;
-  --muted-foreground: #6B5E4F;
+  --muted: #f7f5f0; /* subtile Fläche (Felder, Code) */
+  --muted-foreground: #6b6459; /* Begleittext, Labels */
 
   /* Accent / CTA */
-  --primary: #2E6B3D;
-  --primary-foreground: #FFFFFF;
-  --secondary: #EDE7DC;
-  --secondary-foreground: #1F1B15;
-  --accent: #EDE7DC;
-  --accent-foreground: #1F1B15;
+  --primary: #1c6b43; /* Flaschengrün */
+  --primary-foreground: #ffffff;
+  --secondary: #efede7; /* Paper als Sekundär-Button */
+  --secondary-foreground: #17140f;
+  --accent: #f7f5f0; /* Hover-Fläche */
+  --accent-foreground: #17140f;
 
   /* Borders & inputs */
-  --border: #D6CDBF;
-  --input: #D6CDBF;
-  --ring: #2E6B3D;
+  --border: #e4e0d6;
+  --input: #dcd6c8;
+  --ring: #1c6b43;
 
   /* Feedback */
-  --destructive: #A8391A;
-  --destructive-foreground: #FFFFFF;
+  --destructive: #a8391a;
+  --destructive-foreground: #ffffff;
 
-  --radius: 0.5rem;
+  /* Studio-Erweiterungen */
+  --canvas: #e4e0d6; /* dunkelstes Paper — optionale Seitenfläche */
+  --clay: #c4744f; /* dekorativer Akzent (Fills, Nummern) */
+  --clay-strong: #a8562f; /* Clay als Text (AA-tauglich) */
+  --clay-foreground: #ffffff;
+  --success: #1c6b43; /* Status "fertig" */
+  --success-tint: #e6f0e9;
+  --warning-tint: #f7eae2; /* Status "in Arbeit / Entwurf" */
+
+  --radius: 0.75rem; /* 12px Basis; Karten rounded-2xl, CTAs rounded-full */
 }
 
 @theme inline {
-  --font-sans: "Inter Variable", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Instrument Sans Variable", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Instrument Sans Variable",
+    system-ui, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -61,16 +75,22 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-clay: var(--clay);
+  --color-clay-strong: var(--clay-strong);
+  --color-clay-foreground: var(--clay-foreground);
+  --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
+  --color-warning-tint: var(--warning-tint);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) * 0.55);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.5);
 }
 
 @layer base {
@@ -79,9 +99,13 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "ss01", "cv11";
   }
   html {
     @apply font-sans antialiased;
+  }
+  /* Display-Schrift für Headlines & Wortmarke */
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
   }
 }

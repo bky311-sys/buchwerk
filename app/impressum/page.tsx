@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Anbieterkennzeichnung und Kontakt für Buchwerk.info.",
 };
 
-const sectionTitleClass = "text-lg font-medium text-foreground";
+const sectionTitleClass = "font-display text-lg font-semibold text-foreground";
 const linkClass =
   "underline underline-offset-4 hover:text-foreground break-words";
 
@@ -17,7 +17,7 @@ export default function ImpressumPage() {
         <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
           Buchwerk.info
         </p>
-        <h1 className="mt-4 text-3xl font-medium tracking-tight sm:text-4xl">
+        <h1 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
           Impressum
         </h1>
 

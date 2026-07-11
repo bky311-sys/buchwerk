@@ -15,7 +15,7 @@ import {
 import type { CoverModel } from "@/lib/ai/replicate";
 
 const TEXTAREA_CLASS =
-  "flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50";
+  "flex w-full rounded-xl border border-input bg-muted px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50";
 
 type Cover = {
   id: string;
@@ -90,7 +90,7 @@ export function CoverStudio({
 
   return (
     <div className="mt-8 space-y-8">
-      <section className="rounded-lg border border-border bg-muted p-6 space-y-4">
+      <section className="space-y-4 rounded-2xl border border-border bg-card p-6 sm:p-7">
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-2">
             <Label htmlFor="cover-prompt">Bildbeschreibung (Prompt)</Label>
@@ -125,6 +125,7 @@ export function CoverStudio({
                 checked={model === "schnell"}
                 onChange={() => setModel("schnell")}
                 disabled={isPending}
+                className="size-4 accent-primary"
               />
               Entwurf (schnell, ~0,003 $)
             </label>
@@ -135,6 +136,7 @@ export function CoverStudio({
                 checked={model === "pro"}
                 onChange={() => setModel("pro")}
                 disabled={isPending}
+                className="size-4 accent-primary"
               />
               Final (beste Qualität, ~0,04 $)
             </label>
@@ -158,7 +160,7 @@ export function CoverStudio({
       </section>
 
       <section>
-        <h2 className="text-lg font-medium">Entwürfe</h2>
+        <h2 className="font-display text-lg font-semibold">Entwürfe</h2>
         {covers.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">
             Noch keine Cover. Generiere oben dein erstes.
@@ -212,7 +214,9 @@ export function CoverStudio({
       </section>
 
       <section className="border-t border-border pt-6">
-        <h2 className="text-lg font-medium">Fertiges Cover-PDF</h2>
+        <h2 className="font-display text-lg font-semibold">
+          Fertiges Cover-PDF
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Vorderseite mit Titel + Autor, Rückseite mit Klappentext aus dem
           KDP-Listing.
@@ -242,7 +246,7 @@ export function CoverStudio({
 
         <div className="mt-5">
           {hasSelected ? (
-            <Button asChild size="lg">
+            <Button asChild size="lg" variant="ink">
               <a href={`/projekte/${projectId}/cover/pdf`} download>
                 Cover-PDF herunterladen
               </a>

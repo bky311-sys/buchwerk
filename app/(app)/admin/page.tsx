@@ -61,7 +61,7 @@ export default async function AdminPage() {
   return (
     <div className="mt-8 space-y-12">
       <section>
-        <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+        <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
           Überblick
         </h1>
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -75,7 +75,7 @@ export default async function AdminPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-medium">Nutzer ({users.length})</h2>
+        <h2 className="font-display text-lg font-semibold">Nutzer ({users.length})</h2>
         {users.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">Noch keine Nutzer.</p>
         ) : (
@@ -103,7 +103,7 @@ export default async function AdminPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-medium">
+        <h2 className="font-display text-lg font-semibold">
           Warteliste-Anmeldungen ({wl.length})
         </h2>
         {wl.length === 0 ? (

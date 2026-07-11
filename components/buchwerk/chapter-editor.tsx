@@ -11,12 +11,14 @@ import {
   moveChapterAction,
   type ActionResult,
 } from "@/lib/books/actions";
+import { StatusBadge } from "@/components/buchwerk/status-badge";
 
 type Props = {
   chapterId: string;
   number: number;
   heading: string;
   summary: string;
+  status: string;
   isFirst: boolean;
   isLast: boolean;
   hasContent: boolean;
@@ -27,6 +29,7 @@ export function ChapterEditor({
   number,
   heading,
   summary,
+  status,
   isFirst,
   isLast,
   hasContent,
@@ -63,9 +66,18 @@ export function ChapterEditor({
   return (
     <header className="space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium text-muted-foreground tabular-nums">
-          Kapitel {number}
-        </span>
+        <div className="flex items-center gap-2.5">
+          <span className="font-display text-sm font-bold text-muted-foreground tabular-nums">
+            {String(number).padStart(2, "0")}
+          </span>
+          {status === "fertig" && hasContent ? (
+            <StatusBadge intent="done">✓ Fertig</StatusBadge>
+          ) : hasContent ? (
+            <StatusBadge intent="draft">Entwurf</StatusBadge>
+          ) : (
+            <StatusBadge intent="neutral">Offen</StatusBadge>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           <Button
             type="button"
@@ -135,7 +147,7 @@ export function ChapterEditor({
               onChange={(event) => setSummaryValue(event.target.value)}
               disabled={isPending}
               rows={2}
-              className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div className="flex gap-2">
@@ -169,7 +181,9 @@ export function ChapterEditor({
         </div>
       ) : (
         <>
-          <h2 className="text-xl font-medium tracking-tight">{heading}</h2>
+          <h2 className="font-display text-xl font-semibold tracking-tight">
+            {heading}
+          </h2>
           {summary ? (
             <p className="text-sm text-muted-foreground">{summary}</p>
           ) : null}

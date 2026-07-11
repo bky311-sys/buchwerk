@@ -3,167 +3,137 @@
 **Single Source of Truth für alle Design-Entscheidungen.**
 Wenn etwas hier steht und im Code anders ist, ist der Code falsch — nicht dieses Dokument.
 
+Aktuelles System: **„Studio"** (seit 2026-07-11). Vorgänger „Werkstatt 3b" siehe Änderungshistorie.
+
 ---
 
-## 1. Farbpalette „Werkstatt 3b"
+## 1. Farbpalette „Studio"
 
-Erdtöne mit Flaschengrün als Akzent. Positionierung: Werkstatt, Verlag, Handwerk — bewusster Gegenentwurf zum typischen Silicon-Valley-SaaS-Look.
+Warmes Paper als Grund, weiße Karten für Tiefe, kräftiges Flaschengrün als CTA,
+Clay (Terracotta) als sparsamer Akzent. Positionierung: modern, klar, app-nah —
+Werkstatt-/Verlags-Charakter, aber mit mehr Struktur und Farbe als der Vorgänger.
 
 ### 1.1 Tokens (Light-Mode)
 
 | Rolle | Token | HEX | Verwendung |
 |---|---|---|---|
-| Hintergrund | `--background` | `#F5F1EB` | Body, große Flächen |
-| Vordergrund (Text primär) | `--foreground` | `#1F1B15` | Fließtext, Headlines |
-| Text sekundär | `--muted-foreground` | `#6B5E4F` | Begleittext, Labels, Platzhalter |
-| Card-Hintergrund | `--card` | `#F5F1EB` | identisch mit Hintergrund (flache Hierarchie) |
-| Card-Vordergrund | `--card-foreground` | `#1F1B15` | Text auf Cards |
-| Akzent / CTA | `--primary` | `#2E6B3D` | Primärbuttons, aktive Links, Fokus-Ringe |
+| Hintergrund (Paper) | `--background` | `#EFEDE7` | Body, große Flächen |
+| Vordergrund (Ink) | `--foreground` | `#17140F` | Fließtext, Headlines |
+| Karte (Surface) | `--card` | `#FFFFFF` | weiße Karten auf Paper |
+| Karte-Vordergrund | `--card-foreground` | `#17140F` | Text auf Karten |
+| Text sekundär | `--muted-foreground` | `#6B6459` | Begleittext, Labels |
+| Muted-Fläche | `--muted` | `#F7F5F0` | weiche Felder (Textareas, KDP-Felder) |
+| Akzent / CTA | `--primary` | `#1C6B43` | Primärbuttons, aktive Links, Fokus-Ringe |
 | Akzent-Vordergrund | `--primary-foreground` | `#FFFFFF` | Text auf Primärbuttons |
-| Rahmen | `--border` | `#D6CDBF` | Linien, Card-Ränder, Inputs |
-| Input-Rahmen | `--input` | `#D6CDBF` | Form-Felder (identisch mit Border) |
-| Muted-Fläche | `--muted` | `#EDE7DC` | subtile Hintergrundfläche (z. B. Code-Blocks) |
-| Fokus-Ring | `--ring` | `#2E6B3D` | Outline bei Tastatur-Fokus |
+| Sekundär | `--secondary` | `#EFEDE7` | Sekundärbuttons |
+| Rahmen | `--border` | `#E4E0D6` | Linien, Karten-Ränder |
+| Input-Rahmen | `--input` | `#DCD6C8` | Form-Felder |
+| Fokus-Ring | `--ring` | `#1C6B43` | Outline bei Tastatur-Fokus |
 | Fehler | `--destructive` | `#A8391A` | Fehlertext, Warnungen |
-| Fehler-Vordergrund | `--destructive-foreground` | `#FFFFFF` | Text auf Fehler-Flächen |
+| Canvas | `--canvas` | `#E4E0D6` | dunkelstes Paper (optionale Seitenfläche) |
+| Clay (dekorativ) | `--clay` | `#C4744F` | dekorative Akzente (Fills, Kreise) |
+| Clay (Text) | `--clay-strong` | `#A8562F` | Clay als Text (Nummern), AA-tauglich |
+| Erfolg | `--success` / `--success-tint` | `#1C6B43` / `#E6F0E9` | Status „Fertig" (Chip) |
+| Warnung/Entwurf | `--warning-tint` | `#F7EAE2` | Status „Entwurf / in Arbeit" (Chip-Fläche, Clay-Text) |
 
 ### 1.2 CSS-Variablen
 
-```css
-:root {
-  /* Surface */
-  --background: #F5F1EB;
-  --foreground: #1F1B15;
-  --card: #F5F1EB;
-  --card-foreground: #1F1B15;
-  --popover: #F5F1EB;
-  --popover-foreground: #1F1B15;
-
-  /* Text hierarchy */
-  --muted: #EDE7DC;
-  --muted-foreground: #6B5E4F;
-
-  /* Accent / CTA */
-  --primary: #2E6B3D;
-  --primary-foreground: #FFFFFF;
-  --secondary: #EDE7DC;
-  --secondary-foreground: #1F1B15;
-  --accent: #EDE7DC;
-  --accent-foreground: #1F1B15;
-
-  /* Borders & Inputs */
-  --border: #D6CDBF;
-  --input: #D6CDBF;
-  --ring: #2E6B3D;
-
-  /* Feedback */
-  --destructive: #A8391A;
-  --destructive-foreground: #FFFFFF;
-
-  --radius: 0.5rem;
-}
-```
+Vollständig in `app/globals.css` unter `:root`. Farb-Utilities werden über
+`@theme inline` als Tailwind-Klassen verfügbar gemacht (`bg-card`, `text-primary`,
+`text-clay-strong`, `bg-success-tint`, `bg-warning-tint` usw.).
 
 ### 1.3 Dark-Mode
 
-Dark-Mode ist im MVP **bewusst nicht aktiviert** (siehe CLAUDE.md → Styling-Regeln). Die `.dark { ... }`-Variante wird ergänzt, sobald wir eine Entscheidung getroffen haben, was der Dark-Mode zur Marke beiträgt. Bis dahin: keine Platzhalter, die später falsch sein könnten.
+Dark-Mode ist im MVP **bewusst nicht aktiviert** (siehe CLAUDE.md → Styling-Regeln).
 
 ---
 
 ## 2. WCAG-Kontrastprüfung
 
-Alle Kombinationen, die in der UI auftreten können, mit errechnetem Kontrast nach WCAG 2.1:
+Für Body-Text gilt AA normal (≥ 4.5 : 1) als Mindestanforderung.
 
 | Vordergrund | Hintergrund | Kontrast | Bewertung |
 |---|---|---|---|
-| `--foreground` (`#1F1B15`) | `--background` (`#F5F1EB`) | **15.0 : 1** | AAA (normal + large) |
-| `--muted-foreground` (`#6B5E4F`) | `--background` (`#F5F1EB`) | **5.5 : 1** | AA normal, AAA large |
-| `--primary-foreground` (`#FFFFFF`) | `--primary` (`#2E6B3D`) | **6.3 : 1** | AA normal, AAA large |
-| `--destructive-foreground` (`#FFFFFF`) | `--destructive` (`#A8391A`) | **6.5 : 1** | AA normal, AAA large |
-| `--destructive` (`#A8391A`) als Text | `--background` (`#F5F1EB`) | **5.7 : 1** | AA normal, AAA large |
-| `--foreground` (`#1F1B15`) | `--muted` (`#EDE7DC`) | **13.2 : 1** | AAA |
-| `--border` (`#D6CDBF`) | `--background` (`#F5F1EB`) | 1.4 : 1 | nur dekorativ (Linien), nicht für Text |
+| `--foreground` (`#17140F`) | `--background` (`#EFEDE7`) | ~16 : 1 | AAA |
+| `--foreground` (`#17140F`) | `--card` (`#FFFFFF`) | ~18 : 1 | AAA |
+| `--muted-foreground` (`#6B6459`) | `--background` (`#EFEDE7`) | ~5.0 : 1 | AA normal |
+| `--muted-foreground` (`#6B6459`) | `--card` (`#FFFFFF`) | ~5.5 : 1 | AA normal |
+| `--primary-foreground` (`#FFFFFF`) | `--primary` (`#1C6B43`) | ~5.9 : 1 | AA normal, AAA large |
+| `--clay-strong` (`#A8562F`) als Text | `--card` (`#FFFFFF`) | ~4.7 : 1 | AA normal |
+| `--clay-strong` (`#A8562F`) als Text | `--warning-tint` (`#F7EAE2`) | ~4.3 : 1 | AA large / Chips (Bold) |
+| `--success` (`#1C6B43`) als Text | `--success-tint` (`#E6F0E9`) | ~5.0 : 1 | AA normal |
 
-**Regel:** Für Body-Text gilt AA normal (≥ 4.5 : 1) als Mindestanforderung. Alle aktuell spezifizierten Text-/Hintergrund-Kombinationen erfüllen das. Wenn neue Kombinationen im Code auftauchen, hier ergänzen und prüfen.
+**Regel:** Clay wird als Text ausschließlich in der dunkleren Variante
+`--clay-strong` verwendet. Das hellere `--clay` (`#C4744F`) ist rein dekorativ
+(Fills, Kreise) und trägt keinen kritischen Text. Neue Kombinationen hier ergänzen.
 
 ---
 
 ## 3. Typografie
 
-### 3.1 Schrift
+### 3.1 Schriften — self-hosted, kein Google-CDN
 
-**Inter Variable** — eine einzige Schrift für die ganze Plattform, self-hosted via `@fontsource-variable/inter`.
+Zwei Schriften, beide self-hosted via `@fontsource-variable/*` (DSGVO — kein
+externer Request):
 
-- Kein Google Fonts CDN (DSGVO-kritisch, siehe CLAUDE.md)
-- Kein Serif-Akzent
-- Variable-Font: Weights kommen aus derselben Datei, kein separates Laden pro Weight
+- **Display:** Bricolage Grotesque Variable (`@fontsource-variable/bricolage-grotesque`)
+  → Headlines und Wortmarke. Utility-Klasse `.font-display` (setzt Family +
+  `letter-spacing: -0.02em`). Weights 600–800.
+- **Body:** Instrument Sans Variable (`@fontsource-variable/instrument-sans`)
+  → alles andere. Default `--font-sans`. Weights 400–600.
 
-### 3.2 Verwendete Weights
+Import in `app/layout.tsx`. Family-Namen: `"Bricolage Grotesque Variable"`,
+`"Instrument Sans Variable"`.
 
-Nur zwei Weights werden tatsächlich eingesetzt:
+### 3.2 Verwendung
 
-- **400 (Regular)** — Fließtext, Labels, Default
-- **500 (Medium)** — Headlines (h1–h4), Button-Text, Hervorhebungen
-
-Weitere Weights werden nicht verwendet. Wenn ein Entwurf mehr Gewichte verlangt, erst hier diskutieren, dann eintragen.
-
-### 3.3 Textskala
-
-Tailwind-Default-Skala. Typische Anwendung:
-
-| Klasse | Größe / Line-Height | Verwendung |
-|---|---|---|
-| `text-5xl font-medium` | 48 / 1 | Hero-Headline |
-| `text-3xl font-medium` | 30 / 2.25rem | Section-Headline |
-| `text-xl font-medium` | 20 / 1.75rem | Subheadline |
-| `text-base` | 16 / 1.5rem | Fließtext |
-| `text-sm text-muted-foreground` | 14 / 1.25rem | Begleittext, Labels |
-| `text-xs` | 12 / 1rem | Footer, Meta, Formular-Fehler |
-
-### 3.4 Tracking & Leading
-
-- Headlines: `tracking-tight` (-0.025em) — kompakter, buchtypografischer Look
-- Body: Default-Tracking (0)
-- Lange Textspalten: `leading-relaxed` für Lesetexte > 3 Zeilen
+| Element | Klassen |
+|---|---|
+| Hero-Headline | `font-display text-5xl/6xl/7xl font-extrabold tracking-tight` |
+| Section-Headline | `font-display text-3xl/4xl font-bold tracking-tight` |
+| Karten-/Sub-Headline | `font-display text-lg/xl font-semibold` |
+| Nummern-Label | `font-display font-bold` (Clay via `text-clay-strong` oder `text-primary`) |
+| Fließtext | Instrument Sans, `text-base` |
+| Begleittext/Labels | `text-sm text-muted-foreground` |
 
 ---
 
-## 4. Spacing
+## 4. Formen & Radien
 
-Tailwind-Default-Skala (4-px-Basis). Kein eigenes Spacing-System — wenn wir später Tokens brauchen (`spacing-page`, `spacing-section`), hier ergänzen.
-
-**Faustregeln:**
-
-- Sektionen auf der Landing Page: vertikaler Abstand `py-16` bis `py-24`
-- Card-Innenabstand: `p-6`
-- Abstand zwischen verwandten Elementen (z. B. Label → Input): `space-y-2`
-- Abstand zwischen unterschiedlichen Blöcken in einer Card: `space-y-6`
-- Max. Textspaltenbreite für Lesbarkeit: `max-w-prose` (~65 Zeichen) bei Fließtext
+- `--radius: 0.75rem` (12px) als Basis
+- **Karten:** `rounded-2xl` (~18px), weiß auf Paper, `border-border`
+- **CTAs / Buttons:** `rounded-full` (Pill) — siehe `components/ui/button.tsx`
+- **Inputs:** `rounded-xl`, weiße Fläche (`bg-card`)
+- **Status-Chips:** `rounded-lg`, siehe `components/buchwerk/status-badge.tsx`
 
 ---
 
-## 5. Formen & Radien
+## 5. Komponenten-Bausteine
 
-- `--radius: 0.5rem` (8 px) als Default — moderat gerundet, nicht verspielt
-- Buttons, Inputs, Cards verwenden diese Radius-Variable
-- Keine doppelt gerundeten Formen (nested Cards mit großem Radius im großen Radius)
+- **Button** (`components/ui/button.tsx`): Pill-Form. Varianten `default` (grün),
+  `ink` (dunkel), `secondary` (Paper), `outline`, `ghost`, `destructive`, `link`.
+- **StatusBadge** (`components/buchwerk/status-badge.tsx`): `done` (grün),
+  `draft` (clay), `neutral` (gedämpft).
+- **Wordmark** (`components/buchwerk/wordmark.tsx`): grünes Badge mit Buch-Glyph +
+  „buchwerk." in Display-Schrift.
+- **Fortschrittsbalken:** `h-2 rounded-full bg-input` mit `bg-primary`-Füllung
+  (Breite als einziger zulässiger Inline-Style, weil Laufzeitwert).
 
 ---
 
 ## 6. Fokus-Zustände
 
-Tastatur-Fokus ist **sichtbar und farbig**, nicht nur ein schwacher Systemring.
-
-```css
-/* Default-Pattern für alle interaktiven Elemente */
-outline: 2px solid var(--ring);
-outline-offset: 2px;
-```
-
-Begründung: Barrierefreiheit, Tastaturnutzung muss gleichwertig zu Maus sein. Das Flaschengrün des Rings ist auf Sand-Hintergrund deutlich erkennbar.
+Tastatur-Fokus sichtbar und farbig (Flaschengrün-Ring), nicht nur Systemring.
+Umsetzung über die `focus-visible:ring-*`-Utilities in Button/Input.
 
 ---
 
 ## 7. Änderungshistorie
 
-- **2026-04-18** — initial, Palette „Werkstatt 3b" (Flaschengrün-Variante), Inter Variable 400/500
+- **2026-04-18** — initial, Palette „Werkstatt 3b" (Sand `#F5F1EB`, Flaschengrün
+  `#2E6B3D`), Inter Variable 400/500.
+- **2026-07-11** — Redesign auf **„Studio"** (Vorlage: Claude-Design
+  „Buchwerk Studio.dc.html"). Paper `#EFEDE7` + weiße Karten, Grün `#1C6B43`,
+  Clay-Akzent `#C4744F`. Typografie neu: Bricolage Grotesque (Display) +
+  Instrument Sans (Body), beide self-hosted. Buttons als Pills, Status-Chips,
+  Fortschrittsbalken. Inter entfernt.

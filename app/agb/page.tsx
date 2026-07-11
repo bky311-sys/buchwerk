@@ -175,7 +175,7 @@ const SECTIONS: Section[] = [
 export default function AgbPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-20">
-      <h1 className="text-3xl font-medium tracking-tight">
+      <h1 className="font-display text-3xl font-bold tracking-tight">
         Allgemeine Geschäftsbedingungen
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">{STAND}</p>
@@ -183,7 +183,7 @@ export default function AgbPage() {
       <div className="mt-10 space-y-8">
         {SECTIONS.map((section) => (
           <section key={section.title}>
-            <h2 className="text-lg font-medium">{section.title}</h2>
+            <h2 className="font-display text-lg font-semibold">{section.title}</h2>
             <div className="mt-2 space-y-2 text-base leading-relaxed text-muted-foreground">
               {section.paragraphs.map((p, i) => (
                 <p key={i}>{p}</p>

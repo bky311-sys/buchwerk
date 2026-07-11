@@ -226,6 +226,9 @@ Hier werden zentrale Architektur- und Produktentscheidungen dokumentiert, damit 
 ### 2026-04-18: Next.js 16 statt 15
 **Grund:** `create-next-app@latest` hat bei Initialisierung am 18.04.2026 Next.js 16.2.4 installiert. Kein inhaltlicher Grund, auf 15 zu downgraden — App Router, Tailwind 4, TypeScript-Setup identisch, Breaking Changes gegenüber 15 für unsere Anwendungsfälle minimal. Dokumentation in CLAUDE.md entsprechend angepasst.
 
+### 2026-07-11: Redesign auf Palette „Studio" (Bricolage + Instrument Sans)
+**Grund:** Umsetzung des Claude-Designs „Buchwerk Studio.dc.html". Ablösung von „Werkstatt 3b": Paper-Grund `#EFEDE7` mit weißen Karten (mehr Tiefe/Hierarchie), kräftigeres Flaschengrün `#1C6B43` als CTA, Clay `#C4744F` als sparsamer Akzent. Typografie von Inter auf ein Zweischrift-System umgestellt: **Bricolage Grotesque** (Display, Headlines/Wortmarke) + **Instrument Sans** (Body) — beide weiterhin self-hosted via `@fontsource-variable/*` (kein Google-CDN, DSGVO). Buttons als Pills, neue Bausteine `StatusBadge` und Fortschrittsbalken. Umsetzung rein über Design-Tokens in `app/globals.css`, daher kaskadiert der neue Look über alle Seiten. Details + Kontraste in `docs/DESIGN.md`. Inter-Package entfernt.
+
 ---
 
 ## Bei Zweifeln

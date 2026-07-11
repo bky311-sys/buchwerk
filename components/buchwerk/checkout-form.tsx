@@ -35,17 +35,24 @@ export function CheckoutForm({ projectId }: { projectId: string }) {
   return (
     <div className="mt-8 space-y-8">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col rounded-lg border border-border p-6">
-          <h2 className="text-lg font-medium">Dieses Buch</h2>
-          <p className="mt-1 text-3xl font-medium">19,99 €</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+        <div className="relative flex flex-col rounded-2xl border-2 border-primary bg-card p-6">
+          <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+            Empfohlen fürs erste Buch
+          </span>
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            Dieses Buch
+          </h2>
+          <p className="font-display mt-1.5 text-4xl font-bold text-foreground">
+            19,99 €
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
             Einmalig. Schaltet die Produktion für dieses Buchprojekt dauerhaft
             frei.
           </p>
           <Button
             type="button"
             size="lg"
-            className="mt-4"
+            className="mt-5 w-full"
             disabled={!consent || isPending}
             onClick={buyBook}
           >
@@ -53,19 +60,22 @@ export function CheckoutForm({ projectId }: { projectId: string }) {
           </Button>
         </div>
 
-        <div className="flex flex-col rounded-lg border border-border p-6">
-          <h2 className="text-lg font-medium">Abo</h2>
-          <p className="mt-1 text-3xl font-medium">
-            29,99 € <span className="text-base text-muted-foreground">/ Monat</span>
+        <div className="flex flex-col rounded-2xl border border-border bg-card p-6">
+          <h2 className="text-sm font-semibold text-muted-foreground">Abo</h2>
+          <p className="font-display mt-1.5 text-4xl font-bold text-foreground">
+            29,99{" "}
+            <span className="text-base font-medium text-muted-foreground">
+              € / Monat
+            </span>
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-muted-foreground">
             Bis zu 10 Bücher pro Monat freischalten. Monatlich kündbar.
           </p>
           <Button
             type="button"
             size="lg"
             variant="secondary"
-            className="mt-4"
+            className="mt-5 w-full"
             disabled={!consent || isPending}
             onClick={subscribe}
           >
@@ -74,15 +84,15 @@ export function CheckoutForm({ projectId }: { projectId: string }) {
         </div>
       </div>
 
-      <fieldset className="space-y-3 rounded-lg border border-border bg-muted p-5">
-        <legend className="px-1 text-sm font-medium">Widerrufsrecht</legend>
+      <fieldset className="space-y-3 rounded-2xl border border-border bg-card p-6">
+        <legend className="px-1 text-sm font-semibold">Widerrufsrecht</legend>
         <label className="flex items-start gap-3 text-sm">
           <input
             type="checkbox"
             checked={consentImmediate}
             onChange={(e) => setConsentImmediate(e.target.checked)}
             disabled={isPending}
-            className="mt-1"
+            className="mt-0.5 size-4 accent-primary"
           />
           <span>
             Ich verlange ausdrücklich, dass Buchwerk mit der Leistung sofort
@@ -95,7 +105,7 @@ export function CheckoutForm({ projectId }: { projectId: string }) {
             checked={consentWaiver}
             onChange={(e) => setConsentWaiver(e.target.checked)}
             disabled={isPending}
-            className="mt-1"
+            className="mt-0.5 size-4 accent-primary"
           />
           <span>
             Mir ist bekannt, dass ich mit Beginn der Leistung mein Widerrufsrecht

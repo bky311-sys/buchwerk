@@ -42,7 +42,7 @@ export default async function AdminPosteingangPage() {
   return (
     <div className="mt-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+        <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
           Posteingang
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">

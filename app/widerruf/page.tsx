@@ -34,12 +34,12 @@ const BLOCKS: Block[] = [
 export default function WiderrufPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-20">
-      <h1 className="text-3xl font-medium tracking-tight">Widerrufsbelehrung</h1>
+      <h1 className="font-display text-3xl font-bold tracking-tight">Widerrufsbelehrung</h1>
 
       <div className="mt-10 space-y-8">
         {BLOCKS.map((block) => (
           <section key={block.title}>
-            <h2 className="text-lg font-medium">{block.title}</h2>
+            <h2 className="font-display text-lg font-semibold">{block.title}</h2>
             <div className="mt-2 space-y-2 text-base leading-relaxed text-muted-foreground">
               {block.paragraphs.map((p, i) => (
                 <p key={i}>{p}</p>
@@ -49,7 +49,7 @@ export default function WiderrufPage() {
         ))}
 
         <section>
-          <h2 className="text-lg font-medium">Muster-Widerrufsformular</h2>
+          <h2 className="font-display text-lg font-semibold">Muster-Widerrufsformular</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             (Wenn Sie den Vertrag widerrufen wollen, füllen Sie dieses Formular
             aus und senden Sie es zurück.)

@@ -31,7 +31,7 @@ export function EditableTitle({ projectId, title }: Props) {
   if (!editing) {
     return (
       <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-        <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+        <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
           {title}
         </h1>
         <Button

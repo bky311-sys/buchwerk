@@ -14,7 +14,7 @@ export default async function AnmeldenPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-medium tracking-tight">Willkommen zurück</h1>
+      <h1 className="font-display text-2xl font-bold tracking-tight">Willkommen zurück</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Melde dich mit deiner E-Mail-Adresse an.
       </p>
