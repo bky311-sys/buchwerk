@@ -1,26 +1,38 @@
 import type { Metadata } from "next";
 import { Wordmark } from "@/components/buchwerk/wordmark";
+import { WaitlistForm } from "@/components/buchwerk/waitlist-form";
 
 export const metadata: Metadata = {
   title: "Bald verfügbar — buchwerk.",
-  description: "Buchwerk ist bald für dich da.",
+  description:
+    "Buchwerk bringt dich vom Thema zum fertigen Buch — bald. Trag dich ein und sei zum Start dabei.",
   robots: { index: false, follow: false },
 };
 
 export default function BaldPage() {
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-24">
-      <div className="text-center">
+      <div className="w-full max-w-lg text-center">
         <div className="flex justify-center">
           <Wordmark />
         </div>
-        <h1 className="mt-8 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-          Bald verfügbar.
-        </h1>
-        <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-          Wir arbeiten gerade an Buchwerk. Die Plattform ist bald für dich da —
-          schau einfach demnächst wieder vorbei.
+        <p className="mt-10 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+          Bald verfügbar
         </p>
+        <h1 className="font-display mt-4 text-4xl font-extrabold leading-[1.02] tracking-tight text-foreground sm:text-5xl">
+          Vom Thema zum fertigen Buch.
+        </h1>
+        <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-muted-foreground">
+          Buchwerk bringt Manuskript, Cover und KDP-Listing in einen Workflow —
+          statt in fünf Tools. Wir legen gerade die letzten Meter zurück und
+          öffnen bald.
+        </p>
+        <p className="mx-auto mt-6 max-w-md text-sm text-foreground">
+          Sei zum Start dabei — wir sagen dir als Erstes Bescheid.
+        </p>
+        <div className="mt-4 flex justify-center">
+          <WaitlistForm source="coming_soon" />
+        </div>
       </div>
     </main>
   );

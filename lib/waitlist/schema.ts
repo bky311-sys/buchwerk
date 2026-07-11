@@ -4,7 +4,11 @@ import { z } from "zod";
  * Allowed entry points for waitlist signups. Keeps DB values controlled
  * so we can segment signups by placement later on.
  */
-export const WAITLIST_SOURCES = ["landing_hero", "landing_footer"] as const;
+export const WAITLIST_SOURCES = [
+  "landing_hero",
+  "landing_footer",
+  "coming_soon",
+] as const;
 export type WaitlistSource = (typeof WAITLIST_SOURCES)[number];
 
 export const waitlistPayloadSchema = z.object({

@@ -4,9 +4,9 @@ import "@fontsource-variable/bricolage-grotesque";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Buchwerk.info — KI-gestütztes Self-Publishing",
+  title: "Buchwerk — Vom Thema zum fertigen Buch",
   description:
-    "Vom Thema bis zum KDP-fertigen Buch in einem Workflow. Deutschsprachige Plattform für Self-Publishing mit KI.",
+    "Die deutschsprachige KI-Plattform fürs Self-Publishing: Manuskript, Cover und KDP-Listing in einem Workflow. Thema und Gliederung gratis, kein Abo-Zwang.",
 };
 
 export default function RootLayout({
