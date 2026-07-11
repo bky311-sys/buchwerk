@@ -15,6 +15,11 @@ type Props = {
   weiter?: string;
 };
 
+// Google login is only shown when it's actually configured in Supabase.
+// Enable by setting NEXT_PUBLIC_ENABLE_GOOGLE_AUTH="true" (and configuring the
+// Google provider in Supabase Auth). Otherwise the button would dead-end.
+const googleEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
+
 export function LoginForm({ weiter }: Props) {
   const [state, formAction, isPending] = useActionState(
     signInAction,
@@ -23,13 +28,16 @@ export function LoginForm({ weiter }: Props) {
 
   return (
     <div className="space-y-4">
-      <GoogleButton next={weiter ?? "/dashboard"} />
-
-      <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">oder</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
+      {googleEnabled ? (
+        <>
+          <GoogleButton next={weiter ?? "/dashboard"} />
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">oder</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      ) : null}
 
       <form action={formAction} className="space-y-4" noValidate>
         {weiter ? <input type="hidden" name="weiter" value={weiter} /> : null}

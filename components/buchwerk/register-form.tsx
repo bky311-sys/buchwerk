@@ -16,6 +16,9 @@ type Props = {
   weiter?: string;
 };
 
+// See login-form: only render Google when it's configured in Supabase.
+const googleEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
+
 export function RegisterForm({ weiter }: Props) {
   const [state, formAction, isPending] = useActionState(
     signUpAction,
@@ -39,16 +42,19 @@ export function RegisterForm({ weiter }: Props) {
 
   return (
     <div className="space-y-4">
-      <GoogleButton
-        next={weiter ?? "/dashboard"}
-        label="Mit Google registrieren"
-      />
-
-      <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">oder</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
+      {googleEnabled ? (
+        <>
+          <GoogleButton
+            next={weiter ?? "/dashboard"}
+            label="Mit Google registrieren"
+          />
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">oder</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      ) : null}
 
       <form action={formAction} className="space-y-4" noValidate>
         {weiter ? <input type="hidden" name="weiter" value={weiter} /> : null}
