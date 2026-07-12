@@ -8,7 +8,6 @@ import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
 import { ChapterContent } from "@/components/buchwerk/chapter-content";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
-import { ResearchPanel } from "@/components/buchwerk/research-panel";
 import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 import { Spinner } from "@/components/buchwerk/spinner";
 import {
@@ -17,7 +16,6 @@ import {
   countWords,
 } from "@/lib/books/generate";
 import { OUTLINE_RUNNING_STATUS } from "@/lib/books/outline-generate";
-import { RESEARCH_STALE_MS } from "@/lib/books/research";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
 import { OutlineActions } from "@/components/buchwerk/outline-actions";
 import { ShopPublish } from "@/components/buchwerk/shop-publish";
@@ -45,15 +43,6 @@ export default async function ProjektPage({
     .eq("id", id)
     .single();
   if (!project) notFound();
-
-  // Research columns are queried separately and best-effort: if the research
-  // migration hasn't been applied yet, this errors and the panel stays hidden
-  // instead of breaking the whole project page (same pattern as shopRow below).
-  const { data: researchRow } = await supabase
-    .from("projects")
-    .select("research, research_status, research_updated_at")
-    .eq("id", id)
-    .maybeSingle();
 
   const {
     data: { user },
@@ -145,17 +134,6 @@ export default async function ProjektPage({
     project.status === OUTLINE_RUNNING_STATUS &&
     outlineAgeMs < STALE_GENERATION_MS;
 
-  // Research (web-search dossier) generation state.
-  const researchStatus = researchRow?.research_status ?? "offen";
-  const researchAgeMs = researchRow?.research_updated_at
-    ? now - new Date(researchRow.research_updated_at).getTime()
-    : Infinity;
-  const researchGenerating =
-    researchStatus === "läuft" && researchAgeMs < RESEARCH_STALE_MS;
-  const researchStale =
-    (researchStatus === "läuft" && researchAgeMs >= RESEARCH_STALE_MS) ||
-    researchStatus === "fehler";
-
   // Total word count across written chapters — the book must clear 7000.
   const totalWords = list.reduce(
     (sum, c) => sum + (c.content ? countWords(c.content) : 0),
@@ -163,7 +141,7 @@ export default async function ProjektPage({
   );
   const belowMinimum = hasWrittenChapters && totalWords < MIN_TOTAL_WORDS;
 
-  const pollerActive = anyGenerating || outlineGenerating || researchGenerating;
+  const pollerActive = anyGenerating || outlineGenerating;
 
   // Buchshop: a finished book can be published by a subscriber.
   const finished = list.length > 0 && list.every((c) => Boolean(c.content));
@@ -174,18 +152,11 @@ export default async function ProjektPage({
       ? ("not_subscriber" as const)
       : null;
 
-  // Guided workflow: Recherche → Buch schreiben → Cover → KDP-Listing → Live.
+  // Guided workflow: Buch schreiben → Cover → KDP-Listing → Live. (Recherche
+  // läuft automatisch in der Kapitel-Pipeline, ist kein eigener Nutzerschritt.)
   // The first not-done required step becomes "current"; an optional step
-  // (Recherche, Veröffentlichen) that was skipped shows as optional.
-  const researchDone = Boolean(researchRow?.research?.trim());
+  // (Veröffentlichen) that was skipped shows as optional.
   const workflowRaw = [
-    {
-      label: "Recherche",
-      href: "#recherche",
-      cta: "Recherche starten",
-      done: researchDone,
-      optional: true,
-    },
     {
       label: "Buch schreiben",
       href: "#kapitel",
@@ -314,17 +285,6 @@ export default async function ProjektPage({
         </div>
       )}
 
-      {unlocked && researchRow ? (
-        <div id="recherche" className="mt-6 scroll-mt-6">
-          <ResearchPanel
-            projectId={project.id}
-            research={researchRow.research}
-            isGenerating={researchGenerating}
-            isStale={researchStale}
-          />
-        </div>
-      ) : null}
-
       <div id="kapitel" className="mt-10 space-y-5 scroll-mt-6">
         {list.map((chapter, index) => {
           const gen = genState.get(chapter.id) ?? {
@@ -371,6 +331,15 @@ export default async function ProjektPage({
           );
         })}
       </div>
+
+      {unlocked ? (
+        <div className="mt-10">
+          <p className="mb-3 text-sm font-semibold text-muted-foreground">
+            Wie geht&apos;s weiter?
+          </p>
+          <WorkflowStepper steps={workflowSteps} />
+        </div>
+      ) : null}
 
       {unlocked && shopRow ? (
         <div id="veroeffentlichen" className="mt-6 scroll-mt-6">

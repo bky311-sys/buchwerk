@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
+import { generateResearch } from "@/lib/books/research";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -95,8 +96,31 @@ export async function generateChapterContent(
     .map((c) => `${c.position}. ${c.heading} — ${c.summary ?? ""}`)
     .join("\n");
 
+  // Research runs automatically in the pipeline — no user step. If this project
+  // has no dossier yet, generate it now so the chapter is grounded in real
+  // sources. Best-effort: if it fails, the chapter is still written. The dossier
+  // is reused for every following chapter, so only the first chapter pays for it.
+  let dossier = researchRow?.research?.trim() ?? "";
+  let didInlineResearch = false;
+  if (!dossier) {
+    try {
+      const res = await generateResearch(chapter.project_id);
+      if (res.ok) {
+        const { data: refreshed } = await supabase
+          .from("projects")
+          .select("research")
+          .eq("id", chapter.project_id)
+          .maybeSingle();
+        dossier = refreshed?.research?.trim() ?? "";
+        didInlineResearch = true;
+      }
+    } catch {
+      // proceed without a dossier
+    }
+  }
+
   const recherche =
-    researchRow?.research?.trim() ||
+    dossier ||
     "(Kein Recherche-Dossier vorhanden. Schreibe sorgfältig nach bestem Wissen und erfinde keine Zahlen oder Quellen.)";
   const wortziel = chapterWordTarget((allChapters ?? []).length);
 
@@ -130,7 +154,10 @@ export async function generateChapterContent(
       .eq("id", chapter.id);
 
     // Enforce the minimum length: one deepen pass if the chapter came in short.
-    if (countWords(content) < wortziel * MIN_CHAPTER_RATIO) {
+    // Skip it when research just ran inline this call, so the first chapter
+    // (research + write) stays within the function time limit; a later
+    // regenerate can still deepen it.
+    if (!didInlineResearch && countWords(content) < wortziel * MIN_CHAPTER_RATIO) {
       const deepenPrompt = await loadPrompt("kapitel-vertiefen", {
         ...commonVars,
         ueberschrift: chapter.heading,
