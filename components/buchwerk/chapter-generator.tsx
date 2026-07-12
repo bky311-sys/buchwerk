@@ -14,10 +14,10 @@ type Props = {
   isGenerating: boolean;
   // The previous run got stuck (function killed before it could finish).
   isStale: boolean;
-  // Run the (decoupled) web research first, then write. Only enabled on a plan
-  // with a raised function limit, and only for the first chapter of a book
-  // without a dossier.
+  // Run the (decoupled, staged) web research first, then write. Only for the
+  // first chapter of a book without a dossier.
   willResearch: boolean;
+  researchStages: number;
 };
 
 export function ChapterGenerator({
@@ -27,10 +27,11 @@ export function ChapterGenerator({
   isGenerating,
   isStale,
   willResearch,
+  researchStages,
 }: Props) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
-  const [researching, setResearching] = useState(false);
+  const [researchStage, setResearchStage] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const busy = isGenerating || starting;
@@ -49,16 +50,22 @@ export function ChapterGenerator({
     setError(null);
     setStarting(true);
     try {
-      // Research is a separate request (it takes minutes) so the chapter write
-      // itself always stays well within the function limit and never aborts.
+      // Research runs in stages, each its own request under the time limit — so
+      // the chapter write itself stays fast and never aborts.
       if (willResearch) {
-        setResearching(true);
-        try {
-          await fetch(`/api/projekte/${projectId}/research`, { method: "POST" });
-        } catch {
-          // best-effort — the chapter is still written without a dossier
+        for (let s = 0; s < researchStages; s++) {
+          setResearchStage(s + 1);
+          try {
+            await fetch(`/api/projekte/${projectId}/research`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ stage: s }),
+            });
+          } catch {
+            // best-effort — the chapter is still written without a dossier
+          }
         }
-        setResearching(false);
+        setResearchStage(0);
         router.refresh();
       }
       const res = await fetch(`/api/chapters/${chapterId}/generate`, {
@@ -76,7 +83,7 @@ export function ChapterGenerator({
     } finally {
       router.refresh();
       setStarting(false);
-      setResearching(false);
+      setResearchStage(0);
     }
   }
 
@@ -84,8 +91,8 @@ export function ChapterGenerator({
     return (
       <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
         <Spinner className="size-4" />
-        {researching
-          ? "Die KI recherchiert dein Thema im Web (~2–3 Min.)…"
+        {researchStage > 0
+          ? `Die KI recherchiert dein Thema im Web — Etappe ${researchStage}/${researchStages}…`
           : "Wird geschrieben… (kann ~30 Sek. dauern)"}
       </div>
     );

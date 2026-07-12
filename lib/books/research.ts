@@ -7,27 +7,50 @@ import { gateProduction } from "@/lib/billing/access";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
-// A research run stuck in "läuft" longer than this is treated as failed (the
-// function was killed before it could write). Web search takes longer than plain
-// generation, so give it more headroom than chapter writing.
+// A research run stuck in "läuft" longer than this is treated as failed.
 export const RESEARCH_STALE_MS = 180_000;
+
+// Research is done in small stages, each its own request, so every stage stays
+// well under the 60 s function limit (measured: ~20–30 s per stage). The stages
+// are appended into one dossier.
+const RESEARCH_STAGES = [
+  {
+    title: "Fakten & Zahlen",
+    auftrag:
+      "Recherchiere belegte Fakten, aktuelle Zahlen, Studien und Daten zum Thema. Nenne konkrete Werte mit Stand/Jahr und jeweils die Quelle.",
+  },
+  {
+    title: "Begriffe & Irrtümer",
+    auftrag:
+      "Erkläre kurz die wichtigsten Fachbegriffe und benenne verbreitete Irrtümer zum Thema — jeweils mit dem, was stattdessen stimmt.",
+  },
+  {
+    title: "Material pro Kapitel & Quellen",
+    auftrag:
+      "Gehe die Kapitel-Gliederung durch und notiere für jede Überschrift 2–3 Stichpunkte, welche Fakten, Beispiele oder Quellen dort hineingehören. Liste am Ende die tatsächlich genutzten Quellen (Titel — URL).",
+  },
+];
+
+export const RESEARCH_TOTAL_STAGES = RESEARCH_STAGES.length;
 
 export type ResearchResult = { ok: boolean; error?: string };
 
 /**
- * Builds a per-book research dossier with Claude's web search tool and stores it
- * on the project. Runs behind /api/projekte/[id]/research so the UI can fire it
- * and poll `research_status` for the result. Sets research_status to "läuft"
- * before the call, then "fertig"/"fehler".
+ * Runs one research stage (web search) and appends it to the project's dossier.
+ * Stage 0 resets the dossier and marks it "läuft"; the last stage marks it
+ * "fertig". Each stage is a separate request, so none exceeds the time limit.
  */
-export async function generateResearch(
+export async function generateResearchStage(
   projectId: string,
+  stageIndex: number,
 ): Promise<ResearchResult> {
-  const supabase = await createClient();
+  const stage = RESEARCH_STAGES[stageIndex];
+  if (!stage) return { ok: false, error: "Ungültige Recherche-Etappe." };
 
+  const supabase = await createClient();
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, topic, audience")
+    .select("title, topic, audience")
     .eq("id", projectId)
     .single();
   if (!project) return { ok: false, error: "Projekt nicht gefunden." };
@@ -35,46 +58,58 @@ export async function generateResearch(
   const gate = await gateProduction(supabase, projectId);
   if (!gate.ok) return { ok: false, error: gate.error };
 
-  // Mark as running (commits immediately so the poller sees the spinner).
-  await supabase
-    .from("projects")
-    .update({
-      research_status: "läuft",
-      research_updated_at: new Date().toISOString(),
-    })
-    .eq("id", projectId);
+  if (stageIndex === 0) {
+    await supabase
+      .from("projects")
+      .update({
+        research: null,
+        research_status: "läuft",
+        research_updated_at: new Date().toISOString(),
+      })
+      .eq("id", projectId);
+  }
 
   const { data: chapters } = await supabase
     .from("chapters")
     .select("position, heading, summary")
     .eq("project_id", projectId)
     .order("position");
-
   const gliederung = (chapters ?? [])
     .map((c) => `${c.position}. ${c.heading} — ${c.summary ?? ""}`)
     .join("\n");
 
   try {
-    const prompt = await loadPrompt("recherche", {
+    const prompt = await loadPrompt("recherche-etappe", {
       titel: project.title ?? project.topic,
       thema: project.topic,
       zielgruppe: project.audience ?? DEFAULT_AUDIENCE,
       gliederung,
+      abschnitt: stage.title,
+      auftrag: stage.auftrag,
     });
-    const research = await claudeText({
+    const text = await claudeText({
       messages: [{ role: "user", content: prompt }],
-      maxTokens: 8000,
-      // Capped so web search + synthesis stays within the 60 s function limit.
-      webSearch: { maxUses: 4 },
+      maxTokens: 2000,
+      webSearch: { maxUses: 2 },
     });
 
-    if (!research.trim()) throw new Error("Leeres Dossier.");
+    const chunk = `## ${stage.title}\n\n${text.trim()}`;
+    const { data: current } = await supabase
+      .from("projects")
+      .select("research")
+      .eq("id", projectId)
+      .maybeSingle();
+    const combined =
+      stageIndex === 0 || !current?.research
+        ? chunk
+        : `${current.research}\n\n${chunk}`;
 
+    const isLast = stageIndex === RESEARCH_TOTAL_STAGES - 1;
     await supabase
       .from("projects")
       .update({
-        research,
-        research_status: "fertig",
+        research: combined,
+        research_status: isLast ? "fertig" : "läuft",
         research_updated_at: new Date().toISOString(),
       })
       .eq("id", projectId);
@@ -90,8 +125,7 @@ export async function generateResearch(
       .eq("id", projectId);
     return {
       ok: false,
-      error:
-        "Die Recherche konnte nicht erstellt werden. Versuch es noch einmal.",
+      error: "Diese Recherche-Etappe ist fehlgeschlagen.",
     };
   }
 }

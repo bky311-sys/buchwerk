@@ -1,16 +1,28 @@
 import { NextResponse } from "next/server";
-import { generateResearch } from "@/lib/books/research";
+import {
+  generateResearchStage,
+  RESEARCH_TOTAL_STAGES,
+} from "@/lib/books/research";
 
-// Web-search-backed research is the longest call in the app. It runs here, not
-// in a Server Action, so the client can fire it and poll research_status instead
-// of blocking on one long request.
+// One research stage per request so each stays under the function time limit.
 export const maxDuration = 60;
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const result = await generateResearch(id);
-  return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+  const body = (await request.json().catch(() => null)) as {
+    stage?: unknown;
+  } | null;
+  const stage =
+    typeof body?.stage === "number" && Number.isInteger(body.stage)
+      ? body.stage
+      : 0;
+
+  const result = await generateResearchStage(id, stage);
+  return NextResponse.json(
+    { ...result, stage, totalStages: RESEARCH_TOTAL_STAGES },
+    { status: result.ok ? 200 : 400 },
+  );
 }

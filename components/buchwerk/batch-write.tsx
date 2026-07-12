@@ -9,16 +9,23 @@ type Props = {
   projectId: string;
   // Ordered ids of chapters that still need to be written.
   chapterIds: string[];
-  // No research dossier yet → run it once up front so the per-chapter writes
-  // stay fast and within the function time limit.
+  // No research dossier yet → run it (in stages) once up front so the per-chapter
+  // writes stay fast and within the function time limit.
   needsResearch: boolean;
+  researchStages: number;
 };
 
 type Phase = "idle" | "research" | "writing";
 
-export function BatchWrite({ projectId, chapterIds, needsResearch }: Props) {
+export function BatchWrite({
+  projectId,
+  chapterIds,
+  needsResearch,
+  researchStages,
+}: Props) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
+  const [researchStage, setResearchStage] = useState(0);
   const [doneCount, setDoneCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,13 +43,21 @@ export function BatchWrite({ projectId, chapterIds, needsResearch }: Props) {
     setError(null);
     setDoneCount(0);
 
-    // Research once up front so each chapter write stays fast.
+    // Research once up front, in stages (each stage a separate request under the
+    // time limit), so each chapter write stays fast afterwards.
     if (needsResearch) {
       setPhase("research");
-      try {
-        await fetch(`/api/projekte/${projectId}/research`, { method: "POST" });
-      } catch {
-        // Best-effort — chapters are still written without a dossier.
+      for (let s = 0; s < researchStages; s++) {
+        setResearchStage(s + 1);
+        try {
+          await fetch(`/api/projekte/${projectId}/research`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ stage: s }),
+          });
+        } catch {
+          // Best-effort — chapters are still written without a dossier.
+        }
       }
       router.refresh();
     }
@@ -70,7 +85,7 @@ export function BatchWrite({ projectId, chapterIds, needsResearch }: Props) {
         <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
           <Spinner className="size-4" />
           {phase === "research"
-            ? "KI recherchiert dein Thema im Web…"
+            ? `KI recherchiert dein Thema im Web — Etappe ${researchStage}/${researchStages}…`
             : `Schreibe Kapitel ${Math.min(doneCount + 1, total)} von ${total}…`}
         </div>
         <p className="mt-2 text-xs text-muted-foreground">

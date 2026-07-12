@@ -19,6 +19,7 @@ import {
   countWords,
 } from "@/lib/books/generate";
 import { OUTLINE_RUNNING_STATUS } from "@/lib/books/outline-generate";
+import { RESEARCH_TOTAL_STAGES } from "@/lib/books/research";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
 import { OutlineActions } from "@/components/buchwerk/outline-actions";
 import { ShopPublish } from "@/components/buchwerk/shop-publish";
@@ -104,10 +105,6 @@ export default async function ProjektPage({
     .eq("id", id)
     .maybeSingle();
   const hasResearch = Boolean(researchRow?.research?.trim());
-  // Web research takes ~2–3 min, so it only works when the function limit is
-  // raised (Vercel Pro). Off by default so it never wastes a doomed 60 s run on
-  // Hobby; set RESEARCH_ENABLED=true once on a plan with a 300 s limit.
-  const researchEnabled = process.env.RESEARCH_ENABLED === "true";
 
   // Imprint (Impressum) — mandatory in the manuscript before export (best-effort
   // query so it doesn't break the page if the migration lags).
@@ -361,7 +358,8 @@ export default async function ProjektPage({
           <BatchWrite
             projectId={project.id}
             chapterIds={unwrittenIds}
-            needsResearch={researchEnabled && !hasResearch}
+            needsResearch={!hasResearch}
+            researchStages={RESEARCH_TOTAL_STAGES}
           />
         </div>
       ) : null}
@@ -407,11 +405,8 @@ export default async function ProjektPage({
                   hasContent={Boolean(chapter.content)}
                   isGenerating={gen.isGenerating}
                   isStale={gen.isStale}
-                  willResearch={
-                    researchEnabled &&
-                    !hasResearch &&
-                    chapter.id === firstUnwrittenId
-                  }
+                  willResearch={!hasResearch && chapter.id === firstUnwrittenId}
+                  researchStages={RESEARCH_TOTAL_STAGES}
                 />
               </div>
             ) : null}
