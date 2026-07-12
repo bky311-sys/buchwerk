@@ -234,6 +234,18 @@ function ShopFooter() {
           >
             Datenschutz
           </Link>
+          <Link
+            href="/agb"
+            className="hover:text-foreground hover:underline underline-offset-4"
+          >
+            AGB
+          </Link>
+          <Link
+            href="/widerruf"
+            className="hover:text-foreground hover:underline underline-offset-4"
+          >
+            Widerruf
+          </Link>
         </nav>
       </div>
     </footer>

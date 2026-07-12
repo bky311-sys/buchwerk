@@ -231,6 +231,24 @@ Hier werden zentrale Architektur- und Produktentscheidungen dokumentiert, damit 
 
 ---
 
+### 2026-07-12: KI-Generierung entkoppelt (Trigger + Polling statt Blocking)
+**Grund:** Kapitel-Text, Cover und Gliederung wurden als synchrone Server-Action erzeugt (langer Claude-/Replicate-Call). Auf Vercel Hobby (`maxDuration=60`) oder bei abgebrochener Browser-Verbindung kam die Erfolgsantwort nie an → kein `router.refresh()`, kein Feedback, kein Fortschritts-Symbol. Einheitliches Muster: Der Button feuert eine **API-Route** und das UI hängt nicht mehr an deren Antwort — ein `GenerationPoller` (alle 4 s `router.refresh()`) zieht das Ergebnis aus der DB, ein `Spinner` (`components/buchwerk/spinner.tsx`) zeigt den Fortschritt.
+
+- **Kapitel:** `POST /api/chapters/[id]/generate` (`lib/books/generate.ts`) setzt das Kapitel **zuerst** auf Status `schreiben`, dann `fertig`/`fehler`. Steckengeblieben (Status `schreiben` älter als `STALE_GENERATION_MS` ≈ 150 s) → „Erneut versuchen".
+- **Cover:** `POST /api/projekte/[id]/cover` (`lib/books/cover-generate.ts`). Cover haben kein Status-Feld (Zeile wird erst am Ende eingefügt) — der Client erkennt „fertig" daran, dass die Cover-Liste wächst (Placeholder-Karte + Spinner, Timeout 120 s). Keine Migration nötig.
+- **Gliederung neu:** `POST /api/projekte/[id]/outline` (`lib/books/outline-generate.ts`) nutzt die **vorhandene** Spalte `projects.status` als Marker `gliederung_läuft`; alte Kapitel werden erst nach fertiger neuer Gliederung gelöscht (Fehler lässt das Buch intakt).
+- **Gliederung bei Projekt-Anlage** bleibt bewusst synchron (`createProjectAction`, ~2000 Tokens, weit unter 60 s, Redirect danach) — nur Spinner ergänzt.
+
+Status überlebt Reloads. Bewusst **kein** externer Worker/Queue (Over-Engineering); die 60-s-Obergrenze bleibt — falls einzelne Kapitel sie reißen, wäre der nächste Schritt Streaming oder ein Render-Worker. **Noch offen:** KDP-Listing (`generateListingAction`) hat denselben blockierenden Flow (~20 s), analog zur Projekt-Anlage niedriges Risiko.
+
+### 2026-07-12: Recherche-Phase (Web-Search) + Mindestlänge ≥7000 Wörter
+**Grund:** Kapitel wurden ohne Recherche aus dem Modellwissen geschrieben (keine Quellen, kein Aktualitätsbezug) und ohne Längengarantie. Neu:
+- **Recherche-Dossier pro Buch** über das native **Anthropic Web-Search-Tool** (`lib/ai/anthropic.ts` → `webSearch`-Option, Tool `web_search_20250305`). `POST /api/projekte/[id]/research` (`lib/books/research.ts`) schreibt ein Markdown-Dossier (Kernaussagen, Fakten/Zahlen, Irrtümer, Material pro Kapitel, **Quellenliste**) in `projects.research`. State via `projects.research_status` (`offen|läuft|fertig|fehler`) + `research_updated_at` (Stale nach ≈180 s). UI: `ResearchPanel` (Fire-and-Poll wie die anderen Flows, Dossier einklappbar sichtbar → Recherche ist nachprüfbar).
+- **Kapitel nutzen das Dossier** (`prompts/kapitel.md` bekommt `{{recherche}}` + `{{wortziel}}`). Der Schreib-Aufruf sucht selbst **nicht** (bleibt schnell/unter 60 s).
+- **Mindestlänge:** Zielgesamtlänge `TARGET_TOTAL_WORDS = 8500` (Puffer über `MIN_TOTAL_WORDS = 7000`); Wortziel pro Kapitel = Ziel/Kapitelanzahl. Nach der Generierung wird die Wortzahl geprüft; ist ein Kapitel <85 % vom Ziel, läuft **ein** Vertiefen-Durchgang (`prompts/kapitel-vertiefen.md`). Projektseite zeigt die Gesamt-Wortzahl (rot unter Minimum).
+
+**Go-live-Voraussetzungen:** (1) Migration `20260712120000_projects_add_research.sql` einspielen (Code ist best-effort, bricht ohne Migration nicht, aber Feature ist erst danach aktiv). (2) **Web-Search-Tool im Anthropic-Konto freischalten** (kostet extra, ~10 $/1000 Suchen; ~0,30–0,50 $/Buch). (3) Tool-Version-String `web_search_20250305` bei API-Änderung prüfen. Der Vertiefen-Durchgang macht Kapitel zu 2 Claude-Calls → 60-s-Limit im Blick behalten (gekillter Lauf = „erneut versuchen", schon abgefangen).
+
 ## Bei Zweifeln
 
 Wenn du als Claude Code unsicher bist:

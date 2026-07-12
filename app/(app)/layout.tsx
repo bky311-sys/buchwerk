@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/buchwerk/wordmark";
+import { LegalFooter } from "@/components/buchwerk/legal-footer";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
 
@@ -39,6 +40,7 @@ export default async function AppLayout({
         </div>
       </header>
       <main className="flex-1">{children}</main>
+      <LegalFooter />
     </>
   );
 }

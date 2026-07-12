@@ -138,8 +138,13 @@ export function CheckoutForm({ projectId }: { projectId: string }) {
       ) : null}
 
       <p className="text-xs text-muted-foreground">
-        Zahlung läuft sicher über Stripe. (Aktuell Testmodus — bitte
-        Stripe-Testkarte 4242 4242 4242 4242 verwenden.)
+        Zahlung läuft sicher über Stripe.
+        {process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" ? (
+          <>
+            {" "}
+            (Testmodus — bitte Stripe-Testkarte 4242 4242 4242 4242 verwenden.)
+          </>
+        ) : null}
       </p>
     </div>
   );
