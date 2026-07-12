@@ -47,13 +47,43 @@ export default async function ProjektePage({
         Deine Buchprojekte
       </h1>
 
-      <section className="mt-10 rounded-2xl border border-border bg-card p-6 sm:p-7">
+      <ol className="mt-6 grid gap-4 sm:grid-cols-3">
+        {[
+          {
+            t: "1 · Thema & Gliederung",
+            d: "Thema eingeben — Buchwerk erstellt Titel und Kapitel-Gliederung. Kostenlos und unverbindlich.",
+          },
+          {
+            t: "2 · Schreiben, Cover, Listing",
+            d: "Kapitel recherchiert ausschreiben, Cover gestalten, KDP-Texte erzeugen. Ab hier einmalig 19,99 € pro Buch.",
+          },
+          {
+            t: "3 · Bei Amazon veröffentlichen",
+            d: "Manuskript-PDF, Cover und KDP-Texte selbst bei Amazon KDP hochladen — mit Anleitung.",
+          },
+        ].map((step) => (
+          <li
+            key={step.t}
+            className="rounded-2xl border border-border bg-card p-5"
+          >
+            <p className="font-display text-sm font-bold text-primary">
+              {step.t}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {step.d}
+            </p>
+          </li>
+        ))}
+      </ol>
+
+      <section className="mt-8 rounded-2xl border border-border bg-card p-6 sm:p-7">
         <h2 className="font-display text-lg font-semibold">
           Neues Buch starten
         </h2>
         <p className="mt-1 mb-5 text-sm text-muted-foreground">
-          Beschreib dein Thema. Buchwerk erstellt daraus eine Kapitel-Gliederung,
-          die du anschließend Kapitel für Kapitel ausschreiben lässt.
+          Beschreib dein Thema. Buchwerk erstellt daraus eine Kapitel-Gliederung
+          — <span className="font-medium text-foreground">kostenlos</span>. Erst
+          zum Schreiben, Cover und KDP-Listing zahlst du.
         </p>
         <NewProjectForm defaultTopic={defaultTopic} />
       </section>
