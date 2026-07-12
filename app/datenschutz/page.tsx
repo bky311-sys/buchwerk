@@ -570,14 +570,19 @@ export default function DatenschutzPage() {
 
             <div className="space-y-2">
               <h3 className={subTitleClass}>
-                Textgenerierung: Anthropic (Claude)
+                Textgenerierung &amp; Recherche: Anthropic (Claude)
               </h3>
               <p>
                 Zur Erstellung von Gliederung, Kapiteltexten und KDP-Listing
-                übermitteln wir die dafür nötigen Eingaben an Anthropic, PBC,
+                sowie für die optionale Recherche übermitteln wir die dafür
+                nötigen Eingaben (z. B. Thema und Gliederung) an Anthropic, PBC,
                 San Francisco, USA. Anthropic verarbeitet die Inhalte zur
-                Erzeugung der Antwort. Bitte geben Sie keine sensiblen
-                personenbezogenen Daten Dritter in die Eingabefelder ein.
+                Erzeugung der Antwort. Für die Recherche führt Anthropic
+                zusätzlich eine Websuche durch; dabei werden themenbezogene
+                Suchanfragen an externe Suchdienste übermittelt, um aktuelle,
+                belegte Informationen zusammenzutragen. Bitte geben Sie keine
+                sensiblen personenbezogenen Daten Dritter in die Eingabefelder
+                ein.
               </p>
             </div>
 
