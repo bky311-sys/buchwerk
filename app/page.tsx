@@ -59,15 +59,16 @@ function HeroSection() {
       <div className="mx-auto grid max-w-5xl gap-12 px-6 py-20 sm:py-28 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            Die deutschsprachige KI-Plattform fürs Self-Publishing
+            Der KI-Buchassistent für den deutschen Markt
           </p>
           <h1 className="font-display mt-5 text-5xl font-extrabold leading-[0.98] tracking-tight text-foreground sm:text-6xl">
-            Vom Thema zum fertigen Buch.
+            Schreib dein Buch mit KI — bis es bei Amazon steht.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Manuskript, Cover und KDP-Listing in einem Workflow — statt in fünf
-            Tools. Gib dein Thema ein, den Rest baust du mit Buchwerk Schritt für
-            Schritt.
+            Du gibst das Thema vor. Buchwerk recherchiert im Web, schreibt Kapitel
+            für Kapitel ein vollständiges Manuskript, gestaltet das Cover und
+            liefert das fertige KDP-Listing. Alles auf Deutsch, in einem
+            Werkzeug — und du entscheidest an jeder Stelle mit.
           </p>
           <div className="mt-8">
             <HeroLeadForm />
@@ -83,10 +84,10 @@ function HeroSection() {
 
 function TrustBar() {
   const items = [
-    "DSGVO — Hosting in Frankfurt",
-    "Kein Abo-Zwang",
-    "Deine Rechte bleiben bei dir",
-    "Widerrufsrecht transparent",
+    "Recherchiert mit echten Quellen",
+    "Vollständiges Manuskript, kein Gerüst",
+    "Du behältst alle Rechte",
+    "DSGVO — Server in Frankfurt",
   ];
   return (
     <section className="border-b border-border bg-card">
@@ -105,16 +106,16 @@ function TrustBar() {
 function ProblemSection() {
   const points = [
     {
-      title: "Fünf Tools, fünf Dialekte.",
-      body: "Du schreibst in Word, überarbeitest mit ChatGPT, bastelst das Cover in Canva, formatierst irgendwo dazwischen und lädst zu KDP hoch. Jeder Schritt ein eigenes Werkzeug, jedes Werkzeug mit eigenen Eigenarten.",
+      title: "Der Anfang ist zu groß.",
+      body: "Ein Sachbuch heißt: recherchieren, gliedern, Kapitel um Kapitel schreiben, überarbeiten. Wochen an Abenden. Die meisten Buchideen sterben genau hier — vor der ersten Seite.",
     },
     {
-      title: "Generische KI spricht nicht Verlag.",
-      body: "ChatGPT und Co. sind auf allgemeinen Texten trainiert. Klappentexte, Kategorien-Logik und KDP-Eigenheiten kennen sie nicht — du wirst zum Übersetzer zwischen Tool und deutschem Buchmarkt.",
+      title: "Reine KI erfindet, was sie nicht weiß.",
+      body: "ChatGPT und Co. klingen souverän, erfinden aber Zahlen, Studien und Quellen. Für ein Buch, das jemand ernst nehmen soll, ist das ein echtes Risiko.",
     },
     {
-      title: "Der letzte Meter frisst die Geduld.",
-      body: "Wenn Manuskript und Cover endlich stehen, verlangt KDP noch Klappentext, Stichwörter, Kategorien und Metadaten. Genau hier verliert man die Lust — und das Buch bleibt im Entwurfsordner.",
+      title: "Und dann kommt Amazon KDP.",
+      body: "Ist der Text fertig, will KDP noch Cover, Klappentext, Stichwörter, Kategorien und Formatierung. Genau hier verliert man die Lust — und das Buch bleibt im Entwurfsordner.",
     },
   ];
 
@@ -122,7 +123,7 @@ function ProblemSection() {
     <section className="border-b border-border">
       <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
         <h2 className="font-display max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Warum ein Buch heute länger dauert als es müsste.
+          Warum die meisten Buchideen nie ein Buch werden.
         </h2>
         <ol className="mt-14 grid gap-6 md:grid-cols-3">
           {points.map((point, index) => (
@@ -150,16 +151,16 @@ function ProblemSection() {
 function SolutionSection() {
   const points = [
     {
-      title: "Ein Workflow statt fünf Tools.",
-      body: "Du gibst das Thema ein. Buchwerk schlägt Gliederung, Kapitel, Cover und KDP-Metadaten in derselben Sitzung vor. Du entscheidest an jeder Stelle mit — nichts wird hinter deinem Rücken fertig.",
+      title: "Erst recherchieren, dann schreiben.",
+      body: "Buchwerk durchsucht das Web, sammelt belegte Fakten, Zahlen und Quellen und schreibt die Kapitel darauf auf. Kein erfundenes Wissen, sondern eine nachvollziehbare Grundlage.",
     },
     {
-      title: "Auf den deutschsprachigen Markt zugeschnitten.",
-      body: "Prompts, Stilvorlagen und Kategorien sind für Deutschland, Österreich und die Schweiz gebaut. Kein übersetztes Englisch, keine amerikanische Rhetorik.",
+      title: "Ein ganzes Manuskript, kein Stichwort-Gerüst.",
+      body: "Du bekommst ausgeschriebene Kapitel mit echtem Umfang — ein vollständiges Manuskript, das man wirklich lesen kann. Du liest mit und überarbeitest, bis es sitzt.",
     },
     {
-      title: "KDP-fertig am Ende, nicht halbfertig.",
-      body: "Am Schluss hast du Druck-PDF, EPUB und ein vollständiges KDP-Listing — Titel, Klappentext, Stichwörter, Kategorien, Preisvorschlag. Hochladen, veröffentlichen.",
+      title: "KDP-fertig bis zum Download.",
+      body: "Am Ende hast du das Manuskript als druckfertiges PDF, ein Cover und ein komplettes KDP-Listing — Titel, Klappentext, Stichwörter, Kategorien, Preisvorschlag. Hochladen, veröffentlichen.",
     },
   ];
 
@@ -167,7 +168,7 @@ function SolutionSection() {
     <section className="border-b border-border">
       <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
         <h2 className="font-display max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Ein Werkzeug. Vom Thema bis zum Hochladen.
+          Buchwerk nimmt dir das Schwere ab — nicht die Kontrolle.
         </h2>
         <ol className="mt-14 grid gap-6 md:grid-cols-3">
           {points.map((point, index) => (
@@ -195,20 +196,20 @@ function SolutionSection() {
 function HowItWorksSection() {
   const steps = [
     {
-      title: "Thema & Richtung",
-      body: "Du nennst Titel oder Thema. Buchwerk schlägt Zielgruppe, Tonalität und Umfang vor.",
+      title: "Thema & Gliederung",
+      body: "Du nennst dein Thema. Buchwerk erstellt Titelvorschlag und Kapitel-Gliederung — kostenlos, bevor du dich entscheidest.",
     },
     {
-      title: "Manuskript",
-      body: "Gliederung entsteht, Kapitel werden Schritt für Schritt geschrieben. Du lektorierst mit, bis es sitzt.",
+      title: "Recherche & Kapitel",
+      body: "Buchwerk recherchiert im Web und schreibt die Kapitel darauf auf. Ton, Länge und Inhalt steuerst du mit.",
     },
     {
       title: "Cover",
-      body: "Entwürfe mit sauberem Titelsatz. Du wählst eine Richtung, wir verfeinern bis zum finalen Cover.",
+      body: "Cover-Entwürfe mit sauberem Titelsatz. Du wählst eine Richtung, wir verfeinern bis zum finalen Cover.",
     },
     {
-      title: "KDP-Listing",
-      body: "Klappentext, Stichwörter, Kategorien, Preisempfehlung — kopierfertig für KDP.",
+      title: "Listing & Download",
+      body: "Klappentext, Stichwörter, Kategorien und Preisempfehlung — kopierfertig für KDP. Das Manuskript lädst du als PDF herunter.",
     },
   ];
 
@@ -216,7 +217,7 @@ function HowItWorksSection() {
     <section className="border-b border-border">
       <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
         <h2 className="font-display max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Vier Schritte, ein Werkzeug.
+          Vier Schritte bis zum fertigen Buch.
         </h2>
         <ol className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (
@@ -265,8 +266,8 @@ function PricingSection() {
               19,99 €
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Einmalig. Schaltet Kapitel-Schreiben, Cover, KDP-Listing und
-              PDF/EPUB für dieses Buch dauerhaft frei.
+              Einmalig. Schaltet Recherche, Kapitel-Schreiben, Cover, KDP-Listing
+              und den Manuskript-Download für dieses Buch dauerhaft frei.
             </p>
             <div className="mt-6">
               <Button asChild size="lg" className="w-full">
@@ -310,12 +311,12 @@ function BuchshopTeaser() {
             Buchshop
           </p>
           <h2 className="font-display mt-3 max-w-2xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Bücher aus dem Werk.
+            Sieh, was andere hier schon gebaut haben.
           </h2>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
             Autorinnen und Autoren veröffentlichen ihre mit Buchwerk gebauten
             Bücher im Buchshop — vorgestellt, bewertet und direkt bei Amazon
-            erhältlich. Sieh dir an, was hier entsteht.
+            erhältlich. Der beste Beweis, dass am Ende ein echtes Buch steht.
           </p>
           <div className="mt-6">
             <Button asChild size="lg" variant="outline">
@@ -335,12 +336,16 @@ function FaqSection() {
       a: "Ja. Amazon KDP erlaubt KI-gestützte Bücher, verlangt bei der Veröffentlichung aber, dass du KI-generierte Inhalte angibst. Du bleibst der verantwortliche Autor — Buchwerk hilft beim Erstellen, du entscheidest und veröffentlichst.",
     },
     {
-      q: "Gehören mir die Rechte am Text?",
-      a: "Ja. Das fertige Manuskript gehört dir. Du veröffentlichst und verkaufst es unter deinem Namen und entscheidest über Preis und Vertrieb.",
+      q: "Wird das nicht einfach generischer KI-Text?",
+      a: "Zwei Dinge unterscheiden Buchwerk: Es recherchiert vorab im Web und stützt die Kapitel auf belegte Quellen statt auf Erfundenes. Und du steuerst jeden Schritt — Gliederung, Kapitel, Überarbeitung. Buchwerk schlägt vor, du feilst nach, bis es sitzt.",
     },
     {
-      q: "Wird das nicht einfach generischer KI-Text?",
-      a: "Du steuerst jeden Schritt: Gliederung, Kapitel, Lektorat. Buchwerk schlägt vor, du feilst nach, bis es sitzt — nichts wird hinter deinem Rücken fertig. Die Qualität hängt an deinem Thema und deinen Entscheidungen.",
+      q: "Wie lang wird mein Buch?",
+      a: "Buchwerk schreibt ein vollständiges Manuskript — mehrere tausend Wörter über alle Kapitel, kein dünnes Gerüst. Wie umfangreich genau, bestimmst du über Thema, Gliederung und die Kapitel, die du schreiben lässt.",
+    },
+    {
+      q: "Gehören mir die Rechte am Text?",
+      a: "Ja. Das fertige Manuskript gehört dir. Du veröffentlichst und verkaufst es unter deinem Namen und entscheidest über Preis und Vertrieb.",
     },
     {
       q: "Was kostet mich das wirklich?",
@@ -382,9 +387,9 @@ function FounderSection() {
           </h2>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground">
             Ich bin Benjamin und baue Buchwerk als kleine Ein-Personen-Werkstatt
-            in Deutschland — weil ich es leid war, für ein einziges Buch fünf
-            Tools zu jonglieren. Buchwerk ist das Werkzeug, das ich mir selbst
-            gewünscht hätte: klar, ehrlich im Preis, und du behältst die
+            in Deutschland — weil zu viele gute Buchideen an allem scheitern außer
+            am Schreiben selbst. Buchwerk ist das Werkzeug, das ich mir dafür
+            gewünscht hätte: gründlich, ehrlich im Preis, und du behältst die
             Kontrolle. Fragen landen bei einem echten Menschen, nicht in einem
             Ticket-Nirwana.
           </p>

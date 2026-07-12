@@ -6,9 +6,9 @@ import "./globals.css";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://buchwerk.info";
 
-const TITLE = "Buchwerk — Vom Thema zum fertigen Buch";
+const TITLE = "Buchwerk — Dein Buch mit KI schreiben und veröffentlichen";
 const DESCRIPTION =
-  "Die deutschsprachige KI-Plattform fürs Self-Publishing: Manuskript, Cover und KDP-Listing in einem Workflow. Thema und Gliederung gratis, kein Abo-Zwang.";
+  "Schreib dein Buch mit KI: Buchwerk recherchiert dein Thema im Web, schreibt ein vollständiges Manuskript, gestaltet das Cover und liefert das fertige Amazon-KDP-Listing — auf Deutsch, kein Abo-Zwang.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

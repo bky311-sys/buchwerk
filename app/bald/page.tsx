@@ -5,7 +5,7 @@ import { WaitlistForm } from "@/components/buchwerk/waitlist-form";
 export const metadata: Metadata = {
   title: "Bald verfügbar — buchwerk.",
   description:
-    "Buchwerk bringt dich vom Thema zum fertigen Buch — bald. Trag dich ein und sei zum Start dabei.",
+    "Buchwerk schreibt dein Buch mit KI — recherchiert, vollständig, KDP-fertig. Bald verfügbar. Trag dich ein und sei zum Start dabei.",
   robots: { index: false, follow: false },
 };
 
@@ -20,12 +20,12 @@ export default function BaldPage() {
           Bald verfügbar
         </p>
         <h1 className="font-display mt-4 text-4xl font-extrabold leading-[1.02] tracking-tight text-foreground sm:text-5xl">
-          Vom Thema zum fertigen Buch.
+          Schreib dein Buch mit KI.
         </h1>
         <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-muted-foreground">
-          Buchwerk bringt Manuskript, Cover und KDP-Listing in einen Workflow —
-          statt in fünf Tools. Wir legen gerade die letzten Meter zurück und
-          öffnen bald.
+          Buchwerk recherchiert dein Thema, schreibt ein vollständiges
+          Manuskript, gestaltet das Cover und liefert das fertige KDP-Listing —
+          auf Deutsch, in einem Werkzeug. Wir öffnen bald.
         </p>
         <p className="mx-auto mt-6 max-w-md text-sm text-foreground">
           Sei zum Start dabei — wir sagen dir als Erstes Bescheid.
