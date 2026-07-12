@@ -104,6 +104,10 @@ export default async function ProjektPage({
     .eq("id", id)
     .maybeSingle();
   const hasResearch = Boolean(researchRow?.research?.trim());
+  // Web research takes ~2–3 min, so it only works when the function limit is
+  // raised (Vercel Pro). Off by default so it never wastes a doomed 60 s run on
+  // Hobby; set RESEARCH_ENABLED=true once on a plan with a 300 s limit.
+  const researchEnabled = process.env.RESEARCH_ENABLED === "true";
 
   // Imprint (Impressum) — mandatory in the manuscript before export (best-effort
   // query so it doesn't break the page if the migration lags).
@@ -357,7 +361,7 @@ export default async function ProjektPage({
           <BatchWrite
             projectId={project.id}
             chapterIds={unwrittenIds}
-            needsResearch={!hasResearch}
+            needsResearch={researchEnabled && !hasResearch}
           />
         </div>
       ) : null}
@@ -399,10 +403,15 @@ export default async function ProjektPage({
               <div className="mt-5">
                 <ChapterGenerator
                   chapterId={chapter.id}
+                  projectId={project.id}
                   hasContent={Boolean(chapter.content)}
                   isGenerating={gen.isGenerating}
                   isStale={gen.isStale}
-                  willResearch={!hasResearch && chapter.id === firstUnwrittenId}
+                  willResearch={
+                    researchEnabled &&
+                    !hasResearch &&
+                    chapter.id === firstUnwrittenId
+                  }
                 />
               </div>
             ) : null}

@@ -7,19 +7,22 @@ import { Spinner } from "@/components/buchwerk/spinner";
 
 type Props = {
   chapterId: string;
+  projectId: string;
   hasContent: boolean;
   // Driven by the chapter's DB status (refreshed by the poller): the model call
   // for this chapter is currently running.
   isGenerating: boolean;
   // The previous run got stuck (function killed before it could finish).
   isStale: boolean;
-  // This generation will run the web research first (only the first chapter of a
-  // book without a dossier), so it takes noticeably longer.
+  // Run the (decoupled) web research first, then write. Only enabled on a plan
+  // with a raised function limit, and only for the first chapter of a book
+  // without a dossier.
   willResearch: boolean;
 };
 
 export function ChapterGenerator({
   chapterId,
+  projectId,
   hasContent,
   isGenerating,
   isStale,
@@ -27,6 +30,7 @@ export function ChapterGenerator({
 }: Props) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
+  const [researching, setResearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const busy = isGenerating || starting;
@@ -45,6 +49,18 @@ export function ChapterGenerator({
     setError(null);
     setStarting(true);
     try {
+      // Research is a separate request (it takes minutes) so the chapter write
+      // itself always stays well within the function limit and never aborts.
+      if (willResearch) {
+        setResearching(true);
+        try {
+          await fetch(`/api/projekte/${projectId}/research`, { method: "POST" });
+        } catch {
+          // best-effort — the chapter is still written without a dossier
+        }
+        setResearching(false);
+        router.refresh();
+      }
       const res = await fetch(`/api/chapters/${chapterId}/generate`, {
         method: "POST",
       });
@@ -55,15 +71,12 @@ export function ChapterGenerator({
         setError(data?.error ?? "Das Kapitel konnte nicht generiert werden.");
       }
     } catch {
-      // The request was dropped (e.g. a long generation past the gateway
-      // limit). The server keeps writing and the poller picks up the result
-      // from the DB status — so no error, just let the refresh below take over.
+      // The request was dropped — the server keeps writing and the poller picks
+      // up the result from the DB status, so just let the refresh below run.
     } finally {
-      // Whatever happened, re-read the DB: on success the content appears, on a
-      // drop the "schreiben" status keeps the spinner + poller going, on an
-      // error the status flips to "fehler" and the retry button shows.
       router.refresh();
       setStarting(false);
+      setResearching(false);
     }
   }
 
@@ -71,8 +84,8 @@ export function ChapterGenerator({
     return (
       <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
         <Spinner className="size-4" />
-        {willResearch
-          ? "Die KI recherchiert dafür zuerst im Web — das dauert einmalig ~1–2 Min., danach geht es schnell."
+        {researching
+          ? "Die KI recherchiert dein Thema im Web (~2–3 Min.)…"
           : "Wird geschrieben… (kann ~30 Sek. dauern)"}
       </div>
     );

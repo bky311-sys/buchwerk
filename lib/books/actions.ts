@@ -155,7 +155,17 @@ export async function updateChapterAction(
 
 export async function addChapterAction(
   projectId: string,
+  heading: string,
+  summary: string,
 ): Promise<ActionResult> {
+  const trimmedHeading = heading.trim();
+  if (!trimmedHeading) {
+    return { ok: false, error: "Bitte gib eine Überschrift ein." };
+  }
+  if (trimmedHeading.length > 300) {
+    return { ok: false, error: "Die Überschrift ist zu lang." };
+  }
+
   const supabase = await createClient();
   const { data: last } = await supabase
     .from("chapters")
@@ -169,8 +179,9 @@ export async function addChapterAction(
   const { error } = await supabase.from("chapters").insert({
     project_id: projectId,
     position: nextPosition,
-    heading: "Neues Kapitel",
-    summary: "",
+    heading: trimmedHeading,
+    // The topic guides what the AI writes for this chapter, so we ask for it.
+    summary: summary.trim() || null,
     status: "offen",
   });
   if (error) return { ok: false, error: "Kapitel konnte nicht angelegt werden." };
