@@ -128,6 +128,20 @@ export function CoverStudio({
     });
   }
 
+  // Persist the current author field, then trigger the PDF download — so
+  // whatever is typed always lands on the cover, without a separate save step.
+  function downloadCover() {
+    setError(null);
+    startTransition(async () => {
+      const result = await updateProjectAuthorAction(projectId, authorValue);
+      if (!result.ok) {
+        setError(result.error ?? "Etwas ist schiefgelaufen.");
+        return;
+      }
+      window.location.href = `/projekte/${projectId}/cover/pdf`;
+    });
+  }
+
   function select(id: string) {
     setError(null);
     startTransition(async () => {
@@ -320,10 +334,14 @@ export function CoverStudio({
 
         <div className="mt-5">
           {hasSelected ? (
-            <Button asChild size="lg" variant="ink">
-              <a href={`/projekte/${projectId}/cover/pdf`} download>
-                Cover-PDF herunterladen
-              </a>
+            <Button
+              type="button"
+              size="lg"
+              variant="ink"
+              onClick={downloadCover}
+              disabled={busy}
+            >
+              Cover-PDF herunterladen
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground">

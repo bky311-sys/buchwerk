@@ -141,30 +141,53 @@ export async function GET(
 
   const front = pdf.addPage([PAGE_W, PAGE_H]);
   front.drawImage(image, { x: 0, y: 0, width: PAGE_W, height: PAGE_H });
+
+  // Title and author sit on a SOLID band at the bottom. The band is opaque (not
+  // a translucent overlay) so it fully covers any lettering the image model may
+  // have rendered into the lower art — the cover prompt asks for none, but Flux
+  // doesn't always comply, and a see-through overlay produced "text over text".
+  const titleSize = 32;
+  const titleLineHeight = 40;
+  const titleLines = wrap(safe(title), helveticaBold, titleSize, PAGE_W - 96);
+  const authorBlock = author ? 44 : 0;
+  const bandHeight = Math.min(
+    PAGE_H * 0.5,
+    titleLines.length * titleLineHeight + 96 + authorBlock,
+  );
+
   front.drawRectangle({
     x: 0,
     y: 0,
     width: PAGE_W,
-    height: 300,
-    color: rgb(0, 0, 0),
-    opacity: 0.5,
+    height: bandHeight,
+    color: rgb(0.09, 0.1, 0.11),
   });
-  drawWrapped(front, title, {
-    font: helveticaBold,
-    size: 34,
-    color: rgb(1, 1, 1),
-    x: 40,
-    yTop: 200,
-    maxWidth: PAGE_W - 80,
-    lineHeight: 40,
+  front.drawRectangle({
+    x: 0,
+    y: bandHeight,
+    width: PAGE_W,
+    height: 5,
+    color: rgb(0.11, 0.42, 0.24),
   });
+
+  let titleY = bandHeight - 56;
+  for (const line of titleLines) {
+    front.drawText(line, {
+      x: 48,
+      y: titleY,
+      size: titleSize,
+      font: helveticaBold,
+      color: rgb(1, 1, 1),
+    });
+    titleY -= titleLineHeight;
+  }
   if (author) {
     front.drawText(safe(author), {
-      x: 40,
-      y: 56,
+      x: 48,
+      y: 40,
       size: 18,
       font: helvetica,
-      color: rgb(1, 1, 1),
+      color: rgb(0.82, 0.82, 0.85),
     });
   }
 
@@ -186,15 +209,28 @@ export async function GET(
     lineHeight: 28,
   });
   if (blurb) {
-    drawWrapped(back, blurb, {
-      font: helvetica,
-      size: 13,
-      color: rgb(0.22, 0.22, 0.22),
-      x: 48,
-      yTop: PAGE_H - 150,
-      maxWidth: PAGE_W - 96,
-      lineHeight: 20,
-    });
+    // Bound the blurb so a long KDP description can't run over the author line
+    // or off the bottom of the page. Truncate with an ellipsis if it doesn't fit.
+    const blurbTop = PAGE_H - 150;
+    const blurbBottom = 96; // keep clear of the author at y=56
+    const lineHeight = 20;
+    const maxLines = Math.max(1, Math.floor((blurbTop - blurbBottom) / lineHeight));
+    const lines = wrap(safe(blurb), helvetica, 13, PAGE_W - 96);
+    const shown = lines.slice(0, maxLines);
+    if (lines.length > maxLines && shown.length > 0) {
+      shown[shown.length - 1] = shown[shown.length - 1].replace(/\.*$/, "") + " …";
+    }
+    let by = blurbTop;
+    for (const line of shown) {
+      back.drawText(line, {
+        x: 48,
+        y: by,
+        size: 13,
+        font: helvetica,
+        color: rgb(0.22, 0.22, 0.22),
+      });
+      by -= lineHeight;
+    }
   }
   if (author) {
     back.drawText(safe(author), {
