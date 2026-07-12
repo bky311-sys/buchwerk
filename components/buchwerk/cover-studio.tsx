@@ -30,10 +30,12 @@ type Cover = {
 
 export function CoverStudio({
   projectId,
+  title,
   author,
   covers,
 }: {
   projectId: string;
+  title: string;
   author: string;
   covers: Cover[];
 }) {
@@ -50,7 +52,8 @@ export function CoverStudio({
   const startCountRef = useRef<number | null>(null);
 
   const busy = isPending || generating;
-  const hasSelected = covers.some((c) => c.is_selected);
+  const selectedCover = covers.find((c) => c.is_selected);
+  const hasSelected = Boolean(selectedCover);
 
   // Detect completion: a new cover appeared.
   useEffect(() => {
@@ -186,6 +189,11 @@ export function CoverStudio({
             placeholder="Englischer Bildprompt – oder lass dir oben einen Vorschlag erstellen."
             className={TEXTAREA_CLASS}
           />
+          <p className="text-xs text-muted-foreground">
+            Beschreibe nur das <span className="font-medium">Motiv</span> —
+            textfrei, ohne Buchstaben. Titel und Autor legt Buchwerk anschließend
+            als saubere Typografie über das Bild.
+          </p>
         </div>
 
         <fieldset className="space-y-2">
@@ -309,6 +317,37 @@ export function CoverStudio({
           Vorderseite mit Titel + Autor, Rückseite mit Klappentext aus dem
           KDP-Listing.
         </p>
+
+        {selectedCover ? (
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-medium">
+              So sieht die Vorderseite aus:
+            </p>
+            <div className="relative w-full max-w-[220px] overflow-hidden rounded-lg border border-border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={selectedCover.image_url}
+                alt="Cover-Vorschau"
+                className="aspect-[2/3] w-full object-cover"
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-[#17181c] px-3 pb-3 pt-3.5">
+                <span className="block h-[3px] w-8 rounded-full bg-primary" />
+                <p className="font-display mt-2 text-sm font-bold leading-tight text-white">
+                  {title}
+                </p>
+                {authorValue.trim() ? (
+                  <p className="mt-1 text-[11px] text-white/75">
+                    {authorValue.trim()}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Vorschau — im PDF exakt gesetzt. Titel und Autor liegen auf einem
+              deckenden Balken über dem Motiv.
+            </p>
+          </div>
+        ) : null}
 
         <div className="mt-4 max-w-sm space-y-1">
           <Label htmlFor="author">Autor (erscheint auf dem Cover)</Label>

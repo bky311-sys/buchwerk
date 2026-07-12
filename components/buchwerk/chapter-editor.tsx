@@ -125,7 +125,7 @@ export function ChapterEditor({
                 setEditing(true);
               }}
             >
-              Bearbeiten
+              Überschrift
             </Button>
           ) : null}
           <Button

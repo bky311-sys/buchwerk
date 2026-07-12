@@ -33,10 +33,13 @@ export const maxDuration = 60;
 
 export default async function ProjektPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ freigeschaltet?: string }>;
 }) {
   const { id } = await params;
+  const { freigeschaltet } = await searchParams;
   const supabase = await createClient();
 
   const { data: project } = await supabase
@@ -238,6 +241,19 @@ export default async function ProjektPage({
         />
       </div>
       <p className="mt-3 text-base text-muted-foreground">{project.topic}</p>
+
+      {freigeschaltet === "1" && unlocked ? (
+        <div className="mt-5 rounded-2xl border border-success/30 bg-success-tint p-4">
+          <p className="text-sm font-semibold text-success">
+            ✓ Buch freigeschaltet — danke!
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Du kannst jetzt Kapitel schreiben, Cover und KDP-Listing erstellen
+            und dein Manuskript herunterladen. Der nächste Schritt steht unten im
+            Ablauf.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="h-2 w-full max-w-[220px] overflow-hidden rounded-full bg-input">

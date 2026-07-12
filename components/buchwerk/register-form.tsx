@@ -34,8 +34,24 @@ export function RegisterForm({ weiter }: Props) {
           geschickt. Öffne den Link, um dein Konto zu aktivieren.
         </p>
         <p className="mt-2 text-xs text-muted-foreground">
-          Keine Mail erhalten? Schau auch im Spam-Ordner nach.
+          Keine Mail erhalten? Schau auch im Spam-Ordner nach. Kommt nichts an,
+          registriere dich in ein paar Minuten erneut — dann senden wir den Link
+          noch einmal.
         </p>
+        <div className="mt-4 flex flex-wrap gap-4 text-sm">
+          <Link
+            href="/anmelden"
+            className="text-foreground underline underline-offset-4 hover:no-underline"
+          >
+            Zur Anmeldung
+          </Link>
+          <Link
+            href="/registrieren"
+            className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            Erneut registrieren
+          </Link>
+        </div>
       </div>
     );
   }

@@ -55,6 +55,7 @@ export default async function CoverPage({
 
       <CoverStudio
         projectId={id}
+        title={project.title ?? project.topic}
         author={project.author ?? ""}
         covers={covers ?? []}
       />
