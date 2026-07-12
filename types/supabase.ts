@@ -102,6 +102,10 @@ export interface Database {
           research: string | null;
           research_status: string;
           research_updated_at: string | null;
+          imprint_name: string | null;
+          imprint_street: string | null;
+          imprint_zip: string | null;
+          imprint_city: string | null;
           shop_published: boolean;
           shop_published_at: string | null;
           shop_slug: string | null;
@@ -121,6 +125,10 @@ export interface Database {
           research?: string | null;
           research_status?: string;
           research_updated_at?: string | null;
+          imprint_name?: string | null;
+          imprint_street?: string | null;
+          imprint_zip?: string | null;
+          imprint_city?: string | null;
           shop_published?: boolean;
           shop_published_at?: string | null;
           shop_slug?: string | null;
@@ -140,6 +148,10 @@ export interface Database {
           research?: string | null;
           research_status?: string;
           research_updated_at?: string | null;
+          imprint_name?: string | null;
+          imprint_street?: string | null;
+          imprint_zip?: string | null;
+          imprint_city?: string | null;
           shop_published?: boolean;
           shop_published_at?: string | null;
           shop_slug?: string | null;

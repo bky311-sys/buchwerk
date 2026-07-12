@@ -7,15 +7,17 @@ import { Button } from "@/components/ui/button";
 export function PublishGuide({
   projectId,
   finished,
+  imprintComplete,
 }: {
   projectId: string;
   finished: boolean;
+  imprintComplete: boolean;
 }) {
   const steps = [
     "Melde dich bei kdp.amazon.com an (kostenloses Amazon-KDP-Konto).",
     "Klick auf „+ Neuen Titel erstellen“ und wähle eBook (oder Taschenbuch).",
     "Füge Titel, Untertitel, Beschreibung, die 7 Keywords und die Kategorien aus deinem KDP-Listing ein — alles kopierfertig.",
-    "Lade das Manuskript-PDF als Buchinhalt hoch.",
+    "Lade dein Manuskript als Buchinhalt hoch — EPUB für das eBook (reflowt sauber am Kindle), PDF für das Taschenbuch.",
     "Lade dein Cover hoch (Cover-PDF bzw. das gewählte Cover-Bild).",
     "Bei der Frage nach KI-Inhalten „Ja“ angeben — Amazon verlangt diese Kennzeichnung.",
     "Preis festlegen und veröffentlichen. Fertig — dein Buch ist live bei Amazon.",
@@ -41,15 +43,26 @@ export function PublishGuide({
           <Button asChild variant="outline" size="sm">
             <Link href={`/projekte/${projectId}/cover`}>Cover</Link>
           </Button>
-          {finished ? (
+          {finished && imprintComplete ? (
+            <>
+              <Button asChild variant="outline" size="sm">
+                <a href={`/projekte/${projectId}/manuskript/epub`} download>
+                  Manuskript-EPUB (eBook)
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <a href={`/projekte/${projectId}/manuskript/pdf`} download>
+                  Manuskript-PDF (Print)
+                </a>
+              </Button>
+            </>
+          ) : finished ? (
             <Button asChild variant="outline" size="sm">
-              <a href={`/projekte/${projectId}/manuskript/pdf`} download>
-                Manuskript-PDF
-              </a>
+              <Link href="#impressum">Impressum ausfüllen</Link>
             </Button>
           ) : (
             <span className="inline-flex items-center text-xs text-muted-foreground">
-              Manuskript-PDF: erst wenn alle Kapitel fertig sind
+              Manuskript: erst wenn alle Kapitel fertig sind
             </span>
           )}
         </div>

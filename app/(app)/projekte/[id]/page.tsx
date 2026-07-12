@@ -11,6 +11,7 @@ import { GenerationPoller } from "@/components/buchwerk/generation-poller";
 import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 import { PublishGuide } from "@/components/buchwerk/publish-guide";
 import { BatchWrite } from "@/components/buchwerk/batch-write";
+import { ImprintForm } from "@/components/buchwerk/imprint-form";
 import { Spinner } from "@/components/buchwerk/spinner";
 import {
   STALE_GENERATION_MS,
@@ -103,6 +104,26 @@ export default async function ProjektPage({
     .eq("id", id)
     .maybeSingle();
   const hasResearch = Boolean(researchRow?.research?.trim());
+
+  // Imprint (Impressum) — mandatory in the manuscript before export (best-effort
+  // query so it doesn't break the page if the migration lags).
+  const { data: imprintRow } = await supabase
+    .from("projects")
+    .select("imprint_name, imprint_street, imprint_zip, imprint_city, author")
+    .eq("id", id)
+    .maybeSingle();
+  const imprint = {
+    name: imprintRow?.imprint_name ?? imprintRow?.author ?? "",
+    street: imprintRow?.imprint_street ?? "",
+    zip: imprintRow?.imprint_zip ?? "",
+    city: imprintRow?.imprint_city ?? "",
+  };
+  const imprintComplete = Boolean(
+    (imprintRow?.imprint_name ?? "").trim() &&
+      imprint.street.trim() &&
+      imprint.zip.trim() &&
+      imprint.city.trim(),
+  );
 
   const [{ data: chapters }, unlocked, subscriber] = await Promise.all([
     supabase
@@ -308,11 +329,24 @@ export default async function ProjektPage({
       ) : (
         <div className="mt-6 space-y-4">
           <WorkflowStepper steps={workflowSteps} />
-          {finished ? (
-            <Button asChild variant="ink" size="lg">
-              <a href={`/projekte/${project.id}/manuskript/pdf`} download>
-                Manuskript-PDF herunterladen
-              </a>
+          {finished && imprintComplete ? (
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="ink" size="lg">
+                <a href={`/projekte/${project.id}/manuskript/epub`} download>
+                  Manuskript-EPUB (eBook)
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <a href={`/projekte/${project.id}/manuskript/pdf`} download>
+                  Manuskript-PDF (Print)
+                </a>
+              </Button>
+            </div>
+          ) : finished ? (
+            <Button asChild variant="outline" size="lg">
+              <Link href="#impressum">
+                Impressum ausfüllen, dann Manuskript laden
+              </Link>
             </Button>
           ) : null}
         </div>
@@ -386,9 +420,25 @@ export default async function ProjektPage({
         </div>
       ) : null}
 
+      {unlocked && hasWrittenChapters ? (
+        <div className="mt-6">
+          <ImprintForm
+            projectId={project.id}
+            name={imprint.name}
+            street={imprint.street}
+            zip={imprint.zip}
+            city={imprint.city}
+          />
+        </div>
+      ) : null}
+
       {unlocked ? (
         <div id="veroeffentlichen" className="mt-6 scroll-mt-6">
-          <PublishGuide projectId={project.id} finished={finished} />
+          <PublishGuide
+            projectId={project.id}
+            finished={finished}
+            imprintComplete={imprintComplete}
+          />
         </div>
       ) : null}
 

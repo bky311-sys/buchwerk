@@ -64,7 +64,9 @@ export async function GET(
 
   const { data: project } = await supabase
     .from("projects")
-    .select("title, topic, author")
+    .select(
+      "title, topic, author, imprint_name, imprint_street, imprint_zip, imprint_city",
+    )
     .eq("id", id)
     .single();
   if (!project) return new NextResponse("Nicht gefunden", { status: 404 });
@@ -72,6 +74,21 @@ export async function GET(
   // Manuscript export is part of production — only for unlocked projects.
   if (!(await isProjectUnlocked(supabase, id))) {
     return new NextResponse("Bitte zuerst freischalten", { status: 402 });
+  }
+
+  // The imprint (Impressum) is mandatory in the book — refuse the export until
+  // the author has provided it.
+  const imprint = {
+    name: project.imprint_name?.trim() ?? "",
+    street: project.imprint_street?.trim() ?? "",
+    zip: project.imprint_zip?.trim() ?? "",
+    city: project.imprint_city?.trim() ?? "",
+  };
+  if (!imprint.name || !imprint.street || !imprint.zip || !imprint.city) {
+    return new NextResponse(
+      "Bitte fülle zuerst das Impressum aus — es ist Pflichtangabe im Buch.",
+      { status: 400 },
+    );
   }
 
   const { data: chapters } = await supabase
@@ -130,6 +147,23 @@ export async function GET(
   y = PAGE_H * 0.62;
   paragraph(title, bold, 26, 32, 16);
   if (author) paragraph(author, body, 14, 20, 0);
+
+  // --- Imprint page (Impressum, mandatory) ---
+  page = pdf.addPage([PAGE_W, PAGE_H]);
+  y = PAGE_H - MARGIN;
+  const year = new Date().getFullYear();
+  paragraph("Impressum", bold, 16, 22, 16);
+  paragraph(`© ${year} ${imprint.name}`, body, 11, 16, 12);
+  paragraph(imprint.name, body, 11, 16, 2);
+  paragraph(imprint.street, body, 11, 16, 2);
+  paragraph(`${imprint.zip} ${imprint.city}`, body, 11, 16, 14);
+  paragraph(
+    "Alle Rechte vorbehalten. Nachdruck oder Vervielfältigung, auch auszugsweise, nur mit ausdrücklicher Genehmigung des Autors.",
+    body,
+    10,
+    15,
+    0,
+  );
 
   // --- Chapters ---
   for (const chapter of written) {
