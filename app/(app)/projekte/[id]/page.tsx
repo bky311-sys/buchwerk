@@ -9,6 +9,7 @@ import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
 import { ChapterContent } from "@/components/buchwerk/chapter-content";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
 import { ResearchPanel } from "@/components/buchwerk/research-panel";
+import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 import { Spinner } from "@/components/buchwerk/spinner";
 import {
   STALE_GENERATION_MS,
@@ -88,6 +89,19 @@ export default async function ProjektPage({
     : { data: null };
   const boostedUntil = boostRow?.boosted_until ?? null;
 
+  // Cover + KDP-listing existence drive the guided workflow stepper (best-effort).
+  const { data: selectedCover } = await supabase
+    .from("covers")
+    .select("id")
+    .eq("project_id", id)
+    .eq("is_selected", true)
+    .maybeSingle();
+  const { data: listingRow } = await supabase
+    .from("kdp_listings")
+    .select("project_id")
+    .eq("project_id", id)
+    .maybeSingle();
+
   const [{ data: chapters }, unlocked, subscriber] = await Promise.all([
     supabase
       .from("chapters")
@@ -160,6 +174,66 @@ export default async function ProjektPage({
       ? ("not_subscriber" as const)
       : null;
 
+  // Guided workflow: Recherche → Buch schreiben → Cover → KDP-Listing → Live.
+  // The first not-done required step becomes "current"; an optional step
+  // (Recherche, Veröffentlichen) that was skipped shows as optional.
+  const researchDone = Boolean(researchRow?.research?.trim());
+  const workflowRaw = [
+    {
+      label: "Recherche",
+      href: "#recherche",
+      cta: "Recherche starten",
+      done: researchDone,
+      optional: true,
+    },
+    {
+      label: "Buch schreiben",
+      href: "#kapitel",
+      cta: hasWrittenChapters ? "Weiter schreiben" : "Kapitel schreiben",
+      done: finished,
+      optional: false,
+    },
+    {
+      label: "Cover",
+      href: `/projekte/${project.id}/cover`,
+      cta: "Cover erstellen",
+      done: Boolean(selectedCover),
+      optional: false,
+    },
+    {
+      label: "KDP-Listing",
+      href: `/projekte/${project.id}/kdp`,
+      cta: "KDP-Listing erstellen",
+      done: Boolean(listingRow),
+      optional: false,
+    },
+    {
+      label: "Veröffentlichen",
+      href: "#veroeffentlichen",
+      cta: "Veröffentlichen",
+      done: Boolean(shopRow?.shop_published),
+      optional: true,
+    },
+  ];
+  let currentTaken = false;
+  const workflowSteps = workflowRaw.map((step, index) => {
+    let status: "done" | "current" | "todo" | "optional";
+    if (step.done) {
+      status = "done";
+    } else if (
+      step.optional &&
+      workflowRaw.slice(index + 1).some((later) => later.done)
+    ) {
+      status = "optional";
+    } else if (!currentTaken) {
+      status = "current";
+      currentTaken = true;
+    } else {
+      status = "todo";
+    }
+    return { label: step.label, href: step.href, cta: step.cta, status };
+  });
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <Link
@@ -228,29 +302,20 @@ export default async function ProjektPage({
           </div>
         </div>
       ) : (
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link href={`/projekte/${project.id}/kdp`}>KDP-Listing</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href={`/projekte/${project.id}/cover`}>Cover</Link>
-          </Button>
+        <div className="mt-6 space-y-4">
+          <WorkflowStepper steps={workflowSteps} />
           {finished ? (
-            <Button asChild variant="ink">
+            <Button asChild variant="ink" size="lg">
               <a href={`/projekte/${project.id}/manuskript/pdf`} download>
-                Manuskript-PDF
+                Manuskript-PDF herunterladen
               </a>
             </Button>
-          ) : (
-            <Button variant="outline" disabled title="Erst alle Kapitel schreiben">
-              Manuskript-PDF
-            </Button>
-          )}
+          ) : null}
         </div>
       )}
 
       {unlocked && researchRow ? (
-        <div className="mt-6">
+        <div id="recherche" className="mt-6 scroll-mt-6">
           <ResearchPanel
             projectId={project.id}
             research={researchRow.research}
@@ -260,7 +325,7 @@ export default async function ProjektPage({
         </div>
       ) : null}
 
-      <div className="mt-10 space-y-5">
+      <div id="kapitel" className="mt-10 space-y-5 scroll-mt-6">
         {list.map((chapter, index) => {
           const gen = genState.get(chapter.id) ?? {
             isGenerating: false,
@@ -308,7 +373,7 @@ export default async function ProjektPage({
       </div>
 
       {unlocked && shopRow ? (
-        <div className="mt-6">
+        <div id="veroeffentlichen" className="mt-6 scroll-mt-6">
           <ShopPublish
             projectId={project.id}
             isPublished={shopRow.shop_published}
