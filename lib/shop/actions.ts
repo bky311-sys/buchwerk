@@ -86,7 +86,10 @@ export async function publishToShopAction(
   const slug =
     project.shop_slug ?? (await uniqueSlug(slugify(project.title ?? project.topic)));
 
-  const { error } = await supabase
+  // Shop columns are not writable via RLS (security migration); ownership was
+  // verified above, so write them through the service-role client.
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("projects")
     .update({
       shop_published: true,
@@ -125,7 +128,10 @@ export async function unpublishFromShopAction(
     return { ok: false, error: "Projekt nicht gefunden." };
   }
 
-  const { error } = await supabase
+  // Shop columns are not writable via RLS (security migration); ownership was
+  // verified above, so write them through the service-role client.
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("projects")
     .update({ shop_published: false, shop_published_at: null })
     .eq("id", projectId);

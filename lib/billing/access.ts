@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -92,7 +93,20 @@ export async function gateProduction(
     };
   }
 
-  await supabase.from("book_unlocks").insert({
+  // Verify ownership before consuming a slot: the RLS (cookie) client can only
+  // read the user's own projects, so a null result means the project isn't
+  // theirs. This guards the admin insert below, which bypasses RLS.
+  const { data: owned } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!owned) return { ok: false, error: LOCKED_MESSAGE };
+
+  // book_unlocks has no self-insert policy (security migration); write through
+  // the service-role client after the checks above.
+  const admin = createAdminClient();
+  await admin.from("book_unlocks").insert({
     project_id: projectId,
     user_id: user.id,
     source: "subscription",
