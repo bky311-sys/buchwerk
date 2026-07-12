@@ -13,6 +13,9 @@ type Props = {
   isGenerating: boolean;
   // The previous run got stuck (function killed before it could finish).
   isStale: boolean;
+  // This generation will run the web research first (only the first chapter of a
+  // book without a dossier), so it takes noticeably longer.
+  willResearch: boolean;
 };
 
 export function ChapterGenerator({
@@ -20,6 +23,7 @@ export function ChapterGenerator({
   hasContent,
   isGenerating,
   isStale,
+  willResearch,
 }: Props) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
@@ -28,6 +32,16 @@ export function ChapterGenerator({
   const busy = isGenerating || starting;
 
   async function run() {
+    // Overwriting an existing chapter (incl. manual/AI edits) is destructive —
+    // confirm first.
+    if (
+      hasContent &&
+      !window.confirm(
+        "Dieses Kapitel neu schreiben? Der aktuelle Text wird ersetzt — auch deine Änderungen.",
+      )
+    ) {
+      return;
+    }
     setError(null);
     setStarting(true);
     try {
@@ -57,7 +71,9 @@ export function ChapterGenerator({
     return (
       <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
         <Spinner className="size-4" />
-        Wird geschrieben… (kann ~30 Sek. dauern)
+        {willResearch
+          ? "KI recherchiert zuerst im Web und schreibt dann — das erste Kapitel dauert länger (~1–2 Min.)"
+          : "Wird geschrieben… (kann ~30 Sek. dauern)"}
       </div>
     );
   }

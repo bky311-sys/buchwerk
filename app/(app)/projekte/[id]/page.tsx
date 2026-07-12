@@ -10,6 +10,7 @@ import { ChapterContent } from "@/components/buchwerk/chapter-content";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
 import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 import { PublishGuide } from "@/components/buchwerk/publish-guide";
+import { BatchWrite } from "@/components/buchwerk/batch-write";
 import { Spinner } from "@/components/buchwerk/spinner";
 import {
   STALE_GENERATION_MS,
@@ -91,6 +92,14 @@ export default async function ProjektPage({
     .select("project_id")
     .eq("project_id", id)
     .maybeSingle();
+  // Whether a research dossier already exists (best-effort) — drives the honest
+  // spinner text and lets the batch write research once up front.
+  const { data: researchRow } = await supabase
+    .from("projects")
+    .select("research")
+    .eq("id", id)
+    .maybeSingle();
+  const hasResearch = Boolean(researchRow?.research?.trim());
 
   const [{ data: chapters }, unlocked, subscriber] = await Promise.all([
     supabase
@@ -106,6 +115,11 @@ export default async function ProjektPage({
   const done = list.filter((c) => c.status === "fertig").length;
   const hasWrittenChapters = list.some((c) => Boolean(c.content));
   const progressPct = list.length ? Math.round((done / list.length) * 100) : 0;
+
+  // Chapters that still need writing (in order). The first of these is where the
+  // "Buch schreiben" step and the auto-research kick in.
+  const unwrittenIds = list.filter((c) => !c.content).map((c) => c.id);
+  const firstUnwrittenId = unwrittenIds[0] ?? null;
 
   // Live generation state per chapter. A chapter is "generating" while its
   // status is "schreiben" and the write is recent; once it's older than the
@@ -160,7 +174,7 @@ export default async function ProjektPage({
   const workflowRaw = [
     {
       label: "Buch schreiben",
-      href: "#kapitel",
+      href: firstUnwrittenId ? `#ch-${firstUnwrittenId}` : "#kapitel",
       cta: hasWrittenChapters ? "Weiter schreiben" : "Kapitel schreiben",
       done: finished,
       optional: false,
@@ -288,6 +302,16 @@ export default async function ProjektPage({
         </div>
       )}
 
+      {unlocked && unwrittenIds.length > 1 ? (
+        <div className="mt-10">
+          <BatchWrite
+            projectId={project.id}
+            chapterIds={unwrittenIds}
+            needsResearch={!hasResearch}
+          />
+        </div>
+      ) : null}
+
       <div id="kapitel" className="mt-10 space-y-5 scroll-mt-6">
         {list.map((chapter, index) => {
           const gen = genState.get(chapter.id) ?? {
@@ -297,7 +321,8 @@ export default async function ProjektPage({
           return (
           <article
             key={chapter.id}
-            className="rounded-2xl border border-border bg-card p-6 sm:p-7"
+            id={`ch-${chapter.id}`}
+            className="scroll-mt-6 rounded-2xl border border-border bg-card p-6 sm:p-7"
           >
             <ChapterEditor
               chapterId={chapter.id}
@@ -327,6 +352,7 @@ export default async function ProjektPage({
                   hasContent={Boolean(chapter.content)}
                   isGenerating={gen.isGenerating}
                   isStale={gen.isStale}
+                  willResearch={!hasResearch && chapter.id === firstUnwrittenId}
                 />
               </div>
             ) : null}
