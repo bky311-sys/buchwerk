@@ -14,13 +14,14 @@ export const maxDuration = 60;
 const STATUS_LABEL: Record<string, string> = {
   entwurf: "Entwurf",
   gliederung: "Gliederung",
+  gliederung_läuft: "Gliederung läuft…",
   schreiben: "In Arbeit",
   fertig: "Fertig",
 };
 
 function statusIntent(status: string): "done" | "draft" | "neutral" {
   if (status === "fertig") return "done";
-  if (status === "schreiben") return "draft";
+  if (status === "schreiben" || status === "gliederung_läuft") return "draft";
   return "neutral";
 }
 

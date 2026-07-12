@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button";
 import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
 import { ChapterContent } from "@/components/buchwerk/chapter-content";
+import { GenerationPoller } from "@/components/buchwerk/generation-poller";
+import { ResearchPanel } from "@/components/buchwerk/research-panel";
+import { Spinner } from "@/components/buchwerk/spinner";
+import {
+  STALE_GENERATION_MS,
+  MIN_TOTAL_WORDS,
+  countWords,
+} from "@/lib/books/generate";
+import { OUTLINE_RUNNING_STATUS } from "@/lib/books/outline-generate";
+import { RESEARCH_STALE_MS } from "@/lib/books/research";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
 import { OutlineActions } from "@/components/buchwerk/outline-actions";
 import { ShopPublish } from "@/components/buchwerk/shop-publish";
@@ -30,10 +40,19 @@ export default async function ProjektPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, topic, audience, status")
+    .select("id, title, topic, audience, status, updated_at")
     .eq("id", id)
     .single();
   if (!project) notFound();
+
+  // Research columns are queried separately and best-effort: if the research
+  // migration hasn't been applied yet, this errors and the panel stays hidden
+  // instead of breaking the whole project page (same pattern as shopRow below).
+  const { data: researchRow } = await supabase
+    .from("projects")
+    .select("research, research_status, research_updated_at")
+    .eq("id", id)
+    .maybeSingle();
 
   const {
     data: { user },
@@ -72,7 +91,7 @@ export default async function ProjektPage({
   const [{ data: chapters }, unlocked, subscriber] = await Promise.all([
     supabase
       .from("chapters")
-      .select("id, position, heading, summary, content, status")
+      .select("id, position, heading, summary, content, status, updated_at")
       .eq("project_id", id)
       .order("position"),
     isProjectUnlocked(supabase, id),
@@ -83,6 +102,54 @@ export default async function ProjektPage({
   const done = list.filter((c) => c.status === "fertig").length;
   const hasWrittenChapters = list.some((c) => Boolean(c.content));
   const progressPct = list.length ? Math.round((done / list.length) * 100) : 0;
+
+  // Live generation state per chapter. A chapter is "generating" while its
+  // status is "schreiben" and the write is recent; once it's older than the
+  // stale threshold the function was almost certainly killed, so we treat it as
+  // failed and offer a retry.
+  // Server Component: the per-request wall clock is exactly what we want here —
+  // the poller re-renders this page every few seconds, so staleness is
+  // re-evaluated on each refresh.
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
+  const genState = new Map(
+    list.map((c) => {
+      const writing = c.status === "schreiben";
+      const ageMs = now - new Date(c.updated_at).getTime();
+      const isGenerating = writing && ageMs < STALE_GENERATION_MS;
+      const isStale = (writing && ageMs >= STALE_GENERATION_MS) ||
+        c.status === "fehler";
+      return [c.id, { isGenerating, isStale }] as const;
+    }),
+  );
+  const anyGenerating = list.some((c) => genState.get(c.id)?.isGenerating);
+
+  // A fresh "gliederung_läuft" status means a new outline is being generated.
+  // Once it's stale we fall back to the normal buttons so it can be retried.
+  const outlineAgeMs = now - new Date(project.updated_at).getTime();
+  const outlineGenerating =
+    project.status === OUTLINE_RUNNING_STATUS &&
+    outlineAgeMs < STALE_GENERATION_MS;
+
+  // Research (web-search dossier) generation state.
+  const researchStatus = researchRow?.research_status ?? "offen";
+  const researchAgeMs = researchRow?.research_updated_at
+    ? now - new Date(researchRow.research_updated_at).getTime()
+    : Infinity;
+  const researchGenerating =
+    researchStatus === "läuft" && researchAgeMs < RESEARCH_STALE_MS;
+  const researchStale =
+    (researchStatus === "läuft" && researchAgeMs >= RESEARCH_STALE_MS) ||
+    researchStatus === "fehler";
+
+  // Total word count across written chapters — the book must clear 7000.
+  const totalWords = list.reduce(
+    (sum, c) => sum + (c.content ? countWords(c.content) : 0),
+    0,
+  );
+  const belowMinimum = hasWrittenChapters && totalWords < MIN_TOTAL_WORDS;
+
+  const pollerActive = anyGenerating || outlineGenerating || researchGenerating;
 
   // Buchshop: a finished book can be published by a subscriber.
   const finished = list.length > 0 && list.every((c) => Boolean(c.content));
@@ -110,7 +177,7 @@ export default async function ProjektPage({
       </div>
       <p className="mt-3 text-base text-muted-foreground">{project.topic}</p>
 
-      <div className="mt-5 flex items-center gap-4">
+      <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="h-2 w-full max-w-[220px] overflow-hidden rounded-full bg-input">
           <div
             className="h-full rounded-full bg-primary transition-[width]"
@@ -120,7 +187,27 @@ export default async function ProjektPage({
         <span className="text-sm font-semibold text-primary tabular-nums">
           {done} / {list.length} Kapitel
         </span>
+        {hasWrittenChapters ? (
+          <span
+            className={`text-sm font-medium tabular-nums ${
+              belowMinimum ? "text-clay-strong" : "text-muted-foreground"
+            }`}
+            title={`Mindestlänge ${MIN_TOTAL_WORDS.toLocaleString("de-DE")} Wörter`}
+          >
+            ≈ {totalWords.toLocaleString("de-DE")} Wörter
+            {belowMinimum ? " (unter Minimum)" : ""}
+          </span>
+        ) : null}
+        {anyGenerating ? (
+          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-clay-strong">
+            <Spinner className="size-4" />
+            Kapitel wird geschrieben…
+          </span>
+        ) : null}
       </div>
+
+      {/* Auto-refreshes the page while a chapter or the outline is generating. */}
+      <GenerationPoller active={pollerActive} />
 
       {!unlocked ? (
         <div className="mt-6 rounded-2xl border border-border bg-card p-6">
@@ -148,11 +235,38 @@ export default async function ProjektPage({
           <Button asChild variant="outline">
             <Link href={`/projekte/${project.id}/cover`}>Cover</Link>
           </Button>
+          {finished ? (
+            <Button asChild variant="ink">
+              <a href={`/projekte/${project.id}/manuskript/pdf`} download>
+                Manuskript-PDF
+              </a>
+            </Button>
+          ) : (
+            <Button variant="outline" disabled title="Erst alle Kapitel schreiben">
+              Manuskript-PDF
+            </Button>
+          )}
         </div>
       )}
 
+      {unlocked && researchRow ? (
+        <div className="mt-6">
+          <ResearchPanel
+            projectId={project.id}
+            research={researchRow.research}
+            isGenerating={researchGenerating}
+            isStale={researchStale}
+          />
+        </div>
+      ) : null}
+
       <div className="mt-10 space-y-5">
-        {list.map((chapter, index) => (
+        {list.map((chapter, index) => {
+          const gen = genState.get(chapter.id) ?? {
+            isGenerating: false,
+            isStale: false,
+          };
+          return (
           <article
             key={chapter.id}
             className="rounded-2xl border border-border bg-card p-6 sm:p-7"
@@ -166,6 +280,8 @@ export default async function ProjektPage({
               isFirst={index === 0}
               isLast={index === list.length - 1}
               hasContent={Boolean(chapter.content)}
+              isGenerating={gen.isGenerating}
+              isStale={gen.isStale}
             />
 
             {chapter.content ? (
@@ -181,11 +297,14 @@ export default async function ProjektPage({
                 <ChapterGenerator
                   chapterId={chapter.id}
                   hasContent={Boolean(chapter.content)}
+                  isGenerating={gen.isGenerating}
+                  isStale={gen.isStale}
                 />
               </div>
             ) : null}
           </article>
-        ))}
+          );
+        })}
       </div>
 
       {unlocked && shopRow ? (
@@ -213,6 +332,7 @@ export default async function ProjektPage({
         <OutlineActions
           projectId={project.id}
           hasWrittenChapters={hasWrittenChapters}
+          isRegenerating={outlineGenerating}
         />
       </div>
     </div>

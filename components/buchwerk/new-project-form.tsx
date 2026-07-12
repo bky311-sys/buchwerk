@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/buchwerk/spinner";
 import {
   createProjectAction,
   type ProjectFormState,
@@ -56,9 +57,14 @@ export function NewProjectForm({ defaultTopic }: { defaultTopic?: string }) {
         disabled={isPending}
         className="h-11 px-5 text-base"
       >
-        {isPending
-          ? "Gliederung wird erstellt… (kann ~20 Sek. dauern)"
-          : "Projekt anlegen & Gliederung erstellen"}
+        {isPending ? (
+          <span className="inline-flex items-center gap-2">
+            <Spinner className="size-4" />
+            Gliederung wird erstellt… (kann ~20 Sek. dauern)
+          </span>
+        ) : (
+          "Projekt anlegen & Gliederung erstellen"
+        )}
       </Button>
     </form>
   );

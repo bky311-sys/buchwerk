@@ -7,8 +7,10 @@
 
 const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
 
-// Manuscript model per CLAUDE.md (Sonnet for cost on token-heavy book text).
-const MODEL = "claude-sonnet-4-6";
+// Manuscript model (Sonnet for cost on token-heavy book text). Overridable via
+// env so the exact model id can be corrected without a code change — verify the
+// id is valid for the Anthropic account before go-live.
+const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -18,6 +20,11 @@ type ClaudeOptions = {
   maxTokens: number;
   // When set, the response is constrained to this JSON schema.
   jsonSchema?: Record<string, unknown>;
+  // When set, Claude may run web searches (server-side tool) to ground its
+  // answer in current, cited sources. `maxUses` caps how many searches it may
+  // run — keep it small so a single request stays under the function limit.
+  // NOTE: web search must be enabled for the Anthropic organisation.
+  webSearch?: { maxUses?: number };
 };
 
 type MessagesResponse = {
@@ -41,6 +48,18 @@ export async function claudeText(opts: ClaudeOptions): Promise<string> {
     body.output_config = {
       format: { type: "json_schema", schema: opts.jsonSchema },
     };
+  }
+  if (opts.webSearch) {
+    // Server-side web search tool. Anthropic runs the search loop internally and
+    // returns the final message (text blocks + web_search_tool_result blocks);
+    // we only keep the text below, so no client-side tool loop is needed.
+    body.tools = [
+      {
+        type: "web_search_20250305",
+        name: "web_search",
+        max_uses: opts.webSearch.maxUses ?? 5,
+      },
+    ];
   }
 
   const response = await fetch(ANTHROPIC_MESSAGES_URL, {
@@ -68,8 +87,24 @@ export async function claudeText(opts: ClaudeOptions): Promise<string> {
     .join("");
 }
 
-// Same call but parses the (schema-constrained) JSON response.
+// Same call but parses the (schema-constrained) JSON response. Tolerates a model
+// that wraps the JSON in ```json fences or surrounding prose.
 export async function claudeJson(opts: ClaudeOptions): Promise<unknown> {
   const text = await claudeText(opts);
-  return JSON.parse(text);
+  return JSON.parse(extractJson(text));
+}
+
+// Pulls the JSON payload out of a model response: strips ```json fences, else
+// falls back to the outermost {...} / [...] span. Returns the trimmed input if
+// neither matches (so JSON.parse throws a meaningful error).
+function extractJson(text: string): string {
+  const trimmed = text.trim();
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fence) return fence[1].trim();
+  const firstBrace = trimmed.search(/[[{]/);
+  const lastBrace = Math.max(trimmed.lastIndexOf("}"), trimmed.lastIndexOf("]"));
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1);
+  }
+  return trimmed;
 }

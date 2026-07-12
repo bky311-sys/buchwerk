@@ -1,30 +1,65 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { generateChapterAction } from "@/lib/books/actions";
+import { Spinner } from "@/components/buchwerk/spinner";
 
 type Props = {
   chapterId: string;
   hasContent: boolean;
+  // Driven by the chapter's DB status (refreshed by the poller): the model call
+  // for this chapter is currently running.
+  isGenerating: boolean;
+  // The previous run got stuck (function killed before it could finish).
+  isStale: boolean;
 };
 
-export function ChapterGenerator({ chapterId, hasContent }: Props) {
+export function ChapterGenerator({
+  chapterId,
+  hasContent,
+  isGenerating,
+  isStale,
+}: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function run() {
+  const busy = isGenerating || starting;
+
+  async function run() {
     setError(null);
-    startTransition(async () => {
-      const result = await generateChapterAction(chapterId);
-      if (result.ok) {
-        router.refresh();
-      } else {
-        setError(result.error ?? "Etwas ist schiefgelaufen.");
+    setStarting(true);
+    try {
+      const res = await fetch(`/api/chapters/${chapterId}/generate`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setError(data?.error ?? "Das Kapitel konnte nicht generiert werden.");
       }
-    });
+    } catch {
+      // The request was dropped (e.g. a long generation past the gateway
+      // limit). The server keeps writing and the poller picks up the result
+      // from the DB status — so no error, just let the refresh below take over.
+    } finally {
+      // Whatever happened, re-read the DB: on success the content appears, on a
+      // drop the "schreiben" status keeps the spinner + poller going, on an
+      // error the status flips to "fehler" and the retry button shows.
+      router.refresh();
+      setStarting(false);
+    }
+  }
+
+  if (busy) {
+    return (
+      <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
+        <Spinner className="size-4" />
+        Wird geschrieben… (kann ~30 Sek. dauern)
+      </div>
+    );
   }
 
   return (
@@ -34,14 +69,18 @@ export function ChapterGenerator({ chapterId, hasContent }: Props) {
         variant={hasContent ? "outline" : "default"}
         size="lg"
         onClick={run}
-        disabled={isPending}
       >
-        {isPending
-          ? "Wird geschrieben… (kann ~30 Sek. dauern)"
+        {isStale
+          ? "Erneut versuchen"
           : hasContent
             ? "Kapitel neu schreiben"
             : "Kapitel schreiben"}
       </Button>
+      {isStale ? (
+        <p className="text-sm text-muted-foreground">
+          Der letzte Versuch wurde unterbrochen. Starte ihn einfach neu.
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}

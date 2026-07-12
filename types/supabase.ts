@@ -99,6 +99,9 @@ export interface Database {
           audience: string | null;
           author: string | null;
           status: string;
+          research: string | null;
+          research_status: string;
+          research_updated_at: string | null;
           shop_published: boolean;
           shop_published_at: string | null;
           shop_slug: string | null;
@@ -115,6 +118,9 @@ export interface Database {
           audience?: string | null;
           author?: string | null;
           status?: string;
+          research?: string | null;
+          research_status?: string;
+          research_updated_at?: string | null;
           shop_published?: boolean;
           shop_published_at?: string | null;
           shop_slug?: string | null;
@@ -131,6 +137,9 @@ export interface Database {
           audience?: string | null;
           author?: string | null;
           status?: string;
+          research?: string | null;
+          research_status?: string;
+          research_updated_at?: string | null;
           shop_published?: boolean;
           shop_published_at?: string | null;
           shop_slug?: string | null;

@@ -29,7 +29,7 @@ export default async function KdpPage({
   const { data: listing } = await supabase
     .from("kdp_listings")
     .select(
-      "title, subtitle, description, keywords, categories, price_eur, price_note",
+      "title, subtitle, description, keywords, categories, price_eur, price_note, updated_at",
     )
     .eq("project_id", id)
     .maybeSingle();

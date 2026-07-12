@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/buchwerk/spinner";
 import {
   generateListingAction,
   updateListingAction,
@@ -18,6 +19,7 @@ type Listing = {
   categories: string[] | null;
   price_eur: number | null;
   price_note: string | null;
+  updated_at: string | null;
 };
 
 const TEXTAREA_CLASS =
@@ -74,6 +76,7 @@ export function KdpListing({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [busyAction, setBusyAction] = useState<"generate" | "save" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -88,18 +91,38 @@ export function KdpListing({
     listing?.price_eur != null ? String(listing.price_eur) : "",
   );
 
+  // Adopt fresh values whenever the server sends a new listing version (after a
+  // (re)generation or save). useState only seeds on mount, so without this the
+  // form would keep showing the old text after router.refresh(). This is the
+  // documented "adjust state while rendering" pattern (guarded so it runs only
+  // when the row actually changed), which preserves the "saved" hint that a
+  // key-based remount would clear.
+  const [seenUpdatedAt, setSeenUpdatedAt] = useState(listing?.updated_at ?? null);
+  if ((listing?.updated_at ?? null) !== seenUpdatedAt) {
+    setSeenUpdatedAt(listing?.updated_at ?? null);
+    setTitle(listing?.title ?? "");
+    setSubtitle(listing?.subtitle ?? "");
+    setDescription(listing?.description ?? "");
+    setKeywords((listing?.keywords ?? []).join("\n"));
+    setCategories((listing?.categories ?? []).join("\n"));
+    setPrice(listing?.price_eur != null ? String(listing.price_eur) : "");
+  }
+
   function generate() {
     setError(null);
+    setBusyAction("generate");
     startTransition(async () => {
       const result = await generateListingAction(projectId);
       if (result.ok) router.refresh();
       else setError(result.error ?? "Etwas ist schiefgelaufen.");
+      setBusyAction(null);
     });
   }
 
   function save() {
     setError(null);
     setSaved(false);
+    setBusyAction("save");
     startTransition(async () => {
       const parsedPrice = price.trim()
         ? Number(price.replace(",", "."))
@@ -118,6 +141,7 @@ export function KdpListing({
       } else {
         setError(result.error ?? "Etwas ist schiefgelaufen.");
       }
+      setBusyAction(null);
     });
   }
 
@@ -141,7 +165,14 @@ export function KdpListing({
         </p>
         <div className="mt-4">
           <Button type="button" size="lg" disabled={isPending} onClick={generate}>
-            {isPending ? "Wird erstellt… (~20 Sek.)" : "KDP-Listing erstellen"}
+            {isPending ? (
+              <span className="inline-flex items-center gap-2">
+                <Spinner className="size-4" />
+                Wird erstellt… (~20 Sek.)
+              </span>
+            ) : (
+              "KDP-Listing erstellen"
+            )}
           </Button>
         </div>
         {error ? (
@@ -229,19 +260,26 @@ export function KdpListing({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
         <Button type="button" size="lg" disabled={isPending} onClick={save}>
-          {isPending ? "Speichern…" : "Änderungen speichern"}
+          {busyAction === "save" ? "Speichern…" : "Änderungen speichern"}
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          disabled={isPending}
-          onClick={regenerate}
-        >
-          Neu generieren
-        </Button>
+        {busyAction === "generate" ? (
+          <span className="inline-flex items-center gap-2 text-sm font-medium text-clay-strong">
+            <Spinner className="size-4" />
+            Wird erstellt… (~20 Sek.)
+          </span>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            disabled={isPending}
+            onClick={regenerate}
+          >
+            Neu generieren
+          </Button>
+        )}
       </div>
     </div>
   );

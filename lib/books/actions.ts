@@ -3,38 +3,13 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { claudeJson, claudeText } from "@/lib/ai/anthropic";
-import { loadPrompt } from "@/lib/ai/prompts";
-import { gateProduction } from "@/lib/billing/access";
-import {
-  newProjectSchema,
-  outlineSchema,
-  OUTLINE_JSON_SCHEMA,
-  type Outline,
-} from "@/lib/books/schema";
-
-const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
+import { generateOutline } from "@/lib/books/outline-generate";
+import { newProjectSchema } from "@/lib/books/schema";
 
 export type ProjectFormState = { error: string | null };
 export type ActionResult = { ok: boolean; error?: string };
 
 // --- helpers ---------------------------------------------------------------
-
-async function generateOutline(
-  topic: string,
-  audience: string | null,
-): Promise<Outline> {
-  const prompt = await loadPrompt("gliederung", {
-    thema: topic,
-    zielgruppe: audience ?? DEFAULT_AUDIENCE,
-  });
-  const raw = await claudeJson({
-    messages: [{ role: "user", content: prompt }],
-    maxTokens: 2000,
-    jsonSchema: OUTLINE_JSON_SCHEMA,
-  });
-  return outlineSchema.parse(raw);
-}
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -122,75 +97,9 @@ export async function createProjectAction(
   redirect(`/projekte/${project.id}`);
 }
 
-export type ChapterResult = { ok: boolean; error?: string };
-
-export async function generateChapterAction(
-  chapterId: string,
-): Promise<ChapterResult> {
-  const supabase = await createClient();
-
-  const { data: chapter, error: chapterError } = await supabase
-    .from("chapters")
-    .select("id, project_id, position, heading, summary")
-    .eq("id", chapterId)
-    .single();
-  if (chapterError || !chapter) {
-    return { ok: false, error: "Kapitel nicht gefunden." };
-  }
-
-  // Production is gated behind payment.
-  const gate = await gateProduction(supabase, chapter.project_id);
-  if (!gate.ok) return { ok: false, error: gate.error };
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("title, topic, audience")
-    .eq("id", chapter.project_id)
-    .single();
-  if (!project) {
-    return { ok: false, error: "Projekt nicht gefunden." };
-  }
-
-  const { data: allChapters } = await supabase
-    .from("chapters")
-    .select("position, heading, summary")
-    .eq("project_id", chapter.project_id)
-    .order("position");
-
-  const gliederung = (allChapters ?? [])
-    .map((c) => `${c.position}. ${c.heading} — ${c.summary ?? ""}`)
-    .join("\n");
-
-  try {
-    const prompt = await loadPrompt("kapitel", {
-      titel: project.title ?? project.topic,
-      thema: project.topic,
-      zielgruppe: project.audience ?? DEFAULT_AUDIENCE,
-      gliederung,
-      nummer: String(chapter.position),
-      ueberschrift: chapter.heading,
-      zusammenfassung: chapter.summary ?? "",
-    });
-    const content = await claudeText({
-      messages: [{ role: "user", content: prompt }],
-      maxTokens: 6000,
-    });
-
-    await supabase
-      .from("chapters")
-      .update({ content, status: "fertig" })
-      .eq("id", chapter.id);
-
-    revalidatePath(`/projekte/${chapter.project_id}`);
-    return { ok: true };
-  } catch {
-    return {
-      ok: false,
-      error:
-        "Das Kapitel konnte nicht generiert werden. Versuch es noch einmal.",
-    };
-  }
-}
+// Chapter generation lives in lib/books/generate.ts and is driven through the
+// /api/chapters/[id]/generate route so the UI can fire it and poll for the
+// result instead of blocking on one long request.
 
 // --- outline editing (free) ------------------------------------------------
 
@@ -314,39 +223,6 @@ export async function moveChapterAction(
   return { ok: true };
 }
 
-export async function regenerateOutlineAction(
-  projectId: string,
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, topic, audience")
-    .eq("id", projectId)
-    .single();
-  if (!project) return { ok: false, error: "Projekt nicht gefunden." };
-
-  try {
-    const outline = await generateOutline(project.topic, project.audience);
-    await supabase.from("chapters").delete().eq("project_id", projectId);
-    await supabase
-      .from("projects")
-      .update({ title: outline.titel, status: "schreiben" })
-      .eq("id", projectId);
-    await supabase.from("chapters").insert(
-      outline.kapitel.map((kapitel, index) => ({
-        project_id: projectId,
-        position: index + 1,
-        heading: kapitel.ueberschrift,
-        summary: kapitel.zusammenfassung,
-        status: "offen",
-      })),
-    );
-    revalidatePath(`/projekte/${projectId}`);
-    return { ok: true };
-  } catch {
-    return {
-      ok: false,
-      error: "Die Gliederung konnte nicht neu erstellt werden.",
-    };
-  }
-}
+// Outline regeneration lives in lib/books/outline-generate.ts and is driven
+// through the /api/projekte/[id]/outline route so the UI can fire it and poll
+// the project status for the result instead of blocking on one long request.

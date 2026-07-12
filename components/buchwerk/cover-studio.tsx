@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/buchwerk/spinner";
 import {
   suggestCoverPromptAction,
-  generateCoverAction,
   selectCoverAction,
   deleteCoverAction,
   updateProjectAuthorAction,
@@ -16,6 +16,10 @@ import type { CoverModel } from "@/lib/ai/replicate";
 
 const TEXTAREA_CLASS =
   "flex w-full rounded-xl border border-input bg-muted px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50";
+
+// After this long without the new cover appearing we stop waiting and offer a
+// retry — the generation almost certainly failed or was killed.
+const COVER_TIMEOUT_MS = 120_000;
 
 type Cover = {
   id: string;
@@ -38,9 +42,45 @@ export function CoverStudio({
   const [model, setModel] = useState<CoverModel>("schnell");
   const [authorValue, setAuthorValue] = useState(author);
   const [isPending, startTransition] = useTransition();
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Cover count when the current generation started; generation is "done" once
+  // the list grows past it (the new row was inserted).
+  const startCountRef = useRef<number | null>(null);
+
+  const busy = isPending || generating;
   const hasSelected = covers.some((c) => c.is_selected);
+
+  // Detect completion: a new cover appeared.
+  useEffect(() => {
+    if (
+      generating &&
+      startCountRef.current !== null &&
+      covers.length > startCountRef.current
+    ) {
+      setGenerating(false);
+      startCountRef.current = null;
+    }
+  }, [covers.length, generating]);
+
+  // While generating, re-fetch the page so the new cover shows up on its own —
+  // even if the generate request never returned.
+  useEffect(() => {
+    if (!generating) return;
+    const poll = setInterval(() => router.refresh(), 4000);
+    const giveUp = setTimeout(() => {
+      setGenerating(false);
+      startCountRef.current = null;
+      setError(
+        "Das Cover ist nicht rechtzeitig fertig geworden. Bitte erneut versuchen.",
+      );
+    }, COVER_TIMEOUT_MS);
+    return () => {
+      clearInterval(poll);
+      clearTimeout(giveUp);
+    };
+  }, [generating, router]);
 
   function suggest() {
     setError(null);
@@ -53,11 +93,30 @@ export function CoverStudio({
 
   function generate() {
     setError(null);
-    startTransition(async () => {
-      const result = await generateCoverAction(projectId, prompt, model);
-      if (result.ok) router.refresh();
-      else setError(result.error ?? "Etwas ist schiefgelaufen.");
-    });
+    startCountRef.current = covers.length;
+    setGenerating(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/projekte/${projectId}/cover`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ prompt, model }),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          setError(data?.error ?? "Das Cover konnte nicht erstellt werden.");
+          setGenerating(false);
+          startCountRef.current = null;
+        }
+      } catch {
+        // Request dropped (long generation past the gateway limit). The poll and
+        // completion effect / timeout take over from here.
+      } finally {
+        router.refresh();
+      }
+    })();
   }
 
   function saveAuthor() {
@@ -99,7 +158,7 @@ export function CoverStudio({
               variant="ghost"
               size="sm"
               onClick={suggest}
-              disabled={isPending}
+              disabled={busy}
             >
               Vorschlag von der KI
             </Button>
@@ -108,7 +167,7 @@ export function CoverStudio({
             id="cover-prompt"
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
-            disabled={isPending}
+            disabled={busy}
             rows={4}
             placeholder="Englischer Bildprompt – oder lass dir oben einen Vorschlag erstellen."
             className={TEXTAREA_CLASS}
@@ -124,7 +183,7 @@ export function CoverStudio({
                 name="model"
                 checked={model === "schnell"}
                 onChange={() => setModel("schnell")}
-                disabled={isPending}
+                disabled={busy}
                 className="size-4 accent-primary"
               />
               Entwurf (schnell, ~0,003 $)
@@ -135,7 +194,7 @@ export function CoverStudio({
                 name="model"
                 checked={model === "pro"}
                 onChange={() => setModel("pro")}
-                disabled={isPending}
+                disabled={busy}
                 className="size-4 accent-primary"
               />
               Final (beste Qualität, ~0,04 $)
@@ -143,14 +202,21 @@ export function CoverStudio({
           </div>
         </fieldset>
 
-        <Button
-          type="button"
-          size="lg"
-          onClick={generate}
-          disabled={isPending || !prompt.trim()}
-        >
-          {isPending ? "Wird erstellt…" : "Cover generieren"}
-        </Button>
+        {generating ? (
+          <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
+            <Spinner className="size-4" />
+            Cover wird erstellt… (kann ~30 Sek. dauern)
+          </div>
+        ) : (
+          <Button
+            type="button"
+            size="lg"
+            onClick={generate}
+            disabled={busy || !prompt.trim()}
+          >
+            Cover generieren
+          </Button>
+        )}
 
         {error ? (
           <p role="alert" className="text-sm text-destructive">
@@ -161,12 +227,20 @@ export function CoverStudio({
 
       <section>
         <h2 className="font-display text-lg font-semibold">Entwürfe</h2>
-        {covers.length === 0 ? (
+        {covers.length === 0 && !generating ? (
           <p className="mt-3 text-sm text-muted-foreground">
             Noch keine Cover. Generiere oben dein erstes.
           </p>
         ) : (
           <ul className="mt-4 grid grid-cols-2 gap-6 sm:grid-cols-3">
+            {generating ? (
+              <li className="space-y-2">
+                <div className="flex aspect-[2/3] w-full items-center justify-center rounded-lg border border-dashed border-border bg-muted">
+                  <Spinner className="size-6 text-muted-foreground" />
+                </div>
+                <p className="text-xs text-muted-foreground">Wird erstellt…</p>
+              </li>
+            ) : null}
             {covers.map((cover) => (
               <li key={cover.id} className="space-y-2">
                 <div
@@ -192,7 +266,7 @@ export function CoverStudio({
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={isPending}
+                    disabled={busy}
                     onClick={() => select(cover.id)}
                   >
                     Als Cover wählen
@@ -202,7 +276,7 @@ export function CoverStudio({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  disabled={isPending}
+                  disabled={busy}
                   onClick={() => remove(cover.id)}
                 >
                   Löschen
@@ -229,7 +303,7 @@ export function CoverStudio({
               id="author"
               value={authorValue}
               onChange={(event) => setAuthorValue(event.target.value)}
-              disabled={isPending}
+              disabled={busy}
               placeholder="Dein Name"
               className="h-10"
             />
@@ -237,7 +311,7 @@ export function CoverStudio({
               type="button"
               variant="outline"
               onClick={saveAuthor}
-              disabled={isPending}
+              disabled={busy}
             >
               Speichern
             </Button>

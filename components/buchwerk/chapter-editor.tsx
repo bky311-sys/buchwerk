@@ -12,6 +12,7 @@ import {
   type ActionResult,
 } from "@/lib/books/actions";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
+import { Spinner } from "@/components/buchwerk/spinner";
 
 type Props = {
   chapterId: string;
@@ -22,6 +23,9 @@ type Props = {
   isFirst: boolean;
   isLast: boolean;
   hasContent: boolean;
+  // Live generation state, derived from the DB status by the parent.
+  isGenerating: boolean;
+  isStale: boolean;
 };
 
 export function ChapterEditor({
@@ -33,6 +37,8 @@ export function ChapterEditor({
   isFirst,
   isLast,
   hasContent,
+  isGenerating,
+  isStale,
 }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -70,7 +76,14 @@ export function ChapterEditor({
           <span className="font-display text-sm font-bold text-muted-foreground tabular-nums">
             {String(number).padStart(2, "0")}
           </span>
-          {status === "fertig" && hasContent ? (
+          {isGenerating ? (
+            <StatusBadge intent="draft">
+              <Spinner className="size-3" />
+              Wird geschrieben…
+            </StatusBadge>
+          ) : (isStale || status === "fehler") && !hasContent ? (
+            <StatusBadge intent="error">Fehlgeschlagen</StatusBadge>
+          ) : status === "fertig" && hasContent ? (
             <StatusBadge intent="done">✓ Fertig</StatusBadge>
           ) : hasContent ? (
             <StatusBadge intent="draft">Entwurf</StatusBadge>

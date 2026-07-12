@@ -1,15 +1,17 @@
 import { cn } from "@/lib/utils";
 
-// Studio status chips. Three intents matching the design system:
+// Studio status chips. Intents matching the design system:
 //   done    → grün auf grünem Tint ("✓ Fertig")
 //   draft   → clay auf warmem Tint ("Entwurf" / "Wird geschrieben…")
 //   neutral → gedämpft auf Paper ("Offen")
-type Intent = "done" | "draft" | "neutral";
+//   error   → Terracotta/destructive für fehlgeschlagene Generierung
+type Intent = "done" | "draft" | "neutral" | "error";
 
 const INTENT_CLASSES: Record<Intent, string> = {
   done: "bg-success-tint text-success",
   draft: "bg-warning-tint text-clay-strong",
   neutral: "bg-muted text-muted-foreground",
+  error: "bg-destructive/10 text-destructive",
 };
 
 export function StatusBadge({
