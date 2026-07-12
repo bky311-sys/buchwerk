@@ -49,6 +49,28 @@ export default async function FreischaltenPage({
         einmalig oder im Abo.
       </p>
 
+      <div className="mt-6 rounded-2xl border border-border bg-card p-6">
+        <p className="text-sm font-semibold text-foreground">Das bekommst du:</p>
+        <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+          {[
+            "Ein vollständig ausgeschriebenes Manuskript, recherchiert und als PDF zum Download",
+            "Cover-Motive plus fertiges Cover-PDF (Titel & Autor)",
+            "Ein komplettes KDP-Listing: Titel, Untertitel, Klappentext, 7 Keywords, Kategorien, Preisvorschlag",
+            "Eine Schritt-für-Schritt-Anleitung, wie du alles bei Amazon KDP hochlädst",
+          ].map((item) => (
+            <li key={item} className="flex gap-2">
+              <span className="text-primary">✓</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Hinweis: Buchwerk ist ein Werkzeug, kein Verlag. Du lädst dein fertiges
+          Buch selbst bei Amazon KDP hoch (dauert wenige Minuten) und behältst
+          alle Rechte und Einnahmen.
+        </p>
+      </div>
+
       <CheckoutForm projectId={id} />
     </div>
   );

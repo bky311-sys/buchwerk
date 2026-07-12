@@ -9,6 +9,7 @@ import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
 import { ChapterContent } from "@/components/buchwerk/chapter-content";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
 import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
+import { PublishGuide } from "@/components/buchwerk/publish-guide";
 import { Spinner } from "@/components/buchwerk/spinner";
 import {
   STALE_GENERATION_MS,
@@ -179,10 +180,12 @@ export default async function ProjektPage({
       optional: false,
     },
     {
-      label: "Veröffentlichen",
+      label: "Bei Amazon veröffentlichen",
       href: "#veroeffentlichen",
-      cta: "Veröffentlichen",
-      done: Boolean(shopRow?.shop_published),
+      cta: "Zur Anleitung",
+      // External, manual step — we can't detect completion, so it stays the
+      // final call-to-action rather than auto-completing.
+      done: false,
       optional: true,
     },
   ];
@@ -341,8 +344,14 @@ export default async function ProjektPage({
         </div>
       ) : null}
 
-      {unlocked && shopRow ? (
+      {unlocked ? (
         <div id="veroeffentlichen" className="mt-6 scroll-mt-6">
+          <PublishGuide projectId={project.id} finished={finished} />
+        </div>
+      ) : null}
+
+      {unlocked && shopRow ? (
+        <div className="mt-4">
           <ShopPublish
             projectId={project.id}
             isPublished={shopRow.shop_published}
