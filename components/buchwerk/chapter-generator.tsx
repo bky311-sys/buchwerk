@@ -72,7 +72,7 @@ export function ChapterGenerator({
       <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
         <Spinner className="size-4" />
         {willResearch
-          ? "KI recherchiert zuerst im Web und schreibt dann — das erste Kapitel dauert länger (~1–2 Min.)"
+          ? "Die KI recherchiert dafür zuerst im Web — das dauert einmalig ~1–2 Min., danach geht es schnell."
           : "Wird geschrieben… (kann ~30 Sek. dauern)"}
       </div>
     );
