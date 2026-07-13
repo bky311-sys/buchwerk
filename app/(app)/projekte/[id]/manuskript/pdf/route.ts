@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
 import { isProjectUnlocked } from "@/lib/billing/access";
+import { extractSources } from "@/lib/books/sources";
+import { manuscriptDisposition } from "@/lib/books/filename";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -104,6 +106,16 @@ export async function GET(
     });
   }
 
+  // Sources from the research dossier become a Quellenverzeichnis at the back of
+  // the book. Best-effort query so a lagging research migration doesn't break the
+  // export; no research → no sources → section omitted.
+  const { data: researchRow } = await supabase
+    .from("projects")
+    .select("research")
+    .eq("id", id)
+    .maybeSingle();
+  const sources = extractSources(researchRow?.research);
+
   const pdf = await PDFDocument.create();
   const body = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -148,23 +160,6 @@ export async function GET(
   paragraph(title, bold, 26, 32, 16);
   if (author) paragraph(author, body, 14, 20, 0);
 
-  // --- Imprint page (Impressum, mandatory) ---
-  page = pdf.addPage([PAGE_W, PAGE_H]);
-  y = PAGE_H - MARGIN;
-  const year = new Date().getFullYear();
-  paragraph("Impressum", bold, 16, 22, 16);
-  paragraph(`© ${year} ${imprint.name}`, body, 11, 16, 12);
-  paragraph(imprint.name, body, 11, 16, 2);
-  paragraph(imprint.street, body, 11, 16, 2);
-  paragraph(`${imprint.zip} ${imprint.city}`, body, 11, 16, 14);
-  paragraph(
-    "Alle Rechte vorbehalten. Nachdruck oder Vervielfältigung, auch auszugsweise, nur mit ausdrücklicher Genehmigung des Autors.",
-    body,
-    10,
-    15,
-    0,
-  );
-
   // --- Chapters ---
   for (const chapter of written) {
     page = pdf.addPage([PAGE_W, PAGE_H]);
@@ -199,11 +194,39 @@ export async function GET(
     }
   }
 
+  // --- Quellenverzeichnis (back matter, only if the book was researched) ---
+  if (sources.length > 0) {
+    page = pdf.addPage([PAGE_W, PAGE_H]);
+    y = PAGE_H - MARGIN;
+    paragraph("Quellen", bold, 18, 23, 16);
+    for (const source of sources) {
+      paragraph(source.title, body, 11, 16, 2, "•  ");
+      paragraph(source.url, body, 9, 13, 8, "   ");
+    }
+  }
+
+  // --- Impressum (mandatory, at the very end of the book) ---
+  page = pdf.addPage([PAGE_W, PAGE_H]);
+  y = PAGE_H - MARGIN;
+  const year = new Date().getFullYear();
+  paragraph("Impressum", bold, 16, 22, 16);
+  paragraph(`© ${year} ${imprint.name}`, body, 11, 16, 12);
+  paragraph(imprint.name, body, 11, 16, 2);
+  paragraph(imprint.street, body, 11, 16, 2);
+  paragraph(`${imprint.zip} ${imprint.city}`, body, 11, 16, 14);
+  paragraph(
+    "Alle Rechte vorbehalten. Nachdruck oder Vervielfältigung, auch auszugsweise, nur mit ausdrücklicher Genehmigung des Autors.",
+    body,
+    10,
+    15,
+    0,
+  );
+
   const pdfBytes = await pdf.save();
   return new NextResponse(Buffer.from(pdfBytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="manuskript-${id}.pdf"`,
+      "Content-Disposition": manuscriptDisposition(title, "pdf"),
       "Cache-Control": "no-store",
     },
   });

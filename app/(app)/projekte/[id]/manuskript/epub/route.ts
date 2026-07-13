@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isProjectUnlocked } from "@/lib/billing/access";
 import { buildEpub } from "@/lib/books/epub";
+import { extractSources } from "@/lib/books/sources";
+import { manuscriptDisposition } from "@/lib/books/filename";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -52,12 +54,22 @@ export async function GET(
     });
   }
 
+  // Sources for the Quellenverzeichnis (best-effort; empty if no research yet).
+  const { data: researchRow } = await supabase
+    .from("projects")
+    .select("research")
+    .eq("id", id)
+    .maybeSingle();
+  const sources = extractSources(researchRow?.research);
+
+  const title = project.title ?? project.topic;
   const now = new Date();
   const epub = await buildEpub({
-    title: project.title ?? project.topic,
+    title,
     author: project.author?.trim() ?? "",
     imprint,
     chapters: written,
+    sources,
     modified: now.toISOString().replace(/\.\d+Z$/, "Z"),
     uuid: crypto.randomUUID(),
     year: now.getFullYear(),
@@ -66,7 +78,7 @@ export async function GET(
   return new NextResponse(Buffer.from(epub), {
     headers: {
       "Content-Type": "application/epub+zip",
-      "Content-Disposition": `attachment; filename="buch-${id}.epub"`,
+      "Content-Disposition": manuscriptDisposition(title, "epub"),
       "Cache-Control": "no-store",
     },
   });

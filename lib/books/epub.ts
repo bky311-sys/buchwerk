@@ -1,6 +1,7 @@
 import "server-only";
 
 import JSZip from "jszip";
+import type { BookSource } from "@/lib/books/sources";
 
 type Chapter = { heading: string; content: string | null };
 type Imprint = { name: string; street: string; zip: string; city: string };
@@ -10,6 +11,9 @@ export type EpubInput = {
   author: string;
   imprint: Imprint;
   chapters: Chapter[];
+  // Sources from the research dossier; rendered as a Quellenverzeichnis in the
+  // back matter. Empty → the section is omitted.
+  sources: BookSource[];
   // ISO timestamp (YYYY-MM-DDThh:mm:ssZ) and a stable id, provided by the route.
   modified: string;
   uuid: string;
@@ -86,8 +90,10 @@ ${bodyInner}
 // Builds a valid EPUB 3 as bytes. Reflowable — the right format for Kindle,
 // unlike a fixed-layout PDF.
 export async function buildEpub(input: EpubInput): Promise<Uint8Array> {
-  const { title, author, imprint, chapters, modified, uuid, year } = input;
+  const { title, author, imprint, chapters, sources, modified, uuid, year } =
+    input;
   const written = chapters.filter((c) => c.content?.trim());
+  const hasSources = sources.length > 0;
 
   const zip = new JSZip();
 
@@ -112,7 +118,9 @@ h2{font-size:1.2em;margin:1.4em 0 .5em;}
 p{margin:0 0 .8em;text-align:justify;}
 .title-page{text-align:center;margin-top:30%;}
 .title-page h1{font-size:2em;}
-.imprint{font-size:.9em;color:#333;}`,
+.imprint{font-size:.9em;color:#333;}
+.sources li{margin:0 0 .7em;word-wrap:break-word;overflow-wrap:break-word;}
+.sources a{color:#1c6b43;}`,
   );
 
   // Content documents.
@@ -147,13 +155,28 @@ p{margin:0 0 .8em;text-align:justify;}
     );
   });
 
+  // Quellenverzeichnis (back matter) — only when the book was researched.
+  if (hasSources) {
+    const items = sources
+      .map(
+        (s) =>
+          `<li><a href="${esc(s.url)}">${esc(s.title)}</a><br/>${esc(s.url)}</li>`,
+      )
+      .join("\n");
+    zip.file(
+      "OEBPS/sources.xhtml",
+      xhtml("Quellen", `<h1>Quellen</h1>\n<ul class="sources">\n${items}\n</ul>`),
+    );
+  }
+
   // Navigation (EPUB 3 nav document).
-  const navItems = written
-    .map(
-      (c, i) =>
-        `<li><a href="chap${i + 1}.xhtml">${esc(c.heading)}</a></li>`,
-    )
-    .join("\n");
+  const navItems = [
+    ...written.map(
+      (c, i) => `<li><a href="chap${i + 1}.xhtml">${esc(c.heading)}</a></li>`,
+    ),
+    ...(hasSources ? [`<li><a href="sources.xhtml">Quellen</a></li>`] : []),
+    `<li><a href="imprint.xhtml">Impressum</a></li>`,
+  ].join("\n");
   zip.file(
     "OEBPS/nav.xhtml",
     `<?xml version="1.0" encoding="UTF-8"?>
@@ -195,12 +218,12 @@ ${navItems}
     <item id="css" href="style.css" media-type="text/css"/>
     <item id="title" href="title.xhtml" media-type="application/xhtml+xml"/>
     <item id="imprint" href="imprint.xhtml" media-type="application/xhtml+xml"/>
-${manifestChapters}
+${hasSources ? '    <item id="sources" href="sources.xhtml" media-type="application/xhtml+xml"/>\n' : ""}${manifestChapters}
   </manifest>
   <spine>
     <itemref idref="title"/>
-    <itemref idref="imprint"/>
 ${spineChapters}
+${hasSources ? '    <itemref idref="sources"/>\n' : ""}    <itemref idref="imprint"/>
   </spine>
 </package>`,
   );

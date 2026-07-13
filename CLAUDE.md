@@ -258,6 +258,12 @@ Status überlebt Reloads. Bewusst **kein** externer Worker/Queue (Over-Engineeri
 ### 2026-07-13: Produktion nur bei bezahltem Abo — `trialing` zählt nicht mehr
 **Grund:** Abwehr eines Multi-Mail-Missbrauchs. `gateProduction` und `isSubscriber` (`lib/billing/access.ts`) werteten bisher `status === "trialing"` als freigeschaltet. Ein kostenloses erstes Buch gibt es **nicht** — jede Kapitelgenerierung ist hinter `gateProduction` (Einmalkauf 19,99 € oder aktives Abo). Solange kein Stripe-Trial konfiguriert ist (Checkout hat kein `trial_period_days`), war das folgenlos. Sobald aber je ein Trial aktiviert würde, könnte jemand pro Wegwerf-Mail ein Trial starten (0 € sofort), bis zu `SUBSCRIPTION_MONTHLY_LIMIT` (10) Bücher generieren und vor der ersten Abbuchung kündigen — beliebig oft. Neu: eine zentrale `isPayingSubscription()`-Prüfung akzeptiert **nur `active`** (nicht abgelaufen). Ändert heute nichts, hält die Tür aber zu. Trial in echten Zugang zu verwandeln muss eine **bewusste** Code-Änderung dort sein, gekoppelt an eine Missbrauchs-Bremse (Zahlungsmittel hinterlegt / Trial-Limit pro Konto). `profiles.plan` bleibt rein kosmetisch (Admin-Anzeige), ist kein Gate. **Kopier-/Screenshot-Schutz bewusst verworfen:** im Browser nicht durchsetzbar (Screenshots gar nicht), umgeht das PDF/EPUB-Download-Deliverable und widerspricht „Du behältst alle Rechte" — nervt nur zahlende Kunden ohne Schutzwirkung.
 
+### 2026-07-13: Manuskript-Struktur — Impressum nach hinten, Quellenverzeichnis, Titel im Dateinamen
+**Grund:** Drei Anpassungen an PDF- und EPUB-Export (`manuskript/pdf/route.ts`, `lib/books/epub.ts`):
+1. **Impressum ans Buchende** statt hinter die Titelseite — übliche Colophon-Position. Reihenfolge jetzt: Titel → Kapitel → (Quellen) → Impressum.
+2. **Quellenverzeichnis** am Buchende, aber **nur wenn recherchiert wurde**: `extractSources()` (`lib/books/sources.ts`) zieht alle URLs samt Label aus dem Dossier (`projects.research`), dedupliziert nach URL. Keine Recherche → kein Abschnitt. Die Web-Search-Zitate selbst werden verworfen (`anthropic.ts` behält nur Text), daher ist das Dossier die Quelle.
+3. **Dateiname = Buchtitel** statt Projekt-UUID: `manuscriptDisposition()` (`lib/books/filename.ts`) liefert ASCII-Slug als `filename` + RFC-5987 `filename*` mit UTF-8-Titel (Umlaute bleiben). Verifiziert: EPUB-Spine-Reihenfolge, XML-Escaping, Dedup, Slug/Umlaut-Transliteration.
+
 ## Bei Zweifeln
 
 Wenn du als Claude Code unsicher bist:
