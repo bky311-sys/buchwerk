@@ -4,22 +4,15 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isProjectUnlocked, isSubscriber } from "@/lib/billing/access";
 import { Button } from "@/components/ui/button";
-import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
-import { ChapterContent } from "@/components/buchwerk/chapter-content";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
 import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 import { PublishGuide } from "@/components/buchwerk/publish-guide";
-import { BatchWrite } from "@/components/buchwerk/batch-write";
 import { ImprintForm } from "@/components/buchwerk/imprint-form";
 import { Spinner } from "@/components/buchwerk/spinner";
-import {
-  STALE_GENERATION_MS,
-  MIN_TOTAL_WORDS,
-  countWords,
-} from "@/lib/books/generate";
+import { STALE_GENERATION_MS, MIN_TOTAL_WORDS } from "@/lib/books/generate";
+import { computeChapterView } from "@/lib/books/project-view";
 import { OUTLINE_RUNNING_STATUS } from "@/lib/books/outline-generate";
-import { RESEARCH_TOTAL_STAGES } from "@/lib/books/research";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
 import { OutlineActions } from "@/components/buchwerk/outline-actions";
 import { ShopPublish } from "@/components/buchwerk/shop-publish";
@@ -97,15 +90,6 @@ export default async function ProjektPage({
     .select("project_id")
     .eq("project_id", id)
     .maybeSingle();
-  // Whether a research dossier already exists (best-effort) — drives the honest
-  // spinner text and lets the batch write research once up front.
-  const { data: researchRow } = await supabase
-    .from("projects")
-    .select("research")
-    .eq("id", id)
-    .maybeSingle();
-  const hasResearch = Boolean(researchRow?.research?.trim());
-
   // Imprint (Impressum) — mandatory in the manuscript before export (best-effort
   // query so it doesn't break the page if the migration lags).
   const { data: imprintRow } = await supabase
@@ -136,36 +120,21 @@ export default async function ProjektPage({
     user ? isSubscriber(supabase, user.id) : Promise.resolve(false),
   ]);
 
-  const list = chapters ?? [];
-  const done = list.filter((c) => c.status === "fertig").length;
-  const hasWrittenChapters = list.some((c) => Boolean(c.content));
-  const progressPct = list.length ? Math.round((done / list.length) * 100) : 0;
-
-  // Chapters that still need writing (in order). The first of these is where the
-  // "Buch schreiben" step and the auto-research kick in.
-  const unwrittenIds = list.filter((c) => !c.content).map((c) => c.id);
-  const firstUnwrittenId = unwrittenIds[0] ?? null;
-
-  // Live generation state per chapter. A chapter is "generating" while its
-  // status is "schreiben" and the write is recent; once it's older than the
-  // stale threshold the function was almost certainly killed, so we treat it as
-  // failed and offer a retry.
   // Server Component: the per-request wall clock is exactly what we want here —
   // the poller re-renders this page every few seconds, so staleness is
   // re-evaluated on each refresh.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
-  const genState = new Map(
-    list.map((c) => {
-      const writing = c.status === "schreiben";
-      const ageMs = now - new Date(c.updated_at).getTime();
-      const isGenerating = writing && ageMs < STALE_GENERATION_MS;
-      const isStale = (writing && ageMs >= STALE_GENERATION_MS) ||
-        c.status === "fehler";
-      return [c.id, { isGenerating, isStale }] as const;
-    }),
-  );
-  const anyGenerating = list.some((c) => genState.get(c.id)?.isGenerating);
+  const {
+    views: list,
+    done,
+    hasWrittenChapters,
+    finished,
+    progressPct,
+    totalWords,
+    belowMinimum,
+    anyGenerating,
+  } = computeChapterView(chapters, now);
 
   // A fresh "gliederung_läuft" status means a new outline is being generated.
   // Once it's stale we fall back to the normal buttons so it can be retried.
@@ -174,17 +143,9 @@ export default async function ProjektPage({
     project.status === OUTLINE_RUNNING_STATUS &&
     outlineAgeMs < STALE_GENERATION_MS;
 
-  // Total word count across written chapters — the book must clear 7000.
-  const totalWords = list.reduce(
-    (sum, c) => sum + (c.content ? countWords(c.content) : 0),
-    0,
-  );
-  const belowMinimum = hasWrittenChapters && totalWords < MIN_TOTAL_WORDS;
-
   const pollerActive = anyGenerating || outlineGenerating;
 
   // Buchshop: a finished book can be published by a subscriber.
-  const finished = list.length > 0 && list.every((c) => Boolean(c.content));
   const canPublish = finished && subscriber;
   const blockReason = !finished
     ? ("not_finished" as const)
@@ -199,7 +160,7 @@ export default async function ProjektPage({
   const workflowRaw = [
     {
       label: "Buch schreiben",
-      href: firstUnwrittenId ? `#ch-${firstUnwrittenId}` : "#kapitel",
+      href: `/projekte/${project.id}/schreiben`,
       cta: hasWrittenChapters ? "Weiter schreiben" : "Kapitel schreiben",
       done: finished,
       optional: false,
@@ -353,66 +314,47 @@ export default async function ProjektPage({
         </div>
       )}
 
-      {unlocked && unwrittenIds.length > 1 ? (
-        <div className="mt-10">
-          <BatchWrite
-            projectId={project.id}
-            chapterIds={unwrittenIds}
-            needsResearch={!hasResearch}
-            researchStages={RESEARCH_TOTAL_STAGES}
-          />
+      {/* Gliederung — Reihenfolge/Überschriften/Kurzbeschreibungen anpassen.
+          Kostenlos (auch ohne Freischaltung); geschrieben wird im Schritt
+          „Schreiben" (eigene Seite). */}
+      <div id="kapitel" className="mt-10 scroll-mt-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            Gliederung
+          </h2>
+          {unlocked ? (
+            <Button asChild size="sm">
+              <Link href={`/projekte/${project.id}/schreiben`}>
+                {hasWrittenChapters ? "Weiter schreiben" : "Kapitel schreiben"}
+              </Link>
+            </Button>
+          ) : null}
         </div>
-      ) : null}
-
-      <div id="kapitel" className="mt-10 space-y-5 scroll-mt-6">
-        {list.map((chapter, index) => {
-          const gen = genState.get(chapter.id) ?? {
-            isGenerating: false,
-            isStale: false,
-          };
-          return (
-          <article
-            key={chapter.id}
-            id={`ch-${chapter.id}`}
-            className="scroll-mt-6 rounded-2xl border border-border bg-card p-6 sm:p-7"
-          >
-            <ChapterEditor
-              chapterId={chapter.id}
-              number={index + 1}
-              heading={chapter.heading}
-              summary={chapter.summary ?? ""}
-              status={chapter.status}
-              isFirst={index === 0}
-              isLast={index === list.length - 1}
-              hasContent={Boolean(chapter.content)}
-              isGenerating={gen.isGenerating}
-              isStale={gen.isStale}
-            />
-
-            {chapter.content ? (
-              <ChapterContent chapterId={chapter.id} content={chapter.content} />
-            ) : (
-              <p className="mt-5 text-sm text-muted-foreground">
-                Dieses Kapitel ist noch nicht geschrieben.
-              </p>
-            )}
-
-            {unlocked ? (
-              <div className="mt-5">
-                <ChapterGenerator
-                  chapterId={chapter.id}
-                  projectId={project.id}
-                  hasContent={Boolean(chapter.content)}
-                  isGenerating={gen.isGenerating}
-                  isStale={gen.isStale}
-                  willResearch={!hasResearch && chapter.id === firstUnwrittenId}
-                  researchStages={RESEARCH_TOTAL_STAGES}
-                />
-              </div>
-            ) : null}
-          </article>
-          );
-        })}
+        <p className="mt-1 text-sm text-muted-foreground">
+          Passe Reihenfolge, Überschriften und Kurzbeschreibungen an — kostenlos.
+          Geschrieben wird im Schritt „Schreiben“.
+        </p>
+        <div className="mt-5 space-y-4">
+          {list.map((chapter, index) => (
+            <article
+              key={chapter.id}
+              className="rounded-2xl border border-border bg-card p-5"
+            >
+              <ChapterEditor
+                chapterId={chapter.id}
+                number={index + 1}
+                heading={chapter.heading}
+                summary={chapter.summary ?? ""}
+                status={chapter.status}
+                isFirst={index === 0}
+                isLast={index === list.length - 1}
+                hasContent={Boolean(chapter.content)}
+                isGenerating={chapter.isGenerating}
+                isStale={chapter.isStale}
+              />
+            </article>
+          ))}
+        </div>
       </div>
 
       {unlocked ? (
