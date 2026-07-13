@@ -159,9 +159,9 @@ Grundmodell **Hub-and-Spoke** bestätigt. Weiter:
 ---
 
 ## 10. Umsetzung in Schnitten (iterativ)
-1. **Schnitt 1 — größter Gewinn:** Seite `…/schreiben` rauslösen + Hub entschlacken (Kapitel-Sektion verschieben). Rest bleibt unangetastet.
-2. **Schnitt 2:** Seite `…/veroeffentlichen` (Impressum + Downloads + Publish-Guide + Shop) rauslösen; Hub weiter entschlacken.
-3. **Schnitt 3:** Zielgruppe beim Anlegen + Gliederungs-Vorschau im Hub veredeln.
+1. ~~**Schnitt 1 — größter Gewinn:** Seite `…/schreiben` rauslösen + Hub entschlacken.~~ **✅ erledigt (2026-07-13)**
+2. ~~**Schnitt 2:** Seite `…/veroeffentlichen` (Impressum + Downloads + Publish-Guide + Shop) rauslösen; Hub weiter entschlacken.~~ **✅ erledigt (2026-07-13)** — inkl. prominentem „Nächster Schritt"-CTA am Hub und Freischalt-Hinweis an der Gliederung für gesperrte Bücher; Stepper-Labels auf „Schreiben · Cover · Listing · Veröffentlichen".
+3. **Schnitt 3:** Zielgruppe beim Anlegen (Feld existiert bereits im Formular — nur Wirkung prüfen) + Gliederungs-Vorschau im Hub veredeln.
 4. **Schnitt 4:** Cover-/KDP-Seiten kosmetisch an das neue Kopf-/Stepper-Muster angleichen; Weiter-CTAs überall.
 5. **Separat (kein UX-Blocker):** `generateListingAction` auf Trigger+Polling.
 
