@@ -6,8 +6,29 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 // Fair-use limit for the subscription: number of books unlockable per period.
 export const SUBSCRIPTION_MONTHLY_LIMIT = 10;
 
-// True if the user currently has an active (or trialing) subscription that has
-// not yet lapsed. Used to gate subscriber-only features like the Buchshop.
+// A subscription unlocks production only once Stripe has actually charged it —
+// i.e. status "active". We deliberately do NOT count "trialing".
+//
+// Why: a free trial (status "trialing", no completed payment yet) would let
+// anyone open a throwaway account, unlock up to SUBSCRIPTION_MONTHLY_LIMIT books
+// for real, and cancel before the first charge — repeatable with fresh emails.
+// No Stripe trial is configured today, so this changes nothing in practice; it
+// keeps the door shut if a trial is ever enabled. Turning trials into real
+// access must be a deliberate change here, paired with an abuse mitigation
+// (card on file, per-account trial limit). See CLAUDE.md decision log 2026-07-13.
+function isPayingSubscription(
+  sub: { status: string; current_period_end: string | null } | null | undefined,
+): boolean {
+  return (
+    !!sub &&
+    sub.status === "active" &&
+    !!sub.current_period_end &&
+    new Date(sub.current_period_end).getTime() > Date.now()
+  );
+}
+
+// True if the user currently has an active (paid) subscription that has not yet
+// lapsed. Used to gate subscriber-only features like the Buchshop.
 export async function isSubscriber(
   supabase: SupabaseClient,
   userId: string,
@@ -18,12 +39,7 @@ export async function isSubscriber(
     .eq("user_id", userId)
     .maybeSingle();
 
-  return (
-    !!sub &&
-    (sub.status === "active" || sub.status === "trialing") &&
-    !!sub.current_period_end &&
-    new Date(sub.current_period_end).getTime() > Date.now()
-  );
+  return isPayingSubscription(sub);
 }
 
 // True if the project already has a production unlock (purchase or subscription).
@@ -63,14 +79,10 @@ export async function gateProduction(
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const now = Date.now();
-  const active =
-    !!sub &&
-    (sub.status === "active" || sub.status === "trialing") &&
-    !!sub.current_period_end &&
-    new Date(sub.current_period_end).getTime() > now;
-
-  if (!active || !sub) {
+  // Only a genuinely paying subscription unlocks production. Trialing is
+  // excluded on purpose (see isPayingSubscription) so a free trial can't be
+  // farmed for free manuscripts across throwaway accounts.
+  if (!sub || !isPayingSubscription(sub)) {
     return { ok: false, error: LOCKED_MESSAGE };
   }
 

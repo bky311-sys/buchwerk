@@ -255,6 +255,9 @@ Status überlebt Reloads. Bewusst **kein** externer Worker/Queue (Over-Engineeri
 ### 2026-07-13: Widerrufsbutton (EU 2023/2673, Pflicht seit 19.06.2026)
 **Grund:** Gesetzliche Online-Widerrufsfunktion. `/widerruf-erklaeren` (öffentlich, ohne Login), zweistufig (erklären → bestätigen), fragt nur Name, Vertrags-ID und E-Mail ab, versendet eine Eingangsbestätigung an den Verbraucher + Info an welcome@ (`sendWithdrawalEmails`). Prominenter Footer-Link „Vertrag widerrufen" überall. **Endabnahme der Formulierung durch Anwalt/Händlerbund empfohlen** (wie die übrigen Rechtstexte).
 
+### 2026-07-13: Produktion nur bei bezahltem Abo — `trialing` zählt nicht mehr
+**Grund:** Abwehr eines Multi-Mail-Missbrauchs. `gateProduction` und `isSubscriber` (`lib/billing/access.ts`) werteten bisher `status === "trialing"` als freigeschaltet. Ein kostenloses erstes Buch gibt es **nicht** — jede Kapitelgenerierung ist hinter `gateProduction` (Einmalkauf 19,99 € oder aktives Abo). Solange kein Stripe-Trial konfiguriert ist (Checkout hat kein `trial_period_days`), war das folgenlos. Sobald aber je ein Trial aktiviert würde, könnte jemand pro Wegwerf-Mail ein Trial starten (0 € sofort), bis zu `SUBSCRIPTION_MONTHLY_LIMIT` (10) Bücher generieren und vor der ersten Abbuchung kündigen — beliebig oft. Neu: eine zentrale `isPayingSubscription()`-Prüfung akzeptiert **nur `active`** (nicht abgelaufen). Ändert heute nichts, hält die Tür aber zu. Trial in echten Zugang zu verwandeln muss eine **bewusste** Code-Änderung dort sein, gekoppelt an eine Missbrauchs-Bremse (Zahlungsmittel hinterlegt / Trial-Limit pro Konto). `profiles.plan` bleibt rein kosmetisch (Admin-Anzeige), ist kein Gate. **Kopier-/Screenshot-Schutz bewusst verworfen:** im Browser nicht durchsetzbar (Screenshots gar nicht), umgeht das PDF/EPUB-Download-Deliverable und widerspricht „Du behältst alle Rechte" — nervt nur zahlende Kunden ohne Schutzwirkung.
+
 ## Bei Zweifeln
 
 Wenn du als Claude Code unsicher bist:
