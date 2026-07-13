@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
 import { isProjectUnlocked } from "@/lib/billing/access";
-import { extractSources } from "@/lib/books/sources";
+import { coerceSources } from "@/lib/books/sources";
 import { manuscriptDisposition } from "@/lib/books/filename";
 
 export const runtime = "nodejs";
@@ -95,7 +95,7 @@ export async function GET(
 
   const { data: chapters } = await supabase
     .from("chapters")
-    .select("position, heading, content")
+    .select("id, position, heading, content")
     .eq("project_id", id)
     .order("position");
 
@@ -106,15 +106,20 @@ export async function GET(
     });
   }
 
-  // Sources from the research dossier become a Quellenverzeichnis at the back of
-  // the book. Best-effort query so a lagging research migration doesn't break the
-  // export; no research → no sources → section omitted.
-  const { data: researchRow } = await supabase
-    .from("projects")
-    .select("research")
-    .eq("id", id)
-    .maybeSingle();
-  const sources = extractSources(researchRow?.research);
+  // Per-chapter used sources → a Quellenverzeichnis grouped by chapter at the
+  // back of the book. Best-effort by chapter id: if the sources migration isn't
+  // applied yet this query errors and we export without sources instead of
+  // breaking the download.
+  const { data: sourceRows } = await supabase
+    .from("chapters")
+    .select("id, sources")
+    .eq("project_id", id);
+  const sourceById = new Map(
+    (sourceRows ?? []).map((r) => [r.id, coerceSources(r.sources)] as const),
+  );
+  const sourceGroups = written
+    .map((c) => ({ heading: c.heading, sources: sourceById.get(c.id) ?? [] }))
+    .filter((g) => g.sources.length > 0);
 
   const pdf = await PDFDocument.create();
   const body = await pdf.embedFont(StandardFonts.Helvetica);
@@ -194,14 +199,19 @@ export async function GET(
     }
   }
 
-  // --- Quellenverzeichnis (back matter, only if the book was researched) ---
-  if (sources.length > 0) {
+  // --- Quellenverzeichnis (back matter), grouped by chapter, only chapters
+  //     that actually used sources ---
+  if (sourceGroups.length > 0) {
     page = pdf.addPage([PAGE_W, PAGE_H]);
     y = PAGE_H - MARGIN;
     paragraph("Quellen", bold, 18, 23, 16);
-    for (const source of sources) {
-      paragraph(source.title, body, 11, 16, 2, "•  ");
-      paragraph(source.url, body, 9, 13, 8, "   ");
+    for (const group of sourceGroups) {
+      paragraph(group.heading, bold, 13, 18, 8);
+      for (const source of group.sources) {
+        paragraph(source.title, body, 11, 16, source.url ? 2 : 8, "•  ");
+        if (source.url) paragraph(source.url, body, 9, 13, 8, "   ");
+      }
+      y -= 6; // gap between chapters
     }
   }
 

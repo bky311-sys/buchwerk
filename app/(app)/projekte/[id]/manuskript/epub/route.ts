@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isProjectUnlocked } from "@/lib/billing/access";
 import { buildEpub } from "@/lib/books/epub";
-import { extractSources } from "@/lib/books/sources";
+import { coerceSources } from "@/lib/books/sources";
 import { manuscriptDisposition } from "@/lib/books/filename";
 
 export const runtime = "nodejs";
@@ -43,7 +43,7 @@ export async function GET(
 
   const { data: chapters } = await supabase
     .from("chapters")
-    .select("heading, content")
+    .select("id, heading, content")
     .eq("project_id", id)
     .order("position");
 
@@ -54,13 +54,20 @@ export async function GET(
     });
   }
 
-  // Sources for the Quellenverzeichnis (best-effort; empty if no research yet).
-  const { data: researchRow } = await supabase
-    .from("projects")
-    .select("research")
-    .eq("id", id)
-    .maybeSingle();
-  const sources = extractSources(researchRow?.research);
+  // Per-chapter used sources for the grouped Quellenverzeichnis. Best-effort by
+  // chapter id: if the sources migration isn't applied yet this query errors and
+  // we simply export without sources instead of breaking the download.
+  const { data: sourceRows } = await supabase
+    .from("chapters")
+    .select("id, sources")
+    .eq("project_id", id);
+  const sourceById = new Map(
+    (sourceRows ?? []).map((r) => [r.id, coerceSources(r.sources)] as const),
+  );
+  const sources = written.map((c) => ({
+    heading: c.heading,
+    sources: sourceById.get(c.id) ?? [],
+  }));
 
   const title = project.title ?? project.topic;
   const now = new Date();

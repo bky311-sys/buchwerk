@@ -179,6 +179,7 @@ export interface Database {
           summary: string | null;
           content: string | null;
           status: string;
+          sources: Json;
           created_at: string;
           updated_at: string;
         };
@@ -190,6 +191,7 @@ export interface Database {
           summary?: string | null;
           content?: string | null;
           status?: string;
+          sources?: Json;
           created_at?: string;
           updated_at?: string;
         };
@@ -201,6 +203,7 @@ export interface Database {
           summary?: string | null;
           content?: string | null;
           status?: string;
+          sources?: Json;
           created_at?: string;
           updated_at?: string;
         };

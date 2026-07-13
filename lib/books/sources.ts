@@ -1,67 +1,109 @@
 import "server-only";
 
 export type BookSource = { title: string; url: string };
+// One chapter's block in the grouped Quellenverzeichnis.
+export type ChapterSources = { heading: string; sources: BookSource[] };
 
-// Trailing punctuation that commonly sticks to a URL when it ends a sentence or
-// a markdown link, but isn't part of the address.
+// The model appends the used-sources list after this marker (see prompts/
+// kapitel.md and kapitel-vertiefen.md). Tolerant of "==QUELLEN==" spelling drift.
+const MARKER = /^[ \t]*={2,}\s*QUELLEN\s*={2,}[ \t]*$/gim;
+
+// Trailing punctuation that commonly sticks to a URL but isn't part of it.
 const TRAILING = /[)\].,;:!?»"'>]+$/;
+const cleanUrl = (raw: string): string => raw.replace(TRAILING, "");
 
-function cleanUrl(raw: string): string {
-  return raw.replace(TRAILING, "");
+/**
+ * Validates the jsonb value from `chapters.sources` into a typed source list.
+ * Anything malformed (or a column that doesn't exist yet) collapses to [].
+ */
+export function coerceSources(value: unknown): BookSource[] {
+  if (!Array.isArray(value)) return [];
+  const out: BookSource[] = [];
+  for (const s of value) {
+    if (
+      s &&
+      typeof s === "object" &&
+      typeof (s as { title?: unknown }).title === "string" &&
+      typeof (s as { url?: unknown }).url === "string"
+    ) {
+      const { title, url } = s as { title: string; url: string };
+      out.push({ title, url });
+    }
+  }
+  return out;
 }
 
 /**
- * Pulls a source list out of the free-form research dossier (`projects.research`).
- *
- * The dossier is plain markdown written by the research prompt, which lists the
- * sources it actually used as "Titel — URL" (and links them inline elsewhere).
- * Rather than depend on one exact layout, we collect every URL in the dossier,
- * pair it with the nearest preceding label (markdown link text or the "Titel —"
- * before the URL), and dedupe by URL. Returns [] when the dossier is empty or
- * contains no links — the caller then omits the Quellenverzeichnis entirely.
+ * Splits a raw chapter response into the visible body and the used-sources the
+ * model reported after the `===QUELLEN===` marker. The marker + list are never
+ * shown in the chapter — they only feed the Quellenverzeichnis at the book's end.
+ * A chapter written before this feature (no marker) yields the whole text as
+ * body and no sources.
  */
-export function extractSources(research: string | null | undefined): BookSource[] {
-  const text = research?.trim();
-  if (!text) return [];
+export function splitChapterSources(raw: string): {
+  body: string;
+  sources: BookSource[];
+} {
+  const matches = [...raw.matchAll(MARKER)];
+  if (matches.length === 0) return { body: raw.trim(), sources: [] };
+  // Use the last marker: it's appended at the very end, and prose is extremely
+  // unlikely to contain a later one.
+  const last = matches[matches.length - 1];
+  const idx = last.index ?? raw.length;
+  const body = raw.slice(0, idx).trim();
+  const block = raw.slice(idx + last[0].length);
+  return { body, sources: parseUsedSources(block) };
+}
 
-  const found = new Map<string, string>(); // url -> title
+/**
+ * Parses the lines below the marker into a deduped source list. Each line is
+ * expected as "- Titel — URL" (also accepts markdown links and title-only
+ * entries). "keine" means the chapter used no sources.
+ */
+export function parseUsedSources(block: string): BookSource[] {
+  const out: BookSource[] = [];
+  const seen = new Set<string>();
 
-  const add = (url: string, title: string) => {
-    const u = cleanUrl(url);
-    if (!/^https?:\/\//i.test(u)) return;
-    const existing = found.get(u);
-    // Keep the most informative (longest, non-empty) title we see for a URL.
-    if (existing === undefined || title.length > existing.length) {
-      found.set(u, title.trim());
+  for (const rawLine of block.split("\n")) {
+    const line = rawLine.trim().replace(/^[-*•]\s+/, "").trim();
+    if (!line || /^keine[.!]?$/i.test(line)) continue;
+
+    let title = "";
+    let url = "";
+
+    const md = line.match(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/);
+    if (md) {
+      title = md[1].trim();
+      url = cleanUrl(md[2]);
+    } else {
+      const um = line.match(/https?:\/\/[^\s)]+/);
+      if (um) {
+        url = cleanUrl(um[0]);
+        title = line
+          .slice(0, um.index)
+          .replace(/[—:–-]\s*$/, "")
+          .replace(/\*\*/g, "")
+          .trim();
+      } else {
+        // Source without a URL (e.g. a book or study). Keep it as a title entry.
+        title = line.replace(/\*\*/g, "").trim();
+      }
     }
-  };
 
-  // 1) Markdown links: [title](url)
-  const mdLink = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
-  for (const m of text.matchAll(mdLink)) add(m[2], m[1]);
+    if (url && !/^https?:\/\//i.test(url)) continue;
+    const key = url || title.toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
 
-  // 2) "Titel — https://…" / "Titel - https://…" / "Titel: https://…" lines.
-  //    Also captures bare URLs (title falls back to the host).
-  const lineUrl = /(?:^|\n)\s*[-*•]?\s*(.*?)(?:\s*[—:-]\s*)?(https?:\/\/[^\s)]+)/g;
-  for (const m of text.matchAll(lineUrl)) {
-    const label = m[1]
-      .replace(/[[\]()]/g, "")
-      .replace(/\*\*/g, "")
-      .trim();
-    add(m[2], label);
+    if (!title && url) {
+      try {
+        title = new URL(url).hostname.replace(/^www\./, "");
+      } catch {
+        title = url;
+      }
+    }
+    out.push({ title, url });
   }
 
-  // 3) Any remaining bare URLs not caught above.
-  const bare = /https?:\/\/[^\s)\]]+/g;
-  for (const m of text.matchAll(bare)) add(m[0], "");
-
-  return [...found.entries()].map(([url, title]) => {
-    if (title) return { title, url };
-    // No label: show the host as the title so the entry is still readable.
-    try {
-      return { title: new URL(url).hostname.replace(/^www\./, ""), url };
-    } catch {
-      return { title: url, url };
-    }
-  });
+  return out;
 }

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
+import { splitChapterSources } from "@/lib/books/sources";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -120,17 +121,20 @@ export async function generateChapterContent(
       ueberschrift: chapter.heading,
       zusammenfassung: chapter.summary ?? "",
     });
-    const content = await claudeText({
+    const firstRaw = await claudeText({
       messages: [{ role: "user", content: prompt }],
       maxTokens: 8000,
     });
+    // Peel the model's used-sources block off the prose. Only the body is stored
+    // as the chapter; the sources feed the grouped Quellenverzeichnis at book end.
+    const { body: content, sources } = splitChapterSources(firstRaw);
 
     // Checkpoint the first pass immediately as "fertig". If the (optional) deepen
     // pass below times out and the function is killed, we keep this text instead
     // of losing everything and paying to regenerate both.
     await supabase
       .from("chapters")
-      .update({ content, status: "fertig" })
+      .update({ content, sources, status: "fertig" })
       .eq("id", chapter.id);
 
     // Enforce the minimum length: one deepen pass if the chapter came in short.
@@ -142,15 +146,17 @@ export async function generateChapterContent(
         ueberschrift: chapter.heading,
         aktueller_text: content,
       });
-      const deepened = await claudeText({
+      const deepenedRaw = await claudeText({
         messages: [{ role: "user", content: deepenPrompt }],
         maxTokens: 8000,
       });
+      const { body: deepened, sources: deepenedSources } =
+        splitChapterSources(deepenedRaw);
       // Only replace if the deepen pass actually produced a longer chapter.
       if (countWords(deepened) > countWords(content)) {
         await supabase
           .from("chapters")
-          .update({ content: deepened })
+          .update({ content: deepened, sources: deepenedSources })
           .eq("id", chapter.id);
       }
     }

@@ -1,7 +1,7 @@
 import "server-only";
 
 import JSZip from "jszip";
-import type { BookSource } from "@/lib/books/sources";
+import type { ChapterSources } from "@/lib/books/sources";
 
 type Chapter = { heading: string; content: string | null };
 type Imprint = { name: string; street: string; zip: string; city: string };
@@ -11,9 +11,9 @@ export type EpubInput = {
   author: string;
   imprint: Imprint;
   chapters: Chapter[];
-  // Sources from the research dossier; rendered as a Quellenverzeichnis in the
-  // back matter. Empty → the section is omitted.
-  sources: BookSource[];
+  // Used sources grouped by chapter; rendered as a Quellenverzeichnis in the back
+  // matter. Chapters without sources are skipped; all-empty → section omitted.
+  sources: ChapterSources[];
   // ISO timestamp (YYYY-MM-DDThh:mm:ssZ) and a stable id, provided by the route.
   modified: string;
   uuid: string;
@@ -93,7 +93,9 @@ export async function buildEpub(input: EpubInput): Promise<Uint8Array> {
   const { title, author, imprint, chapters, sources, modified, uuid, year } =
     input;
   const written = chapters.filter((c) => c.content?.trim());
-  const hasSources = sources.length > 0;
+  // Keep only chapters that actually have sources.
+  const sourceGroups = sources.filter((g) => g.sources.length > 0);
+  const hasSources = sourceGroups.length > 0;
 
   const zip = new JSZip();
 
@@ -155,17 +157,24 @@ p{margin:0 0 .8em;text-align:justify;}
     );
   });
 
-  // Quellenverzeichnis (back matter) — only when the book was researched.
+  // Quellenverzeichnis (back matter), grouped by chapter — only chapters that
+  // actually used sources, in reading order.
   if (hasSources) {
-    const items = sources
-      .map(
-        (s) =>
-          `<li><a href="${esc(s.url)}">${esc(s.title)}</a><br/>${esc(s.url)}</li>`,
-      )
+    const groups = sourceGroups
+      .map((g) => {
+        const items = g.sources
+          .map((s) =>
+            s.url
+              ? `<li><a href="${esc(s.url)}">${esc(s.title)}</a><br/>${esc(s.url)}</li>`
+              : `<li>${esc(s.title)}</li>`,
+          )
+          .join("\n");
+        return `<h2>${esc(g.heading)}</h2>\n<ul class="sources">\n${items}\n</ul>`;
+      })
       .join("\n");
     zip.file(
       "OEBPS/sources.xhtml",
-      xhtml("Quellen", `<h1>Quellen</h1>\n<ul class="sources">\n${items}\n</ul>`),
+      xhtml("Quellen", `<h1>Quellen</h1>\n${groups}`),
     );
   }
 
