@@ -5,6 +5,7 @@ const LINKS = [
   { href: "/datenschutz", label: "Datenschutz" },
   { href: "/agb", label: "AGB" },
   { href: "/widerruf", label: "Widerruf" },
+  { href: "/widerruf-erklaeren", label: "Vertrag widerrufen" },
 ];
 
 // Legal links required to be reachable from every page (§5 TMG). Shared by the

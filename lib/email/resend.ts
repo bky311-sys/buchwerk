@@ -46,6 +46,61 @@ export async function sendConfirmationEmail({
   return { id: data?.id ?? "unknown" };
 }
 
+type WithdrawalArgs = {
+  name: string;
+  contract: string;
+  email: string;
+  when: string;
+};
+
+// Sends the receipt confirmation of a withdrawal to the consumer (required by
+// EU 2023/2673) and a notification to the merchant inbox.
+export async function sendWithdrawalEmails(
+  args: WithdrawalArgs,
+): Promise<{ ok: boolean; error?: string }> {
+  const client = getClient();
+  const details = [
+    `Name: ${args.name}`,
+    `Vertrag: ${args.contract}`,
+    `E-Mail: ${args.email}`,
+    `Eingegangen am: ${args.when}`,
+  ].join("\n");
+
+  const consumer = await client.emails.send({
+    from: FROM_ADDRESS,
+    to: [args.email],
+    replyTo: REPLY_TO,
+    subject: "Eingangsbestätigung deines Widerrufs — Buchwerk",
+    text: [
+      "Buchwerk.info",
+      "",
+      "Wir bestätigen den Eingang deines Widerrufs mit folgenden Angaben:",
+      "",
+      details,
+      "",
+      "Diese Bestätigung dient dem Nachweis des Zugangs. Über die weitere Abwicklung melden wir uns.",
+      "",
+      "Bei Fragen: welcome@buchwerk.info",
+    ].join("\n"),
+  });
+  if (consumer.error) {
+    return { ok: false, error: consumer.error.message ?? "Resend-Fehler." };
+  }
+
+  // Best-effort notification to the merchant; failure here doesn't fail the flow.
+  await client.emails
+    .send({
+      from: FROM_ADDRESS,
+      to: [REPLY_TO],
+      replyTo: args.email,
+      subject: `Neuer Widerruf: ${args.name}`,
+      text: `Ein Widerruf ist eingegangen:\n\n${details}`,
+    })
+    .catch(() => undefined);
+
+  return { ok: true };
+}
+
 function buildHtml(confirmUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="de">

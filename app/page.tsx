@@ -466,6 +466,12 @@ function SiteFooter() {
           >
             Widerruf
           </Link>
+          <Link
+            href="/widerruf-erklaeren"
+            className="hover:text-foreground hover:underline underline-offset-4"
+          >
+            Vertrag widerrufen
+          </Link>
         </nav>
       </div>
     </footer>
