@@ -8,6 +8,7 @@ import { ChapterContent } from "@/components/buchwerk/chapter-content";
 import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
 import { BatchWrite } from "@/components/buchwerk/batch-write";
+import { ChapterCollapse } from "@/components/buchwerk/chapter-collapse";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { Spinner } from "@/components/buchwerk/spinner";
 import { MIN_TOTAL_WORDS } from "@/lib/books/generate";
@@ -147,60 +148,61 @@ export default async function SchreibenPage({
             </div>
           ) : null}
 
-          <div className="mt-8 space-y-5">
-            {views.map((chapter, index) => (
-              <article
-                key={chapter.id}
-                id={`ch-${chapter.id}`}
-                className="scroll-mt-6 rounded-2xl border border-border bg-card p-6 sm:p-7"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="font-display text-sm font-bold text-muted-foreground tabular-nums">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  {chapter.isGenerating ? (
-                    <StatusBadge intent="draft">
-                      <Spinner className="size-3" />
-                      Wird geschrieben…
-                    </StatusBadge>
-                  ) : chapter.isStale && !chapter.content ? (
-                    <StatusBadge intent="error">Fehlgeschlagen</StatusBadge>
-                  ) : chapter.status === "fertig" && chapter.content ? (
-                    <StatusBadge intent="done">✓ Fertig</StatusBadge>
-                  ) : chapter.content ? (
-                    <StatusBadge intent="draft">Entwurf</StatusBadge>
+          <div className="mt-8 space-y-4">
+            {views.map((chapter, index) => {
+              const badge = chapter.isGenerating ? (
+                <StatusBadge intent="draft">
+                  <Spinner className="size-3" />
+                  Wird geschrieben…
+                </StatusBadge>
+              ) : chapter.isStale && !chapter.content ? (
+                <StatusBadge intent="error">Fehlgeschlagen</StatusBadge>
+              ) : chapter.status === "fertig" && chapter.content ? (
+                <StatusBadge intent="done">✓ Fertig</StatusBadge>
+              ) : chapter.content ? (
+                <StatusBadge intent="draft">Entwurf</StatusBadge>
+              ) : (
+                <StatusBadge intent="neutral">Offen</StatusBadge>
+              );
+              // Chapters that still need attention start open; finished ones start
+              // collapsed so the page stays short.
+              const defaultOpen =
+                !chapter.content || chapter.isGenerating || chapter.isStale;
+              return (
+                <ChapterCollapse
+                  key={chapter.id}
+                  number={index + 1}
+                  heading={chapter.heading}
+                  badge={badge}
+                  defaultOpen={defaultOpen}
+                >
+                  {chapter.content ? (
+                    <ChapterContent
+                      chapterId={chapter.id}
+                      content={chapter.content}
+                    />
                   ) : (
-                    <StatusBadge intent="neutral">Offen</StatusBadge>
+                    <p className="text-sm text-muted-foreground">
+                      Dieses Kapitel ist noch nicht geschrieben.
+                    </p>
                   )}
-                </div>
-                <h2 className="mt-2 font-display text-xl font-semibold tracking-tight">
-                  {chapter.heading}
-                </h2>
 
-                {chapter.content ? (
-                  <ChapterContent
-                    chapterId={chapter.id}
-                    content={chapter.content}
-                  />
-                ) : (
-                  <p className="mt-5 text-sm text-muted-foreground">
-                    Dieses Kapitel ist noch nicht geschrieben.
-                  </p>
-                )}
-
-                <div className="mt-5">
-                  <ChapterGenerator
-                    chapterId={chapter.id}
-                    projectId={project.id}
-                    hasContent={Boolean(chapter.content)}
-                    isGenerating={chapter.isGenerating}
-                    isStale={chapter.isStale}
-                    willResearch={!hasResearch && chapter.id === firstUnwrittenId}
-                    researchStages={RESEARCH_TOTAL_STAGES}
-                  />
-                </div>
-              </article>
-            ))}
+                  <div className="mt-5">
+                    <ChapterGenerator
+                      chapterId={chapter.id}
+                      projectId={project.id}
+                      hasContent={Boolean(chapter.content)}
+                      isGenerating={chapter.isGenerating}
+                      isStale={chapter.isStale}
+                      willResearch={
+                        !hasResearch && chapter.id === firstUnwrittenId
+                      }
+                      researchStages={RESEARCH_TOTAL_STAGES}
+                    />
+                  </div>
+                </ChapterCollapse>
+              );
+            })}
           </div>
 
           <div className="mt-10 border-t border-border pt-6">

@@ -208,7 +208,7 @@ export function CoverStudio({
                 disabled={busy}
                 className="size-4 accent-primary"
               />
-              Entwurf (schnell, ~0,003 $)
+              Entwurf (schnell, ~10 Sek.)
             </label>
             <label className="flex items-center gap-2">
               <input
@@ -219,7 +219,7 @@ export function CoverStudio({
                 disabled={busy}
                 className="size-4 accent-primary"
               />
-              Final (beste Qualität, ~0,04 $)
+              Final (beste Qualität, ~30 Sek.)
             </label>
           </div>
         </fieldset>

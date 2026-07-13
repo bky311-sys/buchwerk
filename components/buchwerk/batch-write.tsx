@@ -1,9 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/buchwerk/spinner";
+
+// A chapter write is decoupled: the server keeps writing even if the HTTP
+// response is dropped (function near the time limit). Abort the client fetch
+// after this long so a hung request can't stall the batch — the write still
+// lands and the poll below reflects it.
+const CHAPTER_FETCH_TIMEOUT_MS = 90_000;
+
+async function fireGenerate(chapterId: string): Promise<void> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CHAPTER_FETCH_TIMEOUT_MS);
+  try {
+    await fetch(`/api/chapters/${chapterId}/generate`, {
+      method: "POST",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 type Props = {
   projectId: string;
@@ -28,6 +47,15 @@ export function BatchWrite({
   const [researchStage, setResearchStage] = useState(0);
   const [doneCount, setDoneCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  // While the batch runs, poll the server state on an interval so the progress
+  // (and the chapter list) reflect the DB truth even if a chapter's fetch hangs
+  // or its response is dropped — the write lands server-side regardless.
+  useEffect(() => {
+    if (phase === "idle") return;
+    const t = setInterval(() => router.refresh(), 4000);
+    return () => clearInterval(t);
+  }, [phase, router]);
 
   const total = chapterIds.length;
   if (total === 0) return null;
@@ -65,11 +93,10 @@ export function BatchWrite({
     setPhase("writing");
     for (let i = 0; i < chapterIds.length; i++) {
       try {
-        await fetch(`/api/chapters/${chapterIds[i]}/generate`, {
-          method: "POST",
-        });
+        await fireGenerate(chapterIds[i]);
       } catch {
-        // Dropped/timeout — that chapter's poller + retry handle it; keep going.
+        // Dropped/aborted/timeout — that chapter's poller + retry handle it; the
+        // write may still land server-side. Keep going.
       }
       setDoneCount(i + 1);
       router.refresh();
