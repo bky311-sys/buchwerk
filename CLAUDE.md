@@ -249,6 +249,12 @@ Status überlebt Reloads. Bewusst **kein** externer Worker/Queue (Over-Engineeri
 
 **Go-live-Voraussetzungen:** (1) Migration `20260712120000_projects_add_research.sql` einspielen (Code ist best-effort, bricht ohne Migration nicht, aber Feature ist erst danach aktiv). (2) **Web-Search-Tool im Anthropic-Konto freischalten** (kostet extra, ~10 $/1000 Suchen; ~0,30–0,50 $/Buch). (3) Tool-Version-String `web_search_20250305` bei API-Änderung prüfen. Der Vertiefen-Durchgang macht Kapitel zu 2 Claude-Calls → 60-s-Limit im Blick behalten (gekillter Lauf = „erneut versuchen", schon abgefangen).
 
+### 2026-07-13: Cover-Rückseite (Cover-Hauptfarbe + KDP-Barcode-Freiraum)
+**Grund:** Die Rückseite hatte einen festen Papierton und keinen Platz für den Amazon-Barcode. Jetzt: Hintergrund = Durchschnittsfarbe des Cover-Motivs (PNG selbst dekodiert in `lib/books/image-color.ts`, ohne neue Dependency), Textfarbe je nach Helligkeit. Unten rechts wird die von KDP fixe **Barcode-Zone (2″×1,2″, ~0,125″ Rand)** als weiße Fläche freigehalten (KDP verlangt hellen Vollton ohne Inhalt); Titel/Klappentext/Autor bleiben davon frei. Front-Cover unverändert (deckender Balken über schriftfreiem Flux-Motiv).
+
+### 2026-07-13: Widerrufsbutton (EU 2023/2673, Pflicht seit 19.06.2026)
+**Grund:** Gesetzliche Online-Widerrufsfunktion. `/widerruf-erklaeren` (öffentlich, ohne Login), zweistufig (erklären → bestätigen), fragt nur Name, Vertrags-ID und E-Mail ab, versendet eine Eingangsbestätigung an den Verbraucher + Info an welcome@ (`sendWithdrawalEmails`). Prominenter Footer-Link „Vertrag widerrufen" überall. **Endabnahme der Formulierung durch Anwalt/Händlerbund empfohlen** (wie die übrigen Rechtstexte).
+
 ## Bei Zweifeln
 
 Wenn du als Claude Code unsicher bist:

@@ -314,8 +314,9 @@ export function CoverStudio({
           Fertiges Cover-PDF
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Vorderseite mit Titel + Autor, Rückseite mit Klappentext aus dem
-          KDP-Listing.
+          Vorderseite mit Titel + Autor. Die Rückseite übernimmt die Hauptfarbe
+          des Covers, zeigt den Klappentext aus dem KDP-Listing und hält unten
+          rechts den Bereich frei, in den Amazon den Barcode druckt.
         </p>
 
         {selectedCover ? (

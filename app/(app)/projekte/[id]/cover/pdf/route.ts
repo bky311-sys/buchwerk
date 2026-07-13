@@ -4,10 +4,10 @@ import {
   StandardFonts,
   rgb,
   type PDFFont,
-  type PDFPage,
 } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
 import { isProjectUnlocked } from "@/lib/billing/access";
+import { averagePngColor } from "@/lib/books/image-color";
 
 export const runtime = "nodejs";
 
@@ -52,30 +52,6 @@ function wrap(
   return lines;
 }
 
-type TextOpts = {
-  font: PDFFont;
-  size: number;
-  color: ReturnType<typeof rgb>;
-  x: number;
-  yTop: number;
-  maxWidth: number;
-  lineHeight: number;
-};
-
-function drawWrapped(page: PDFPage, text: string, opts: TextOpts): void {
-  const lines = wrap(safe(text), opts.font, opts.size, opts.maxWidth);
-  let y = opts.yTop;
-  for (const line of lines) {
-    page.drawText(line, {
-      x: opts.x,
-      y,
-      size: opts.size,
-      font: opts.font,
-      color: opts.color,
-    });
-    y -= opts.lineHeight;
-  }
-}
 
 export async function GET(
   _request: Request,
@@ -192,27 +168,56 @@ export async function GET(
   }
 
   const back = pdf.addPage([PAGE_W, PAGE_H]);
+
+  // Back cover takes the cover's main colour (average of the art), so front and
+  // back match. Text colour flips for contrast based on the background's
+  // brightness.
+  const main = averagePngColor(imageBytes) ?? { r: 0.961, g: 0.945, b: 0.922 };
+  const luminance = 0.299 * main.r + 0.587 * main.g + 0.114 * main.b;
+  const dark = luminance < 0.5;
+  const titleColor = dark ? rgb(0.97, 0.97, 0.97) : rgb(0.12, 0.12, 0.12);
+  const bodyColor = dark ? rgb(0.86, 0.86, 0.86) : rgb(0.28, 0.28, 0.28);
+
   back.drawRectangle({
     x: 0,
     y: 0,
     width: PAGE_W,
     height: PAGE_H,
-    color: rgb(0.961, 0.945, 0.922),
+    color: rgb(main.r, main.g, main.b),
   });
-  drawWrapped(back, title, {
-    font: helveticaBold,
-    size: 22,
-    color: rgb(0.12, 0.12, 0.12),
-    x: 48,
-    yTop: PAGE_H - 80,
-    maxWidth: PAGE_W - 96,
-    lineHeight: 28,
+
+  // KDP prints its EAN-13 barcode in a fixed 2" × 1.2" area in the lower-right
+  // corner (~0.125" from the edges). That area must be a solid light fill with
+  // nothing in it, so we reserve a white box there and keep all text clear of it.
+  const BC_W = 144; // 2"
+  const BC_H = 87; // 1.2"
+  const BC_MARGIN = 9; // ~0.125"
+  back.drawRectangle({
+    x: PAGE_W - BC_MARGIN - BC_W,
+    y: BC_MARGIN,
+    width: BC_W,
+    height: BC_H,
+    color: rgb(1, 1, 1),
   });
+  const barcodeTop = BC_MARGIN + BC_H; // text must stay above this
+
+  const backTitleLines = wrap(safe(title), helveticaBold, 22, PAGE_W - 96);
+  let backTitleY = PAGE_H - 80;
+  for (const line of backTitleLines) {
+    back.drawText(line, {
+      x: 48,
+      y: backTitleY,
+      size: 22,
+      font: helveticaBold,
+      color: titleColor,
+    });
+    backTitleY -= 28;
+  }
   if (blurb) {
-    // Bound the blurb so a long KDP description can't run over the author line
-    // or off the bottom of the page. Truncate with an ellipsis if it doesn't fit.
-    const blurbTop = PAGE_H - 150;
-    const blurbBottom = 96; // keep clear of the author at y=56
+    // Start below the title (dynamic, so a long title never overlaps), and bound
+    // it so it can't run into the author line or the barcode area.
+    const blurbTop = backTitleY - 18;
+    const blurbBottom = barcodeTop + 24; // stay clear of barcode + author
     const lineHeight = 20;
     const maxLines = Math.max(1, Math.floor((blurbTop - blurbBottom) / lineHeight));
     const lines = wrap(safe(blurb), helvetica, 13, PAGE_W - 96);
@@ -227,18 +232,19 @@ export async function GET(
         y: by,
         size: 13,
         font: helvetica,
-        color: rgb(0.22, 0.22, 0.22),
+        color: bodyColor,
       });
       by -= lineHeight;
     }
   }
   if (author) {
+    // Bottom-left, clear of the bottom-right barcode area.
     back.drawText(safe(author), {
       x: 48,
-      y: 56,
+      y: 40,
       size: 13,
       font: helvetica,
-      color: rgb(0.35, 0.35, 0.35),
+      color: bodyColor,
     });
   }
 
