@@ -18,12 +18,10 @@ import {
 import {
   COVER_POSITIONS,
   COVER_TONES,
-  parseCoverStyle,
   buildCoverStyle,
   normalizeCoverTitleStyle,
   bandColorFromMain,
   bandTitleColor,
-  bandAuthorColor,
   rgbCss,
   NEUTRAL_MAIN,
   type RGB,
@@ -72,20 +70,24 @@ export function CoverStudio({
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cover count when the current generation started; generation is "done" once
-  // the list grows past it (the new row was inserted).
+  // Cover count when the current generation started + how many we're waiting for;
+  // generation is "done" once the list has grown by that many (rows inserted).
   const startCountRef = useRef<number | null>(null);
+  const expectedRef = useRef<number>(1);
+
+  // How many motifs each "generate" round produces.
+  const MOTIFS_PER_ROUND = 4;
 
   const busy = isPending || generating;
   const selectedCover = covers.find((c) => c.is_selected);
   const hasSelected = Boolean(selectedCover);
 
-  // Detect completion: a new cover appeared.
+  // Detect completion: all expected motifs of this round have appeared.
   useEffect(() => {
     if (
       generating &&
       startCountRef.current !== null &&
-      covers.length > startCountRef.current
+      covers.length >= startCountRef.current + expectedRef.current
     ) {
       setGenerating(false);
       startCountRef.current = null;
@@ -161,30 +163,36 @@ export function CoverStudio({
     });
   }
 
+  // Step 1: generate MOTIFS_PER_ROUND cheap draft motifs at once, so the user
+  // picks the one they like instead of regenerating single covers over and over.
   function generate() {
     setError(null);
     startCountRef.current = covers.length;
+    expectedRef.current = MOTIFS_PER_ROUND;
     setGenerating(true);
     (async () => {
       try {
-        const res = await fetch(`/api/projekte/${projectId}/cover`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          // Always final quality — no draft/final split.
-          body: JSON.stringify({ prompt, model: "pro" }),
-        });
-        if (!res.ok) {
-          const data = (await res.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          setError(data?.error ?? "Das Cover konnte nicht erstellt werden.");
+        const results = await Promise.allSettled(
+          Array.from({ length: MOTIFS_PER_ROUND }, () =>
+            fetch(`/api/projekte/${projectId}/cover`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              // Cheap drafts for exploration; the chosen motif becomes the cover.
+              body: JSON.stringify({ prompt, model: "schnell" }),
+            }).then((r) => r.ok),
+          ),
+        );
+        // If every request failed outright, surface an error and stop.
+        const anyOk = results.some((r) => r.status === "fulfilled" && r.value);
+        if (!anyOk) {
+          setError("Die Motive konnten nicht erstellt werden.");
           setGenerating(false);
           startCountRef.current = null;
         }
       } catch {
-        // Request dropped (long generation past the gateway limit). The poll and
-        // completion effect / timeout take over from here.
+        // Dropped requests — the poll + completion effect / timeout take over.
       } finally {
+        setGenerating(false);
         router.refresh();
       }
     })();
@@ -289,7 +297,7 @@ export function CoverStudio({
         {generating ? (
           <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
             <Spinner className="size-4" />
-            Cover wird erstellt… (kann ~30 Sek. dauern)
+            {MOTIFS_PER_ROUND} Motive werden erstellt… (~10–20 Sek.)
           </div>
         ) : (
           <Button
@@ -298,7 +306,9 @@ export function CoverStudio({
             onClick={generate}
             disabled={busy || !prompt.trim()}
           >
-            Cover generieren
+            {covers.length > 0
+              ? `${MOTIFS_PER_ROUND} neue Motive erzeugen`
+              : `${MOTIFS_PER_ROUND} Motive erzeugen`}
           </Button>
         )}
 
@@ -310,21 +320,31 @@ export function CoverStudio({
       </section>
 
       <section>
-        <h2 className="font-display text-lg font-semibold">Entwürfe</h2>
+        <h2 className="font-display text-lg font-semibold">
+          1 · Motiv wählen
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Wähle das Motiv, das am ehesten passt. Den Titel-Look legst du danach
+          fest — Bild und Text bleiben getrennt.
+        </p>
         {covers.length === 0 && !generating ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            Noch keine Cover. Generiere oben dein erstes.
+            Noch keine Motive. Erzeuge oben deine ersten {MOTIFS_PER_ROUND}.
           </p>
         ) : (
           <ul className="mt-4 grid grid-cols-2 gap-6 sm:grid-cols-3">
-            {generating ? (
-              <li className="space-y-2">
-                <div className="flex aspect-[2/3] w-full items-center justify-center rounded-lg border border-dashed border-border bg-muted">
-                  <Spinner className="size-6 text-muted-foreground" />
-                </div>
-                <p className="text-xs text-muted-foreground">Wird erstellt…</p>
-              </li>
-            ) : null}
+            {generating
+              ? Array.from({ length: MOTIFS_PER_ROUND }, (_, i) => (
+                  <li key={`ph-${i}`} className="space-y-2">
+                    <div className="flex aspect-[2/3] w-full items-center justify-center rounded-lg border border-dashed border-border bg-muted">
+                      <Spinner className="size-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Wird erstellt…
+                    </p>
+                  </li>
+                ))
+              : null}
             {covers.map((cover) => (
               <li key={cover.id} className="space-y-2">
                 <div
@@ -343,7 +363,7 @@ export function CoverStudio({
                 </div>
                 {cover.is_selected ? (
                   <p className="text-xs font-medium text-primary">
-                    Ausgewählt ✓
+                    Motiv gewählt ✓
                   </p>
                 ) : (
                   <Button
@@ -353,7 +373,7 @@ export function CoverStudio({
                     disabled={busy}
                     onClick={() => select(cover.id)}
                   >
-                    Als Cover wählen
+                    Dieses Motiv wählen
                   </Button>
                 )}
                 <Button
@@ -371,113 +391,76 @@ export function CoverStudio({
         )}
       </section>
 
+      {selectedCover ? (
+        <section className="border-t border-border pt-6">
+          <h2 className="font-display text-lg font-semibold">2 · Look wählen</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Dasselbe Motiv mit vier Titel-Varianten — Position (oben/unten) und
+            Farbe (hell/dunkel, aus dem Motiv abgeleitet). Wähle deinen Favoriten.
+          </p>
+          <ul className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {COVER_POSITIONS.flatMap((p) =>
+              COVER_TONES.map((t) => {
+                const value = buildCoverStyle(p.value, t.value);
+                const active = style === value;
+                const main = motifColor ?? NEUTRAL_MAIN;
+                const bandCss = rgbCss(bandColorFromMain(main, t.value));
+                const titleCss = rgbCss(bandTitleColor(t.value));
+                return (
+                  <li key={value}>
+                    <button
+                      type="button"
+                      onClick={() => chooseStyle(value)}
+                      aria-pressed={active}
+                      className={`block w-full overflow-hidden rounded-lg border text-left transition-colors ${
+                        active
+                          ? "border-primary ring-2 ring-primary"
+                          : "border-border hover:border-muted-foreground/40"
+                      }`}
+                    >
+                      <div className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={selectedCover.image_url}
+                          alt=""
+                          className="aspect-[2/3] w-full object-cover"
+                        />
+                        <div
+                          className={`absolute inset-x-0 px-2 pb-2 pt-2 ${
+                            p.value === "oben" ? "top-0" : "bottom-0"
+                          }`}
+                          style={{ backgroundColor: bandCss }}
+                        >
+                          <p
+                            className="font-display text-[11px] font-bold leading-tight"
+                            style={{ color: titleCss }}
+                          >
+                            {title}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="block px-2 py-1.5 text-xs text-muted-foreground">
+                        {p.label} · {t.label}
+                        {active ? " ✓" : ""}
+                      </span>
+                    </button>
+                  </li>
+                );
+              }),
+            )}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="border-t border-border pt-6">
         <h2 className="font-display text-lg font-semibold">
-          Fertiges Cover-PDF
+          3 · Feinschliff &amp; Download
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Vorderseite mit Titel + Autor. Die Rückseite übernimmt die Hauptfarbe
-          des Covers, zeigt den Klappentext aus dem KDP-Listing und hält unten
-          rechts den Bereich frei, in den Amazon den Barcode druckt.
+          Autor und Klappentext (Rückseite), dann das fertige Cover-PDF mit
+          Vorder- und Rückseite. Unten rechts bleibt der Bereich für den
+          Amazon-Barcode frei.
         </p>
-
-        {selectedCover ? (
-          <div className="mt-4">
-            {(() => {
-              const { position, tone } = parseCoverStyle(style);
-              const setPosition = (p: string) =>
-                chooseStyle(buildCoverStyle(parseCoverStyle(`${p}-${tone}`).position, tone));
-              const setTone = (t: string) =>
-                chooseStyle(buildCoverStyle(position, parseCoverStyle(`${position}-${t}`).tone));
-              const pill = (active: boolean) =>
-                `rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                  active
-                    ? "border-primary bg-primary/10 font-medium text-primary"
-                    : "border-border text-muted-foreground hover:bg-muted"
-                }`;
-              const main = motifColor ?? NEUTRAL_MAIN;
-              const bandCss = rgbCss(bandColorFromMain(main, tone));
-              const titleCss = rgbCss(bandTitleColor(tone));
-              const authorCss = rgbCss(bandAuthorColor(tone));
-              return (
-                <>
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                    <div>
-                      <p className="mb-1.5 text-sm font-medium">Position</p>
-                      <div className="flex gap-2">
-                        {COVER_POSITIONS.map((o) => (
-                          <button
-                            key={o.value}
-                            type="button"
-                            onClick={() => setPosition(o.value)}
-                            aria-pressed={position === o.value}
-                            className={pill(position === o.value)}
-                          >
-                            {o.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-1.5 text-sm font-medium">Ton</p>
-                      <div className="flex gap-2">
-                        {COVER_TONES.map((o) => (
-                          <button
-                            key={o.value}
-                            type="button"
-                            onClick={() => setTone(o.value)}
-                            aria-pressed={tone === o.value}
-                            className={pill(tone === o.value)}
-                          >
-                            {o.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="mb-2 mt-4 text-sm font-medium">
-                    So sieht die Vorderseite aus:
-                  </p>
-                  <div className="relative w-full max-w-[220px] overflow-hidden rounded-lg border border-border">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={selectedCover.image_url}
-                      alt="Cover-Vorschau"
-                      className="aspect-[2/3] w-full object-cover"
-                    />
-                    <div
-                      className={`absolute inset-x-0 px-3 pb-3 pt-3.5 ${
-                        position === "oben" ? "top-0" : "bottom-0"
-                      }`}
-                      style={{ backgroundColor: bandCss }}
-                    >
-                      <span className="block h-[3px] w-8 rounded-full bg-primary" />
-                      <p
-                        className="font-display mt-2 text-sm font-bold leading-tight"
-                        style={{ color: titleCss }}
-                      >
-                        {title}
-                      </p>
-                      {authorValue.trim() ? (
-                        <p
-                          className="mt-1 text-[11px]"
-                          style={{ color: authorCss }}
-                        >
-                          {authorValue.trim()}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Vorschau — im PDF exakt gesetzt. Die Balkenfarbe ist aus dem
-                    Motiv abgeleitet (heller oder dunkler Ton).
-                  </p>
-                </>
-              );
-            })()}
-          </div>
-        ) : null}
 
         <div className="mt-4 max-w-sm space-y-1">
           <Label htmlFor="author">Autor (erscheint auf dem Cover)</Label>
