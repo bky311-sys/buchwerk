@@ -16,10 +16,17 @@ import {
 } from "@/lib/books/cover-actions";
 import type { CoverModel } from "@/lib/ai/replicate";
 import {
-  COVER_TITLE_STYLES,
-  coverBandPlacement,
+  COVER_POSITIONS,
+  COVER_TONES,
+  parseCoverStyle,
+  buildCoverStyle,
   normalizeCoverTitleStyle,
-  type CoverTitleStyle,
+  bandColorFromMain,
+  bandTitleColor,
+  bandAuthorColor,
+  rgbCss,
+  NEUTRAL_MAIN,
+  type RGB,
 } from "@/lib/books/cover-style";
 
 const TEXTAREA_CLASS =
@@ -56,9 +63,12 @@ export function CoverStudio({
   const [model, setModel] = useState<CoverModel>("schnell");
   const [authorValue, setAuthorValue] = useState(author);
   const [blurbValue, setBlurbValue] = useState(blurb);
-  const [style, setStyle] = useState<CoverTitleStyle>(
+  const [style, setStyle] = useState<string>(
     normalizeCoverTitleStyle(titleStyle),
   );
+  // Dominant colour of the selected cover motif, sampled client-side, so the
+  // preview band matches what the PDF derives. Null until sampled / on failure.
+  const [motifColor, setMotifColor] = useState<RGB | null>(null);
   const [isPending, startTransition] = useTransition();
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +92,39 @@ export function CoverStudio({
       startCountRef.current = null;
     }
   }, [covers.length, generating]);
+
+  // Sample the selected motif's dominant colour so the preview band uses the
+  // same shade the PDF derives. Best-effort: if the image is CORS-tainted we
+  // fall back to a neutral tone.
+  const selectedUrl = selectedCover?.image_url;
+  useEffect(() => {
+    if (!selectedUrl) return;
+    let cancelled = false;
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      if (cancelled) return;
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1;
+        canvas.height = 1;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, 1, 1);
+        const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+        setMotifColor({ r: r / 255, g: g / 255, b: b / 255 });
+      } catch {
+        setMotifColor(null);
+      }
+    };
+    img.onerror = () => {
+      if (!cancelled) setMotifColor(null);
+    };
+    img.src = selectedUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedUrl]);
 
   // While generating, re-fetch the page so the new cover shows up on its own —
   // even if the generate request never returned.
@@ -156,7 +199,7 @@ export function CoverStudio({
     });
   }
 
-  function chooseStyle(next: CoverTitleStyle) {
+  function chooseStyle(next: string) {
     setStyle(next); // optimistic — the preview updates immediately
     setError(null);
     startTransition(async () => {
@@ -359,70 +402,99 @@ export function CoverStudio({
 
         {selectedCover ? (
           <div className="mt-4">
-            <p className="mb-2 text-sm font-medium">Titel-Stil</p>
-            <div className="flex flex-wrap gap-2">
-              {COVER_TITLE_STYLES.map((s) => (
-                <button
-                  key={s.value}
-                  type="button"
-                  onClick={() => chooseStyle(s.value)}
-                  aria-pressed={style === s.value}
-                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
-                    style === s.value
-                      ? "border-primary bg-primary/10 font-medium text-primary"
-                      : "border-border text-muted-foreground hover:bg-muted"
-                  }`}
-                  title={s.hint}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-
-            <p className="mb-2 mt-4 text-sm font-medium">
-              So sieht die Vorderseite aus:
-            </p>
             {(() => {
-              const band = coverBandPlacement(style);
-              const light = band.tone === "light";
+              const { position, tone } = parseCoverStyle(style);
+              const setPosition = (p: string) =>
+                chooseStyle(buildCoverStyle(parseCoverStyle(`${p}-${tone}`).position, tone));
+              const setTone = (t: string) =>
+                chooseStyle(buildCoverStyle(position, parseCoverStyle(`${position}-${t}`).tone));
+              const pill = (active: boolean) =>
+                `rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                  active
+                    ? "border-primary bg-primary/10 font-medium text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                }`;
+              const main = motifColor ?? NEUTRAL_MAIN;
+              const bandCss = rgbCss(bandColorFromMain(main, tone));
+              const titleCss = rgbCss(bandTitleColor(tone));
+              const authorCss = rgbCss(bandAuthorColor(tone));
               return (
-                <div className="relative w-full max-w-[220px] overflow-hidden rounded-lg border border-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedCover.image_url}
-                    alt="Cover-Vorschau"
-                    className="aspect-[2/3] w-full object-cover"
-                  />
-                  <div
-                    className={`absolute inset-x-0 px-3 pb-3 pt-3.5 ${
-                      band.position === "top" ? "top-0" : "bottom-0"
-                    } ${light ? "bg-[#efede7]" : "bg-[#17181c]"}`}
-                  >
-                    <span className="block h-[3px] w-8 rounded-full bg-primary" />
-                    <p
-                      className={`font-display mt-2 text-sm font-bold leading-tight ${
-                        light ? "text-[#17181c]" : "text-white"
-                      }`}
-                    >
-                      {title}
-                    </p>
-                    {authorValue.trim() ? (
-                      <p
-                        className={`mt-1 text-[11px] ${
-                          light ? "text-black/60" : "text-white/75"
-                        }`}
-                      >
-                        {authorValue.trim()}
-                      </p>
-                    ) : null}
+                <>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                    <div>
+                      <p className="mb-1.5 text-sm font-medium">Position</p>
+                      <div className="flex gap-2">
+                        {COVER_POSITIONS.map((o) => (
+                          <button
+                            key={o.value}
+                            type="button"
+                            onClick={() => setPosition(o.value)}
+                            aria-pressed={position === o.value}
+                            className={pill(position === o.value)}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-sm font-medium">Ton</p>
+                      <div className="flex gap-2">
+                        {COVER_TONES.map((o) => (
+                          <button
+                            key={o.value}
+                            type="button"
+                            onClick={() => setTone(o.value)}
+                            aria-pressed={tone === o.value}
+                            className={pill(tone === o.value)}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
+
+                  <p className="mb-2 mt-4 text-sm font-medium">
+                    So sieht die Vorderseite aus:
+                  </p>
+                  <div className="relative w-full max-w-[220px] overflow-hidden rounded-lg border border-border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedCover.image_url}
+                      alt="Cover-Vorschau"
+                      className="aspect-[2/3] w-full object-cover"
+                    />
+                    <div
+                      className={`absolute inset-x-0 px-3 pb-3 pt-3.5 ${
+                        position === "oben" ? "top-0" : "bottom-0"
+                      }`}
+                      style={{ backgroundColor: bandCss }}
+                    >
+                      <span className="block h-[3px] w-8 rounded-full bg-primary" />
+                      <p
+                        className="font-display mt-2 text-sm font-bold leading-tight"
+                        style={{ color: titleCss }}
+                      >
+                        {title}
+                      </p>
+                      {authorValue.trim() ? (
+                        <p
+                          className="mt-1 text-[11px]"
+                          style={{ color: authorCss }}
+                        >
+                          {authorValue.trim()}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Vorschau — im PDF exakt gesetzt. Die Balkenfarbe ist aus dem
+                    Motiv abgeleitet (heller oder dunkler Ton).
+                  </p>
+                </>
               );
             })()}
-            <p className="mt-2 text-xs text-muted-foreground">
-              Vorschau — im PDF exakt gesetzt. Titel und Autor liegen auf einem
-              deckenden Balken über dem Motiv.
-            </p>
           </div>
         ) : null}
 

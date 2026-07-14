@@ -8,7 +8,13 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { isProjectUnlocked } from "@/lib/billing/access";
 import { averagePngColor } from "@/lib/books/image-color";
-import { coverBandPlacement } from "@/lib/books/cover-style";
+import {
+  parseCoverStyle,
+  bandColorFromMain,
+  bandTitleColor,
+  bandAuthorColor,
+  NEUTRAL_MAIN,
+} from "@/lib/books/cover-style";
 
 export const runtime = "nodejs";
 
@@ -116,6 +122,10 @@ export async function GET(
   const author = project.author?.trim() ?? "";
   const blurb = listing?.description?.trim() ?? "";
 
+  // The cover's dominant colour drives both the front band and the back cover,
+  // so the whole cover reads as one piece.
+  const main = averagePngColor(imageBytes) ?? NEUTRAL_MAIN;
+
   const front = pdf.addPage([PAGE_W, PAGE_H]);
   front.drawImage(image, { x: 0, y: 0, width: PAGE_W, height: PAGE_H });
 
@@ -123,14 +133,17 @@ export async function GET(
   // overlay) so it fully covers any lettering the image model may have rendered
   // into the art — the cover prompt asks for none, but Flux doesn't always
   // comply, and a see-through overlay produced "text over text". The author
-  // chooses the band's placement (top/bottom) and tone (dark/light) via
-  // cover_title_style, so the text doesn't cover the important part of the motif.
-  const band = coverBandPlacement(project.cover_title_style);
-  const light = band.tone === "light";
-  const bandColor = light ? rgb(0.937, 0.929, 0.906) : rgb(0.09, 0.1, 0.11);
-  const frontTitleColor = light ? rgb(0.09, 0.1, 0.11) : rgb(1, 1, 1);
-  const authorColor = light ? rgb(0.32, 0.32, 0.32) : rgb(0.82, 0.82, 0.85);
+  // chooses the band's placement (top/bottom) and tone (light/dark); the colour
+  // is a shade of the motif's dominant colour, not pure black/white.
+  const { position, tone } = parseCoverStyle(project.cover_title_style);
+  const bandRgb = bandColorFromMain(main, tone);
+  const titleRgb = bandTitleColor(tone);
+  const authorRgb = bandAuthorColor(tone);
+  const bandColor = rgb(bandRgb.r, bandRgb.g, bandRgb.b);
+  const frontTitleColor = rgb(titleRgb.r, titleRgb.g, titleRgb.b);
+  const authorColor = rgb(authorRgb.r, authorRgb.g, authorRgb.b);
   const accentColor = rgb(0.11, 0.42, 0.24);
+  const bandAtTop = position === "oben";
 
   const titleSize = 32;
   const titleLineHeight = 40;
@@ -140,7 +153,7 @@ export async function GET(
     PAGE_H * 0.5,
     titleLines.length * titleLineHeight + 96 + authorBlock,
   );
-  const bandY = band.position === "top" ? PAGE_H - bandHeight : 0;
+  const bandY = bandAtTop ? PAGE_H - bandHeight : 0;
 
   front.drawRectangle({
     x: 0,
@@ -152,7 +165,7 @@ export async function GET(
   // Accent strip on the band's inner edge (below a top band, above a bottom one).
   front.drawRectangle({
     x: 0,
-    y: band.position === "top" ? bandY - 5 : bandHeight,
+    y: bandAtTop ? bandY - 5 : bandHeight,
     width: PAGE_W,
     height: 5,
     color: accentColor,
@@ -182,10 +195,8 @@ export async function GET(
 
   const back = pdf.addPage([PAGE_W, PAGE_H]);
 
-  // Back cover takes the cover's main colour (average of the art), so front and
-  // back match. Text colour flips for contrast based on the background's
-  // brightness.
-  const main = averagePngColor(imageBytes) ?? { r: 0.961, g: 0.945, b: 0.922 };
+  // Back cover takes the cover's main colour (computed above), so front and back
+  // match. Text colour flips for contrast based on the background's brightness.
   const luminance = 0.299 * main.r + 0.587 * main.g + 0.114 * main.b;
   const dark = luminance < 0.5;
   const titleColor = dark ? rgb(0.97, 0.97, 0.97) : rgb(0.12, 0.12, 0.12);
