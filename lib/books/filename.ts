@@ -31,12 +31,23 @@ function slugifyTitle(title: string): string {
  * title. Provides both an ASCII `filename` (broad compatibility) and an RFC 5987
  * `filename*` with the full UTF-8 title so modern browsers keep umlauts.
  */
-export function manuscriptDisposition(title: string, ext: "pdf" | "epub"): string {
-  const asciiName = `${slugifyTitle(title)}.${ext}`;
-  const utf8Name = `${title.trim() || "Buch"}.${ext}`;
+function disposition(asciiBase: string, utf8Base: string, ext: string): string {
+  const asciiName = `${asciiBase}.${ext}`;
+  const utf8Name = `${utf8Base}.${ext}`;
   const encoded = encodeURIComponent(utf8Name).replace(
     /['()*]/g,
     (ch) => "%" + ch.charCodeAt(0).toString(16).toUpperCase(),
   );
   return `attachment; filename="${asciiName}"; filename*=UTF-8''${encoded}`;
+}
+
+export function manuscriptDisposition(title: string, ext: "pdf" | "epub"): string {
+  return disposition(slugifyTitle(title), title.trim() || "Buch", ext);
+}
+
+// Cover PDF download named after the book, with a "-cover" suffix so it doesn't
+// clash with the manuscript PDF ("stressfrei-mit-dem-hund-cover.pdf").
+export function coverDisposition(title: string): string {
+  const base = title.trim() || "Buch";
+  return disposition(`${slugifyTitle(title)}-cover`, `${base} Cover`, "pdf");
 }

@@ -15,6 +15,7 @@ import {
   bandAuthorColor,
   NEUTRAL_MAIN,
 } from "@/lib/books/cover-style";
+import { coverDisposition } from "@/lib/books/filename";
 
 export const runtime = "nodejs";
 
@@ -277,7 +278,7 @@ export async function GET(
   return new NextResponse(Buffer.from(pdfBytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="cover-${id}.pdf"`,
+      "Content-Disposition": coverDisposition(title),
       "Cache-Control": "no-store",
     },
   });
