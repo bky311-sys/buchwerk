@@ -232,6 +232,11 @@ export function KdpListing({
           rows={3}
           className={TEXTAREA_CLASS}
         />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Vorgeschlagen aus dem Amazon-Kindle-Kategoriebaum. Amazon passt seine
+          Kategorien gelegentlich an — sollte ein Pfad im KDP-Picker nicht exakt
+          auftauchen, wähle dort die nächstliegende Entsprechung.
+        </p>
       </Field>
 
       <div className="space-y-1">

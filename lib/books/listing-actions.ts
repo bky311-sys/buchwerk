@@ -6,6 +6,7 @@ import { claudeJson } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
 import { LISTING_JSON_SCHEMA, listingSchema } from "@/lib/books/listing-schema";
+import { KDP_CATEGORIES } from "@/lib/books/kdp-categories";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -42,6 +43,7 @@ export async function generateListingAction(
       thema: project.topic,
       zielgruppe: project.audience ?? DEFAULT_AUDIENCE,
       gliederung,
+      kategorien_liste: KDP_CATEGORIES.map((c) => `- ${c}`).join("\n"),
     });
     const raw = await claudeJson({
       messages: [{ role: "user", content: prompt }],
