@@ -52,10 +52,18 @@ export async function regenerateOutline(
   const supabase = await createClient();
   const { data: project } = await supabase
     .from("projects")
-    .select("id, topic, audience, status")
+    .select("id, topic, audience, status, published_at")
     .eq("id", projectId)
     .single();
   if (!project) return { ok: false, error: "Projekt nicht gefunden." };
+
+  if (project.published_at) {
+    return {
+      ok: false,
+      error:
+        "Dieses Buch ist veröffentlicht und gesperrt. Für Änderungen erstelle eine Neuauflage.",
+    };
+  }
 
   const previousStatus = project.status;
 

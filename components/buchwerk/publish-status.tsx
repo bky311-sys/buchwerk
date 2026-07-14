@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/buchwerk/status-badge";
 import {
   markPublishedAction,
   unmarkPublishedAction,
+  updateAmazonUrlAction,
 } from "@/lib/books/publish-actions";
 
 // The "published on Amazon KDP" milestone. There's no KDP API, so the author
@@ -53,11 +54,40 @@ export function PublishStatus({
       </div>
 
       {published ? (
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-4">
           <p className="text-sm text-muted-foreground">
             Dein Buch ist als bei Amazon veröffentlicht markiert. Der Schritt
             zählt jetzt als erledigt.
           </p>
+
+          <div className="max-w-md space-y-1.5">
+            <Label htmlFor="amazon-published-url">Amazon-Link (optional)</Label>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                id="amazon-published-url"
+                type="url"
+                inputMode="url"
+                value={amazon}
+                onChange={(e) => setAmazon(e.target.value)}
+                disabled={isPending}
+                placeholder="https://www.amazon.de/dp/…"
+                className="min-w-0 flex-1"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isPending || amazon.trim() === (amazonUrl ?? "").trim()}
+                onClick={() => run(() => updateAmazonUrlAction(projectId, amazon))}
+              >
+                {isPending ? "…" : "Speichern"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Kannst du jederzeit nachtragen — der Link erscheint dann auch als
+              „Bei Amazon kaufen“ im Buchwerk-Shop.
+            </p>
+          </div>
+
           {amazon.trim() ? (
             <a
               href={amazon.trim()}

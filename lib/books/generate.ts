@@ -57,6 +57,20 @@ export async function generateChapterContent(
     return { ok: false, error: "Kapitel nicht gefunden." };
   }
 
+  // A published book is locked — changes must go through a new edition.
+  const { data: pubRow } = await supabase
+    .from("projects")
+    .select("published_at")
+    .eq("id", chapter.project_id)
+    .maybeSingle();
+  if (pubRow?.published_at) {
+    return {
+      ok: false,
+      error:
+        "Dieses Buch ist veröffentlicht und gesperrt. Für Änderungen erstelle eine Neuauflage.",
+    };
+  }
+
   // Production is gated behind payment.
   const gate = await gateProduction(supabase, chapter.project_id);
   if (!gate.ok) return { ok: false, error: gate.error };

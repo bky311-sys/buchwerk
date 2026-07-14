@@ -52,6 +52,42 @@ export async function markPublishedAction(
   return { ok: true };
 }
 
+// Adds or changes the Amazon link after publishing (the link is optional at
+// publish time, so it must be editable later). An empty value clears it. This
+// same amazon_url also feeds the "Bei Amazon kaufen" button in the Buchshop.
+export async function updateAmazonUrlAction(
+  projectId: string,
+  amazonUrl: string,
+): Promise<PublishResult> {
+  const owned = await ownedProjectId(projectId);
+  if (!owned) return { ok: false, error: "Projekt nicht gefunden." };
+
+  const url = amazonUrl.trim();
+  if (url && !/^https?:\/\/([a-z0-9-]+\.)*amazon\.[a-z.]+\/.+/i.test(url)) {
+    return {
+      ok: false,
+      error: "Der Amazon-Link sieht nicht gültig aus — oder lass ihn einfach leer.",
+    };
+  }
+
+  const admin = createAdminClient();
+  const { data: slugRow } = await admin
+    .from("projects")
+    .select("shop_slug")
+    .eq("id", owned)
+    .maybeSingle();
+  const { error } = await admin
+    .from("projects")
+    .update({ amazon_url: url || null })
+    .eq("id", owned);
+  if (error) return { ok: false, error: "Konnte nicht gespeichert werden." };
+
+  revalidatePath(`/projekte/${projectId}/veroeffentlichen`);
+  revalidatePath("/buchshop");
+  if (slugRow?.shop_slug) revalidatePath(`/buchshop/${slugRow.shop_slug}`);
+  return { ok: true };
+}
+
 // Reverts the "published" milestone (e.g. marked by mistake).
 export async function unmarkPublishedAction(
   projectId: string,

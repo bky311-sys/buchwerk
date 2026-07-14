@@ -13,6 +13,8 @@ import { computeChapterView } from "@/lib/books/project-view";
 import { OUTLINE_RUNNING_STATUS } from "@/lib/books/outline-generate";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
 import { OutlineActions } from "@/components/buchwerk/outline-actions";
+import { NewEditionButton } from "@/components/buchwerk/new-edition-button";
+import { StatusBadge } from "@/components/buchwerk/status-badge";
 
 export const metadata: Metadata = {
   title: "Projekt — Buchwerk",
@@ -141,6 +143,10 @@ export default async function ProjektPage({
   // The one prominent next action shown at the top of the cockpit.
   const currentStep = workflowSteps.find((s) => s.status === "current") ?? null;
 
+  // A book marked as published on Amazon is locked from editing. Changes go
+  // through a new edition (a separate book that counts in the monthly budget).
+  const published = Boolean(project.published_at);
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <Link
@@ -242,15 +248,37 @@ export default async function ProjektPage({
         </div>
       )}
 
+      {published ? (
+        <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-display text-lg font-semibold tracking-tight">
+              Bei Amazon veröffentlicht
+            </h2>
+            <StatusBadge intent="done">✓ Veröffentlicht</StatusBadge>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Dieses Buch ist veröffentlicht und gegen versehentliche Änderungen
+            gesperrt. Willst du etwas ändern, erstelle eine{" "}
+            <span className="font-medium text-foreground">Neuauflage</span> — ein
+            eigenständiges neues Buch mit kopiertem Inhalt als Startpunkt. Es
+            zählt als eigenes Buch (Freischaltung bzw. Monatsbudget).
+          </p>
+          <div className="mt-4">
+            <NewEditionButton projectId={project.id} />
+          </div>
+        </div>
+      ) : null}
+
       {/* Gliederung — Reihenfolge/Überschriften/Kurzbeschreibungen anpassen.
           Kostenlos (auch ohne Freischaltung); geschrieben wird im Schritt
-          „Schreiben" (eigene Seite). */}
+          „Schreiben" (eigene Seite). Bei veröffentlichten Büchern nur noch
+          lesbar. */}
       <div id="kapitel" className="mt-10 scroll-mt-6">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-lg font-semibold tracking-tight">
             Gliederung
           </h2>
-          {unlocked ? (
+          {unlocked && !published ? (
             <Button asChild size="sm">
               <Link href={`/projekte/${project.id}/schreiben`}>
                 {hasWrittenChapters ? "Weiter schreiben" : "Kapitel schreiben"}
@@ -259,10 +287,11 @@ export default async function ProjektPage({
           ) : null}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Passe Reihenfolge, Überschriften und Kurzbeschreibungen an — kostenlos.
-          Geschrieben wird im Schritt „Schreiben“.
+          {published
+            ? "Das Buch ist veröffentlicht — die Gliederung ist schreibgeschützt. Änderungen laufen über eine Neuauflage."
+            : "Passe Reihenfolge, Überschriften und Kurzbeschreibungen an — kostenlos. Geschrieben wird im Schritt „Schreiben“."}
         </p>
-        {!unlocked ? (
+        {!unlocked && !published ? (
           <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
             Kapitel generieren kannst du, sobald du das Buch freigeschaltet
             hast —{" "}
@@ -276,35 +305,61 @@ export default async function ProjektPage({
           </p>
         ) : null}
         <div className="mt-5 space-y-4">
-          {list.map((chapter, index) => (
-            <article
-              key={chapter.id}
-              className="rounded-2xl border border-border bg-card p-5"
-            >
-              <ChapterEditor
-                chapterId={chapter.id}
-                number={index + 1}
-                heading={chapter.heading}
-                summary={chapter.summary ?? ""}
-                status={chapter.status}
-                isFirst={index === 0}
-                isLast={index === list.length - 1}
-                hasContent={Boolean(chapter.content)}
-                isGenerating={chapter.isGenerating}
-                isStale={chapter.isStale}
-              />
-            </article>
-          ))}
+          {list.map((chapter, index) =>
+            published ? (
+              <article
+                key={chapter.id}
+                className="rounded-2xl border border-border bg-card p-5"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold tabular-nums text-muted-foreground">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  {chapter.status === "fertig" || chapter.content ? (
+                    <StatusBadge intent="done">✓ Fertig</StatusBadge>
+                  ) : null}
+                </div>
+                <h3 className="mt-2 font-display text-base font-semibold tracking-tight">
+                  {chapter.heading}
+                </h3>
+                {chapter.summary ? (
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    {chapter.summary}
+                  </p>
+                ) : null}
+              </article>
+            ) : (
+              <article
+                key={chapter.id}
+                className="rounded-2xl border border-border bg-card p-5"
+              >
+                <ChapterEditor
+                  chapterId={chapter.id}
+                  number={index + 1}
+                  heading={chapter.heading}
+                  summary={chapter.summary ?? ""}
+                  status={chapter.status}
+                  isFirst={index === 0}
+                  isLast={index === list.length - 1}
+                  hasContent={Boolean(chapter.content)}
+                  isGenerating={chapter.isGenerating}
+                  isStale={chapter.isStale}
+                />
+              </article>
+            ),
+          )}
         </div>
       </div>
 
-      <div className="mt-12 border-t border-border pt-6">
-        <OutlineActions
-          projectId={project.id}
-          hasWrittenChapters={hasWrittenChapters}
-          isRegenerating={outlineGenerating}
-        />
-      </div>
+      {!published ? (
+        <div className="mt-12 border-t border-border pt-6">
+          <OutlineActions
+            projectId={project.id}
+            hasWrittenChapters={hasWrittenChapters}
+            isRegenerating={outlineGenerating}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -64,7 +64,17 @@ export async function GET(request: Request) {
         data: { user },
       } = await supabase.auth.getUser();
       await grantBetaAccessIfReleased(user?.email);
-      return NextResponse.redirect(`${origin}${next}`);
+
+      // While the coming-soon gate is up, carry the preview token on the
+      // post-confirmation redirect so the browser that opened the email link
+      // also gets the bypass cookie — otherwise a confirmed beta tester would
+      // land on /bald. Only holders of a valid one-time code reach this branch.
+      const target = new URL(`${origin}${next}`);
+      const bypass = process.env.SITE_BYPASS_TOKEN;
+      if (process.env.SITE_LIVE !== "true" && bypass) {
+        target.searchParams.set("preview", bypass);
+      }
+      return NextResponse.redirect(target);
     }
   }
 

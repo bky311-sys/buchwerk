@@ -10,8 +10,17 @@ function maintenanceGate(request: NextRequest): NextResponse | null {
 
   const { pathname, searchParams } = request.nextUrl;
 
-  // Keep API (Stripe webhook etc.) and the coming-soon page itself reachable.
-  if (pathname.startsWith("/api") || pathname === "/bald") return null;
+  // Keep API (Stripe webhook etc.), the auth plumbing (email-confirmation code
+  // exchange) and the coming-soon page itself reachable. /auth/* must never be
+  // gated: a swallowed confirmation code can't be retried (it's one-time), which
+  // would lock invited beta testers out for good.
+  if (
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/auth") ||
+    pathname === "/bald"
+  ) {
+    return null;
+  }
 
   const token = process.env.SITE_BYPASS_TOKEN;
 

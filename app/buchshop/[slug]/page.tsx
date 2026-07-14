@@ -128,9 +128,6 @@ export default async function BuchDetailPage({
                       Bei Amazon kaufen
                     </a>
                   </Button>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Affiliate-Link — der Kauf läuft bei Amazon.
-                  </p>
                 </div>
               ) : null}
 
@@ -220,7 +217,12 @@ function ShopFooter() {
   return (
     <footer className="bg-background">
       <div className="mx-auto flex max-w-5xl flex-col gap-4 px-6 py-10 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <p>© {new Date().getFullYear()} Buchwerk — Benjamin Koch</p>
+        <p>
+          © {new Date().getFullYear()} Buchwerk — Benjamin Koch
+          <span className="mt-1 block text-xs">
+            Als Amazon-Partner verdienen wir an qualifizierten Käufen.
+          </span>
+        </p>
         <nav className="flex gap-6">
           <Link
             href="/impressum"
