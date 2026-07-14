@@ -8,9 +8,10 @@ import { manuscriptDisposition } from "@/lib/books/filename";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// A5-ish trim, comfortable margins.
-const PAGE_W = 420;
-const PAGE_H = 595;
+// KDP-Taschenbuch-Standardformat 5,5 × 8,5 Zoll (14,0 × 21,6 cm) = 396 × 612 pt.
+// Wenn sich das ändert, den Trimm-Hinweis in publish-guide.tsx mitziehen.
+const PAGE_W = 396;
+const PAGE_H = 612;
 const MARGIN = 50;
 const CONTENT_W = PAGE_W - 2 * MARGIN;
 const INK = rgb(0.12, 0.12, 0.12);

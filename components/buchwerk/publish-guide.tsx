@@ -72,7 +72,7 @@ export function PublishGuide({
     {
       title: "Nur fürs Taschenbuch (Print)",
       steps: [
-        "Beim Anlegen als Buchgröße/Format 14,8 × 21 cm (A5) wählen — genau darauf ist die Manuskript-PDF gesetzt.",
+        "Als Format „5,50 × 8,50 Zoll (14,0 × 21,6 cm)“ wählen — genau darauf ist die Manuskript-PDF gesetzt.",
         "Als Buchinhalt die Manuskript-PDF hochladen (nicht die EPUB).",
       ],
     },
