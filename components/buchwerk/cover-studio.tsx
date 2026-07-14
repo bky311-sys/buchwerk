@@ -15,7 +15,6 @@ import {
   updateCoverTitleStyleAction,
   updateBlurbAction,
 } from "@/lib/books/cover-actions";
-import type { CoverModel } from "@/lib/ai/replicate";
 import {
   COVER_POSITIONS,
   COVER_TONES,
@@ -61,7 +60,6 @@ export function CoverStudio({
 }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
-  const [model, setModel] = useState<CoverModel>("schnell");
   const [authorValue, setAuthorValue] = useState(author);
   const [blurbValue, setBlurbValue] = useState(blurb);
   const [style, setStyle] = useState<string>(
@@ -172,7 +170,8 @@ export function CoverStudio({
         const res = await fetch(`/api/projekte/${projectId}/cover`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ prompt, model }),
+          // Always final quality — no draft/final split.
+          body: JSON.stringify({ prompt, model: "pro" }),
         });
         if (!res.ok) {
           const data = (await res.json().catch(() => null)) as {
@@ -286,34 +285,6 @@ export function CoverStudio({
             als saubere Typografie über das Bild.
           </p>
         </div>
-
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">Qualität</legend>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="model"
-                checked={model === "schnell"}
-                onChange={() => setModel("schnell")}
-                disabled={busy}
-                className="size-4 accent-primary"
-              />
-              Entwurf (schnell, ~10 Sek.)
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="model"
-                checked={model === "pro"}
-                onChange={() => setModel("pro")}
-                disabled={busy}
-                className="size-4 accent-primary"
-              />
-              Final (beste Qualität, ~30 Sek.)
-            </label>
-          </div>
-        </fieldset>
 
         {generating ? (
           <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
