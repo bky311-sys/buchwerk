@@ -19,10 +19,12 @@ import {
 import {
   COVER_POSITIONS,
   COVER_TONES,
+  parseCoverStyle,
   buildCoverStyle,
   normalizeCoverTitleStyle,
   bandColorFromMain,
   bandTitleColor,
+  bandAuthorColor,
   rgbCss,
   NEUTRAL_MAIN,
   type RGB,
@@ -231,6 +233,108 @@ export function CoverStudio({
       const result = await updateCoverTitleStyleAction(projectId, next);
       if (!result.ok) setError(result.error ?? "Etwas ist schiefgelaufen.");
     });
+  }
+
+  // Render the front cover (motif + title band) to a PNG and download it. KDP
+  // wants the cover as a PNG image, never a PDF — this composites the same way
+  // the preview does, client-side on a canvas (no server rasteriser needed).
+  function downloadCoverPng() {
+    if (!selectedCover) return;
+    setError(null);
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = async () => {
+      try {
+        if (document.fonts?.ready) await document.fonts.ready;
+        const W = 1600;
+        const H = Math.round((W * 3) / 2); // 2:3, matches the Flux motif
+        const canvas = document.createElement("canvas");
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("no ctx");
+
+        // Motif fills the whole canvas (object-cover).
+        const scale = Math.max(W / img.width, H / img.height);
+        const dw = img.width * scale;
+        const dh = img.height * scale;
+        ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+
+        const { position, tone } = parseCoverStyle(style);
+        const main = motifColor ?? NEUTRAL_MAIN;
+        const bandColor = rgbCss(bandColorFromMain(main, tone));
+        const titleColor = rgbCss(bandTitleColor(tone));
+        const authorColor = rgbCss(bandAuthorColor(tone));
+
+        const pad = 96;
+        const titleSize = 84;
+        const titleLh = 104;
+        ctx.textBaseline = "top";
+
+        // Wrap the title to the band width.
+        ctx.font = `700 ${titleSize}px "Bricolage Grotesque", sans-serif`;
+        const lines: string[] = [];
+        let line = "";
+        for (const word of title.split(/\s+/).filter(Boolean)) {
+          const cand = line ? `${line} ${word}` : word;
+          if (ctx.measureText(cand).width > W - 2 * pad && line) {
+            lines.push(line);
+            line = word;
+          } else {
+            line = cand;
+          }
+        }
+        if (line) lines.push(line);
+
+        const authorText = authorValue.trim();
+        const authorSize = 46;
+        const bandH = Math.min(
+          H * 0.5,
+          64 + lines.length * titleLh + 48 + (authorText ? authorSize + 40 : 0),
+        );
+        const bandY = position === "oben" ? 0 : H - bandH;
+
+        ctx.fillStyle = bandColor;
+        ctx.fillRect(0, bandY, W, bandH);
+        ctx.fillStyle = "rgb(28, 107, 67)"; // accent strip on the inner edge
+        ctx.fillRect(0, position === "oben" ? bandY + bandH : bandY - 8, W, 8);
+
+        ctx.fillStyle = titleColor;
+        ctx.font = `700 ${titleSize}px "Bricolage Grotesque", sans-serif`;
+        let ty = bandY + 64;
+        for (const l of lines) {
+          ctx.fillText(l, pad, ty);
+          ty += titleLh;
+        }
+        if (authorText) {
+          ctx.fillStyle = authorColor;
+          ctx.font = `500 ${authorSize}px "Instrument Sans", sans-serif`;
+          ctx.fillText(authorText, pad, bandY + bandH - authorSize - 44);
+        }
+
+        const slug =
+          (title.trim() || "buch")
+            .toLowerCase()
+            .replace(/[äöü]/g, (c) => ({ ä: "ae", ö: "oe", ü: "ue" })[c] ?? c)
+            .replace(/ß/g, "ss")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "")
+            .slice(0, 60) || "cover";
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/png");
+        a.download = `${slug}-cover.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch {
+        setError(
+          "Cover-Bild konnte nicht erstellt werden. Lad die Seite neu und versuch es nochmal.",
+        );
+      }
+    };
+    img.onerror = () =>
+      setError("Cover-Bild nicht erreichbar. Versuch es gleich nochmal.");
+    img.src = selectedCover.image_url;
   }
 
   // Persist the current author + Klappentext, then trigger the PDF download — so
@@ -552,19 +656,37 @@ export function CoverStudio({
 
         <div className="mt-5">
           {hasSelected ? (
-            <Button
-              type="button"
-              size="lg"
-              variant="ink"
-              onClick={downloadCover}
-              disabled={busy}
-            >
-              Cover-PDF herunterladen
-            </Button>
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="ink"
+                  onClick={downloadCoverPng}
+                  disabled={busy}
+                >
+                  Cover-Bild (PNG) herunterladen
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  onClick={downloadCover}
+                  disabled={busy}
+                >
+                  Cover-PDF (nur Taschenbuch)
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Fürs eBook bei Amazon KDP lädst du das{" "}
+                <span className="font-medium">Cover-Bild als PNG</span> hoch — KDP
+                nimmt für Cover kein PDF. Die PDF-Variante ist nur fürs Taschenbuch
+                (Print, mit Rückseite).
+              </p>
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Wähle oben einen Entwurf als Cover, dann kannst du das PDF
-              herunterladen.
+              Wähle oben ein Motiv, dann kannst du das Cover-Bild herunterladen.
             </p>
           )}
         </div>
