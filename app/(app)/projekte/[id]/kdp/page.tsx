@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { KdpListing } from "@/components/buchwerk/kdp-listing";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "KDP-Listing — Buchwerk",
@@ -51,10 +52,21 @@ export default async function KdpPage({
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
         Kopierfertige Texte für deinen KDP-Upload. Alles bearbeitbar, jedes Feld
-        mit „Kopieren".
+        mit „Kopieren“.
       </p>
 
       <KdpListing projectId={id} listing={listing ?? null} />
+
+      {listing ? (
+        <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border pt-6">
+          <p className="text-sm font-medium text-success">✓ KDP-Listing steht.</p>
+          <Button asChild size="lg">
+            <Link href={`/projekte/${id}/veroeffentlichen`}>
+              Weiter zum Veröffentlichen
+            </Link>
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

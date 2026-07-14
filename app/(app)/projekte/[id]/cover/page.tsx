@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CoverStudio } from "@/components/buchwerk/cover-studio";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Cover — Buchwerk",
@@ -60,6 +61,15 @@ export default async function CoverPage({
         titleStyle={project.cover_title_style}
         covers={covers ?? []}
       />
+
+      {(covers ?? []).some((c) => c.is_selected) ? (
+        <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border pt-6">
+          <p className="text-sm font-medium text-success">✓ Cover gewählt.</p>
+          <Button asChild size="lg">
+            <Link href={`/projekte/${id}/kdp`}>Weiter zum KDP-Listing</Link>
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
