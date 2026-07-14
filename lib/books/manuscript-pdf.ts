@@ -1,6 +1,7 @@
 import "server-only";
 
-import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+import { PDFDocument, rgb, type PDFFont } from "pdf-lib";
+import { embedBookFonts } from "@/lib/books/pdf-fonts";
 
 // KDP-Taschenbuch-Standardformat 5,5 × 8,5 Zoll (14,0 × 21,6 cm) = 396 × 612 pt.
 export const TRIM_W = 396;
@@ -31,18 +32,18 @@ export type ManuscriptInput = {
   year: number;
 };
 
-// Map characters WinAnsi (StandardFonts) can't render to safe equivalents.
+// Keep Latin-1 plus the German typographic characters the embedded serif has
+// (real „…" quotes, en/em dashes, ellipsis, bullet); drop anything exotic so a
+// missing glyph can't crash drawText.
+const KEEP_EXTRA = "„“”‚‘’–—…•";
 function safe(text: string): string {
-  const mapped = text
-    .replace(/[‘’‚]/g, "'")
-    .replace(/[“”„]/g, '"')
-    .replace(/[–—]/g, "-")
-    .replace(/…/g, "...")
-    .replace(/ /g, " ");
+  const mapped = text.replace(/ /g, " "); // nbsp → normal space (wrapping)
   let out = "";
   for (const ch of mapped) {
     const code = ch.charCodeAt(0);
-    if (ch === "\n" || (code >= 0x20 && code <= 0xff)) out += ch;
+    if (ch === "\n" || (code >= 0x20 && code <= 0xff) || KEEP_EXTRA.includes(ch)) {
+      out += ch;
+    }
   }
   return out;
 }
@@ -84,8 +85,7 @@ export async function buildManuscriptPdf(
   const { title, author, imprint, chapters, sourceGroups, year } = input;
 
   const pdf = await PDFDocument.create();
-  const body = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const { body, bold } = await embedBookFonts(pdf);
 
   let page = pdf.addPage([TRIM_W, TRIM_H]);
   let y = TRIM_H - M_TOP;

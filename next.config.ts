@@ -2,10 +2,10 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  // Bundle the /prompts Markdown files into the serverless functions so
-  // loadPrompt() can read them at runtime (lib/ai/prompts.ts).
+  // Bundle files read from disk at runtime into the serverless functions:
+  // /prompts Markdown (loadPrompt) and the embedded book fonts (lib/books/pdf-fonts).
   outputFileTracingIncludes: {
-    "/**": ["./prompts/**/*"],
+    "/**": ["./prompts/**/*", "./lib/fonts/*.ttf"],
   },
 };
 

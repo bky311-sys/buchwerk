@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+import { PDFDocument, rgb, type PDFFont } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
+import { embedBookFonts } from "@/lib/books/pdf-fonts";
 import { isProjectUnlocked } from "@/lib/billing/access";
 import { averagePngColor } from "@/lib/books/image-color";
 import {
@@ -23,17 +24,16 @@ const SAFE = 18; // 0.25" safe margin from the trim edge
 // White paper spine thickness per page (KDP: 0.002252" for white / B&W interior).
 const SPINE_PER_PAGE = 0.002252 * 72;
 
+// Keep Latin-1 plus the German typographic characters the embedded serif has.
+const KEEP_EXTRA = "„“”‚‘’–—…•";
 function safe(text: string): string {
-  const mapped = text
-    .replace(/[‘’‚]/g, "'")
-    .replace(/[“”„]/g, '"')
-    .replace(/[–—]/g, "-")
-    .replace(/…/g, "...")
-    .replace(/ /g, " ");
+  const mapped = text.replace(/ /g, " ");
   let out = "";
   for (const ch of mapped) {
     const code = ch.charCodeAt(0);
-    if (ch === "\n" || (code >= 0x20 && code <= 0xff)) out += ch;
+    if (ch === "\n" || (code >= 0x20 && code <= 0xff) || KEEP_EXTRA.includes(ch)) {
+      out += ch;
+    }
   }
   return out;
 }
@@ -149,8 +149,7 @@ export async function GET(
   const contentType = imageResponse.headers.get("content-type") ?? "";
 
   const pdf = await PDFDocument.create();
-  const helvetica = await pdf.embedFont(StandardFonts.Helvetica);
-  const helveticaBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const { body: helvetica, bold: helveticaBold } = await embedBookFonts(pdf);
 
   let image;
   try {

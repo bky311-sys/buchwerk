@@ -1,0 +1,9 @@
+serif-regular.ttf and serif-bold.ttf are Source Serif 4 (Regular / Bold),
+copyright 2014–2021 Adobe (https://github.com/adobe-fonts/source-serif),
+licensed under the SIL Open Font License, Version 1.1.
+
+The fonts here were converted from the @fontsource/source-serif-4 WOFF2 files to
+TTF (latin subset, weights 400 and 700) for embedding into generated print PDFs.
+
+The full SIL Open Font License 1.1 text applies:
+https://openfontlicense.org/open-font-license-official-text/
