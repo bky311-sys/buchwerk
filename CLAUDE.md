@@ -266,13 +266,13 @@ Status überlebt Reloads. Bewusst **kein** externer Worker/Queue (Over-Engineeri
 
 **Go-live:** Migration `20260713120000_chapters_add_sources.sql` einspielen + Supabase-Typen neu generieren (Spalte `chapters.sources` ist vorab manuell in `types/supabase.ts` ergänzt, damit der Build ohne DB-Zugriff typcheckt). **Nur neu geschriebene Kapitel** bekommen Quellen — Altbestand bleibt ohne (kein Marker → leere Quellen, kein Fehler). Verifiziert: Marker-Abtrennung, Dedup, „keine"/quellenlose Einträge, EPUB-Spine-Reihenfolge, gruppiertes Rendering, XML-Escaping.
 
-### 2026-07-14: Cover als geführter Trichter (Motiv wählen → Look wählen)
-**Grund:** Nutzer generierten früher x-fach einzelne Cover, bis eins gefiel — und wenn dann Textposition/Farbe nicht passten, fingen sie von vorn an. Neuer Flow (`cover-studio.tsx`):
-1. **Motiv wählen:** Ein Klick erzeugt **4 günstige Entwürfe** (Flux Schnell, parallel) → Nutzer wählt das Motiv.
+### 2026-07-14: Cover-Flow — Motiv iterieren (Einzel) → Look wählen
+**Grund:** Nutzer generierten x-fach Cover, bis eins gefiel — und wenn dann Text/Farbe nicht passten, von vorn. Neuer Flow (`cover-studio.tsx`):
+1. **Motiv wählen:** Pro Klick **ein** Motiv in finaler Qualität (Flux Pro). Zwischendurch **Prompt anpassen** in Worten („Motiv anpassen" → `refineCoverPromptAction`, `prompts/cover-prompt-refine.md`) oder Prompt direkt editieren, dann neu erzeugen. (Ein 4er-Batch wurde verworfen: gleicher Prompt → nahezu identische Bilder, keine Variety; parallele Replicate-Anfragen fielen zudem teils aus.)
 2. **Look wählen:** Dasselbe Motiv mit **4 Titel-Varianten** = die 4 Kombinationen aus Position (oben/unten) × Ton (hell/dunkel). **Keine neue KI-Generierung** — nur der Text-Balken wird gerendert, Farbe aus dem Motiv abgeleitet (`bandColorFromMain`). Sofort, gratis.
 3. **Feinschliff & Download:** Autor, Klappentext (mit KI-Vorschlag), Cover-PDF.
 
-Bild und Text sind bewusst **entkoppelt** (Balken deckt Flux-Motiv, kein Text im Bild). `cover_title_style` speichert `"<position>-<ton>"`. Die frühere „Entwurf/Final"-Qualitätswahl ist entfallen; Entwürfe sind immer Schnell, das gewählte Motiv wird das Cover. Balkenfarbe kommt aus der Motiv-Hauptfarbe (Front + Rückseite konsistent), Vorschau samplet sie client-seitig per Canvas (CORS-Fallback neutral).
+Bild und Text sind bewusst **entkoppelt** (Balken deckt Flux-Motiv, kein Text im Bild). `cover_title_style` speichert `"<position>-<ton>"`. Der Bild-Prompt (`prompts/cover-prompt.md`) ist geschärft: Objekte konkret/eindeutig, realistisch/zurückhaltend (gegen „goldene Schale statt Waschpfanne / zu viel Gold"). Balkenfarbe kommt aus der Motiv-Hauptfarbe (Front + Rückseite konsistent), Vorschau samplet sie client-seitig per Canvas (CORS-Fallback neutral).
 
 ## Bei Zweifeln
 

@@ -72,24 +72,20 @@ export function CoverStudio({
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cover count when the current generation started + how many we're waiting for;
-  // generation is "done" once the list has grown by that many (rows inserted).
+  // Cover count when the current generation started; generation is "done" once
+  // the list has grown (the new row was inserted).
   const startCountRef = useRef<number | null>(null);
-  const expectedRef = useRef<number>(1);
-
-  // How many motifs each "generate" round produces.
-  const MOTIFS_PER_ROUND = 4;
 
   const busy = isPending || generating;
   const selectedCover = covers.find((c) => c.is_selected);
   const hasSelected = Boolean(selectedCover);
 
-  // Detect completion: all expected motifs of this round have appeared.
+  // Detect completion: the new motif appeared.
   useEffect(() => {
     if (
       generating &&
       startCountRef.current !== null &&
-      covers.length >= startCountRef.current + expectedRef.current
+      covers.length > startCountRef.current
     ) {
       setGenerating(false);
       startCountRef.current = null;
@@ -179,36 +175,32 @@ export function CoverStudio({
     });
   }
 
-  // Step 1: generate MOTIFS_PER_ROUND cheap draft motifs at once, so the user
-  // picks the one they like instead of regenerating single covers over and over.
+  // Generate one motif in final quality. Same prompt yields near-identical Flux
+  // images, so a batch of 4 adds no variety — instead the author iterates: tweak
+  // the prompt (or use "Motiv anpassen"), then generate again.
   function generate() {
     setError(null);
     startCountRef.current = covers.length;
-    expectedRef.current = MOTIFS_PER_ROUND;
     setGenerating(true);
     (async () => {
       try {
-        const results = await Promise.allSettled(
-          Array.from({ length: MOTIFS_PER_ROUND }, () =>
-            fetch(`/api/projekte/${projectId}/cover`, {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              // Cheap drafts for exploration; the chosen motif becomes the cover.
-              body: JSON.stringify({ prompt, model: "schnell" }),
-            }).then((r) => r.ok),
-          ),
-        );
-        // If every request failed outright, surface an error and stop.
-        const anyOk = results.some((r) => r.status === "fulfilled" && r.value);
-        if (!anyOk) {
-          setError("Die Motive konnten nicht erstellt werden.");
+        const res = await fetch(`/api/projekte/${projectId}/cover`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ prompt, model: "pro" }),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          setError(data?.error ?? "Das Motiv konnte nicht erstellt werden.");
           setGenerating(false);
           startCountRef.current = null;
         }
       } catch {
-        // Dropped requests — the poll + completion effect / timeout take over.
+        // Dropped (long generation past the gateway limit). The poll + completion
+        // effect / timeout take over from here.
       } finally {
-        setGenerating(false);
         router.refresh();
       }
     })();
@@ -339,7 +331,7 @@ export function CoverStudio({
         {generating ? (
           <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
             <Spinner className="size-4" />
-            {MOTIFS_PER_ROUND} Motive werden erstellt… (~10–20 Sek.)
+            Motiv wird erstellt… (~30 Sek.)
           </div>
         ) : (
           <Button
@@ -348,9 +340,7 @@ export function CoverStudio({
             onClick={generate}
             disabled={busy || !prompt.trim()}
           >
-            {covers.length > 0
-              ? `${MOTIFS_PER_ROUND} neue Motive erzeugen`
-              : `${MOTIFS_PER_ROUND} Motive erzeugen`}
+            {covers.length > 0 ? "Neues Motiv erzeugen" : "Motiv erzeugen"}
           </Button>
         )}
 
@@ -366,27 +356,23 @@ export function CoverStudio({
           1 · Motiv wählen
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Wähle das Motiv, das am ehesten passt. Den Titel-Look legst du danach
-          fest — Bild und Text bleiben getrennt.
+          Erzeuge Motive, passe den Prompt zwischendurch an und wähle das beste.
+          Den Titel-Look legst du danach fest — Bild und Text bleiben getrennt.
         </p>
         {covers.length === 0 && !generating ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            Noch keine Motive. Erzeuge oben deine ersten {MOTIFS_PER_ROUND}.
+            Noch kein Motiv. Erzeuge oben dein erstes.
           </p>
         ) : (
           <ul className="mt-4 grid grid-cols-2 gap-6 sm:grid-cols-3">
-            {generating
-              ? Array.from({ length: MOTIFS_PER_ROUND }, (_, i) => (
-                  <li key={`ph-${i}`} className="space-y-2">
-                    <div className="flex aspect-[2/3] w-full items-center justify-center rounded-lg border border-dashed border-border bg-muted">
-                      <Spinner className="size-6 text-muted-foreground" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Wird erstellt…
-                    </p>
-                  </li>
-                ))
-              : null}
+            {generating ? (
+              <li className="space-y-2">
+                <div className="flex aspect-[2/3] w-full items-center justify-center rounded-lg border border-dashed border-border bg-muted">
+                  <Spinner className="size-6 text-muted-foreground" />
+                </div>
+                <p className="text-xs text-muted-foreground">Wird erstellt…</p>
+              </li>
+            ) : null}
             {covers.map((cover) => (
               <li key={cover.id} className="space-y-2">
                 <div
