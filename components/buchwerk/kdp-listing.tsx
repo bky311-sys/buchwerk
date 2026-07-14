@@ -234,8 +234,9 @@ export function KdpListing({
         />
         <p className="mt-1 text-xs text-muted-foreground">
           Vorgeschlagen aus dem Amazon-Kindle-Kategoriebaum. Amazon passt seine
-          Kategorien gelegentlich an — sollte ein Pfad im KDP-Picker nicht exakt
-          auftauchen, wähle dort die nächstliegende Entsprechung.
+          Kategorien gelegentlich an — taucht ein Pfad im KDP-Picker nicht exakt
+          auf, wähle einfach eine vergleichbare Kategorie. Kleine Unterschiede
+          haben kaum Einfluss auf dein Ranking.
         </p>
       </Field>
 
