@@ -11,8 +11,15 @@ import {
   selectCoverAction,
   deleteCoverAction,
   updateProjectAuthorAction,
+  updateCoverTitleStyleAction,
 } from "@/lib/books/cover-actions";
 import type { CoverModel } from "@/lib/ai/replicate";
+import {
+  COVER_TITLE_STYLES,
+  coverBandPlacement,
+  normalizeCoverTitleStyle,
+  type CoverTitleStyle,
+} from "@/lib/books/cover-style";
 
 const TEXTAREA_CLASS =
   "flex w-full rounded-xl border border-input bg-muted px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50";
@@ -32,17 +39,22 @@ export function CoverStudio({
   projectId,
   title,
   author,
+  titleStyle,
   covers,
 }: {
   projectId: string;
   title: string;
   author: string;
+  titleStyle: string;
   covers: Cover[];
 }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState<CoverModel>("schnell");
   const [authorValue, setAuthorValue] = useState(author);
+  const [style, setStyle] = useState<CoverTitleStyle>(
+    normalizeCoverTitleStyle(titleStyle),
+  );
   const [isPending, startTransition] = useTransition();
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +140,15 @@ export function CoverStudio({
       const result = await updateProjectAuthorAction(projectId, authorValue);
       if (result.ok) router.refresh();
       else setError(result.error ?? "Etwas ist schiefgelaufen.");
+    });
+  }
+
+  function chooseStyle(next: CoverTitleStyle) {
+    setStyle(next); // optimistic — the preview updates immediately
+    setError(null);
+    startTransition(async () => {
+      const result = await updateCoverTitleStyleAction(projectId, next);
+      if (!result.ok) setError(result.error ?? "Etwas ist schiefgelaufen.");
     });
   }
 
@@ -321,28 +342,67 @@ export function CoverStudio({
 
         {selectedCover ? (
           <div className="mt-4">
-            <p className="mb-2 text-sm font-medium">
+            <p className="mb-2 text-sm font-medium">Titel-Stil</p>
+            <div className="flex flex-wrap gap-2">
+              {COVER_TITLE_STYLES.map((s) => (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => chooseStyle(s.value)}
+                  disabled={busy}
+                  aria-pressed={style === s.value}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
+                    style === s.value
+                      ? "border-primary bg-primary/10 font-medium text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                  title={s.hint}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            <p className="mb-2 mt-4 text-sm font-medium">
               So sieht die Vorderseite aus:
             </p>
-            <div className="relative w-full max-w-[220px] overflow-hidden rounded-lg border border-border">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={selectedCover.image_url}
-                alt="Cover-Vorschau"
-                className="aspect-[2/3] w-full object-cover"
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-[#17181c] px-3 pb-3 pt-3.5">
-                <span className="block h-[3px] w-8 rounded-full bg-primary" />
-                <p className="font-display mt-2 text-sm font-bold leading-tight text-white">
-                  {title}
-                </p>
-                {authorValue.trim() ? (
-                  <p className="mt-1 text-[11px] text-white/75">
-                    {authorValue.trim()}
-                  </p>
-                ) : null}
-              </div>
-            </div>
+            {(() => {
+              const band = coverBandPlacement(style);
+              const light = band.tone === "light";
+              return (
+                <div className="relative w-full max-w-[220px] overflow-hidden rounded-lg border border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedCover.image_url}
+                    alt="Cover-Vorschau"
+                    className="aspect-[2/3] w-full object-cover"
+                  />
+                  <div
+                    className={`absolute inset-x-0 px-3 pb-3 pt-3.5 ${
+                      band.position === "top" ? "top-0" : "bottom-0"
+                    } ${light ? "bg-[#efede7]" : "bg-[#17181c]"}`}
+                  >
+                    <span className="block h-[3px] w-8 rounded-full bg-primary" />
+                    <p
+                      className={`font-display mt-2 text-sm font-bold leading-tight ${
+                        light ? "text-[#17181c]" : "text-white"
+                      }`}
+                    >
+                      {title}
+                    </p>
+                    {authorValue.trim() ? (
+                      <p
+                        className={`mt-1 text-[11px] ${
+                          light ? "text-black/60" : "text-white/75"
+                        }`}
+                      >
+                        {authorValue.trim()}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })()}
             <p className="mt-2 text-xs text-muted-foreground">
               Vorschau — im PDF exakt gesetzt. Titel und Autor liegen auf einem
               deckenden Balken über dem Motiv.

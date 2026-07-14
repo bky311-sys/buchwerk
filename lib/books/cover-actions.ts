@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
+import { normalizeCoverTitleStyle } from "@/lib/books/cover-style";
 
 export type CoverResult = { ok: boolean; error?: string };
 export type SuggestResult = { ok: boolean; prompt?: string; error?: string };
@@ -84,6 +85,22 @@ export async function updateProjectAuthorAction(
   const { error } = await supabase
     .from("projects")
     .update({ author: author.trim() || null })
+    .eq("id", projectId);
+  if (error) return { ok: false, error: "Konnte nicht gespeichert werden." };
+
+  revalidatePath(`/projekte/${projectId}/cover`);
+  return { ok: true };
+}
+
+export async function updateCoverTitleStyleAction(
+  projectId: string,
+  style: string,
+): Promise<CoverResult> {
+  const value = normalizeCoverTitleStyle(style);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ cover_title_style: value })
     .eq("id", projectId);
   if (error) return { ok: false, error: "Konnte nicht gespeichert werden." };
 

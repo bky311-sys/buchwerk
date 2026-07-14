@@ -8,6 +8,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { isProjectUnlocked } from "@/lib/billing/access";
 import { averagePngColor } from "@/lib/books/image-color";
+import { coverBandPlacement } from "@/lib/books/cover-style";
 
 export const runtime = "nodejs";
 
@@ -62,7 +63,7 @@ export async function GET(
 
   const { data: project } = await supabase
     .from("projects")
-    .select("title, topic, author")
+    .select("title, topic, author, cover_title_style")
     .eq("id", id)
     .single();
   if (!project) return new NextResponse("Nicht gefunden", { status: 404 });
@@ -118,10 +119,19 @@ export async function GET(
   const front = pdf.addPage([PAGE_W, PAGE_H]);
   front.drawImage(image, { x: 0, y: 0, width: PAGE_W, height: PAGE_H });
 
-  // Title and author sit on a SOLID band at the bottom. The band is opaque (not
-  // a translucent overlay) so it fully covers any lettering the image model may
-  // have rendered into the lower art — the cover prompt asks for none, but Flux
-  // doesn't always comply, and a see-through overlay produced "text over text".
+  // Title and author sit on a SOLID band. The band is opaque (not a translucent
+  // overlay) so it fully covers any lettering the image model may have rendered
+  // into the art — the cover prompt asks for none, but Flux doesn't always
+  // comply, and a see-through overlay produced "text over text". The author
+  // chooses the band's placement (top/bottom) and tone (dark/light) via
+  // cover_title_style, so the text doesn't cover the important part of the motif.
+  const band = coverBandPlacement(project.cover_title_style);
+  const light = band.tone === "light";
+  const bandColor = light ? rgb(0.937, 0.929, 0.906) : rgb(0.09, 0.1, 0.11);
+  const frontTitleColor = light ? rgb(0.09, 0.1, 0.11) : rgb(1, 1, 1);
+  const authorColor = light ? rgb(0.32, 0.32, 0.32) : rgb(0.82, 0.82, 0.85);
+  const accentColor = rgb(0.11, 0.42, 0.24);
+
   const titleSize = 32;
   const titleLineHeight = 40;
   const titleLines = wrap(safe(title), helveticaBold, titleSize, PAGE_W - 96);
@@ -130,40 +140,43 @@ export async function GET(
     PAGE_H * 0.5,
     titleLines.length * titleLineHeight + 96 + authorBlock,
   );
+  const bandY = band.position === "top" ? PAGE_H - bandHeight : 0;
 
   front.drawRectangle({
     x: 0,
-    y: 0,
+    y: bandY,
     width: PAGE_W,
     height: bandHeight,
-    color: rgb(0.09, 0.1, 0.11),
+    color: bandColor,
   });
+  // Accent strip on the band's inner edge (below a top band, above a bottom one).
   front.drawRectangle({
     x: 0,
-    y: bandHeight,
+    y: band.position === "top" ? bandY - 5 : bandHeight,
     width: PAGE_W,
     height: 5,
-    color: rgb(0.11, 0.42, 0.24),
+    color: accentColor,
   });
 
-  let titleY = bandHeight - 56;
+  // Title starts near the top of the band; author sits near its bottom.
+  let titleY = bandY + bandHeight - 56;
   for (const line of titleLines) {
     front.drawText(line, {
       x: 48,
       y: titleY,
       size: titleSize,
       font: helveticaBold,
-      color: rgb(1, 1, 1),
+      color: frontTitleColor,
     });
     titleY -= titleLineHeight;
   }
   if (author) {
     front.drawText(safe(author), {
       x: 48,
-      y: 40,
+      y: bandY + 40,
       size: 18,
       font: helvetica,
-      color: rgb(0.82, 0.82, 0.85),
+      color: authorColor,
     });
   }
 

@@ -21,7 +21,7 @@ export default async function CoverPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, topic, author")
+    .select("id, title, topic, author, cover_title_style")
     .eq("id", id)
     .single();
   if (!project) notFound();
@@ -57,6 +57,7 @@ export default async function CoverPage({
         projectId={id}
         title={project.title ?? project.topic}
         author={project.author ?? ""}
+        titleStyle={project.cover_title_style}
         covers={covers ?? []}
       />
     </div>
