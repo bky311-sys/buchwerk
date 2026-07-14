@@ -89,6 +89,31 @@ export async function suggestCoverPromptAction(
   }
 }
 
+// Second pass: revise the current image prompt from the author's plain-language
+// feedback (e.g. "weniger Gold, echte Goldwaschpfanne"). Returns the improved
+// prompt; the author reviews it, then generates again.
+export async function refineCoverPromptAction(
+  currentPrompt: string,
+  feedback: string,
+): Promise<SuggestResult> {
+  if (!currentPrompt.trim() || !feedback.trim()) {
+    return { ok: false, error: "Bitte Prompt und Anpassung angeben." };
+  }
+  try {
+    const prompt = await loadPrompt("cover-prompt-refine", {
+      prompt: currentPrompt.trim(),
+      feedback: feedback.trim(),
+    });
+    const text = await claudeText({
+      messages: [{ role: "user", content: prompt }],
+      maxTokens: 400,
+    });
+    return { ok: true, prompt: text.trim() };
+  } catch {
+    return { ok: false, error: "Der Prompt konnte nicht angepasst werden." };
+  }
+}
+
 // Cover generation lives in lib/books/cover-generate.ts and is driven through
 // the /api/projekte/[id]/cover route so the UI can fire it and poll the cover
 // list for the result instead of blocking on one long request.

@@ -10,5 +10,7 @@ Strikte Regeln:
 - Verwende NIEMALS die Wörter „book cover", „cover", „title", „text", „typography", „poster", „mockup" oder Ähnliches — sonst malt das Modell Buchstaben ins Bild.
 - Das Motiv enthält KEINE Schrift, keine Buchstaben, keine Zahlen, kein Logo, kein Wasserzeichen und keinen gerahmten Buchrand.
 - Kein 3D-Buch-Mockup, keine Hände.
+- **Beschreibe zentrale Objekte konkret und eindeutig** (Material, Form, Farbe, Größe), damit das Modell sie nicht mit ähnlichen Dingen verwechselt. Beispiel: nicht nur „gold pan", sondern „a shallow dark plastic gold-panning pan with ridged sides" (keine goldene Schale, kein Kochgeschirr).
+- **Bleib realistisch und zurückhaltend.** Keine übertriebenen, kitschigen oder überladenen Elemente — z. B. nicht das ganze Bild voller glänzendem Gold, sondern nur dezente, glaubwürdige Andeutungen. Das Motiv soll seriös und nüchtern wirken, passend zu einem Sachbuch.
 - Gib nur den Prompt selbst aus: ein bis drei Sätze, keine Anführungszeichen, keine Erklärung.
-- Hänge am Ende genau an: "clean photographic scene, no lettering, no writing, no watermark".
+- Hänge am Ende genau an: "clean photographic scene, realistic and restrained, no lettering, no writing, no watermark".

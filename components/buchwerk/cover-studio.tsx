@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/buchwerk/spinner";
 import {
   suggestCoverPromptAction,
+  refineCoverPromptAction,
   suggestBlurbAction,
   selectCoverAction,
   deleteCoverAction,
@@ -58,6 +59,7 @@ export function CoverStudio({
 }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
+  const [feedbackValue, setFeedbackValue] = useState("");
   const [authorValue, setAuthorValue] = useState(author);
   const [blurbValue, setBlurbValue] = useState(blurb);
   const [style, setStyle] = useState<string>(
@@ -151,6 +153,20 @@ export function CoverStudio({
       const result = await suggestCoverPromptAction(projectId);
       if (result.ok && result.prompt) setPrompt(result.prompt);
       else setError(result.error ?? "Konnte keinen Vorschlag erstellen.");
+    });
+  }
+
+  function refinePrompt() {
+    if (!prompt.trim() || !feedbackValue.trim()) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await refineCoverPromptAction(prompt, feedbackValue);
+      if (result.ok && result.prompt) {
+        setPrompt(result.prompt);
+        setFeedbackValue("");
+      } else {
+        setError(result.error ?? "Konnte den Prompt nicht anpassen.");
+      }
     });
   }
 
@@ -291,6 +307,32 @@ export function CoverStudio({
             Beschreibe nur das <span className="font-medium">Motiv</span> —
             textfrei, ohne Buchstaben. Titel und Autor legt Buchwerk anschließend
             als saubere Typografie über das Bild.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cover-feedback">Motiv anpassen (optional)</Label>
+          <div className="flex gap-2">
+            <Input
+              id="cover-feedback"
+              value={feedbackValue}
+              onChange={(event) => setFeedbackValue(event.target.value)}
+              disabled={busy || !prompt.trim()}
+              placeholder="z. B. weniger Gold, echte Goldwaschpfanne mit Riffeln"
+              className="h-10"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={refinePrompt}
+              disabled={busy || !prompt.trim() || !feedbackValue.trim()}
+            >
+              Prompt anpassen
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Sag in Stichworten, was am Motiv anders soll — die KI überarbeitet den
+            Prompt. Danach neu erzeugen.
           </p>
         </div>
 
