@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/buchwerk/spinner";
 import {
   suggestCoverPromptAction,
+  suggestBlurbAction,
   selectCoverAction,
   deleteCoverAction,
   updateProjectAuthorAction,
@@ -150,6 +151,15 @@ export function CoverStudio({
       const result = await suggestCoverPromptAction(projectId);
       if (result.ok && result.prompt) setPrompt(result.prompt);
       else setError(result.error ?? "Konnte keinen Vorschlag erstellen.");
+    });
+  }
+
+  function suggestBlurb() {
+    setError(null);
+    startTransition(async () => {
+      const result = await suggestBlurbAction(projectId);
+      if (result.ok && result.blurb) setBlurbValue(result.blurb);
+      else setError(result.error ?? "Konnte keinen Klappentext erstellen.");
     });
   }
 
@@ -521,7 +531,17 @@ export function CoverStudio({
         </div>
 
         <div className="mt-5 max-w-xl space-y-1">
-          <Label htmlFor="blurb">Klappentext (Rückseite)</Label>
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="blurb">Klappentext (Rückseite)</Label>
+            <button
+              type="button"
+              onClick={suggestBlurb}
+              disabled={busy}
+              className="text-sm font-medium text-primary underline underline-offset-4 hover:text-primary/80 disabled:opacity-50"
+            >
+              {busy ? "…" : "Vorschlag von der KI"}
+            </button>
+          </div>
           <p className="text-xs text-muted-foreground">
             Der Text für die Buchrückseite. Er ist derselbe wie die
             KDP-Beschreibung — was du hier schreibst, steht später im Listing

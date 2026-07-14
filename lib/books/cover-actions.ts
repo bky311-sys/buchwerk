@@ -9,6 +9,58 @@ import { normalizeCoverTitleStyle } from "@/lib/books/cover-style";
 
 export type CoverResult = { ok: boolean; error?: string };
 export type SuggestResult = { ok: boolean; prompt?: string; error?: string };
+export type SuggestBlurbResult = {
+  ok: boolean;
+  blurb?: string;
+  error?: string;
+};
+
+// Generates a back-cover Klappentext with Claude, grounded in the book's title,
+// topic, audience and outline. Returns the text; the client fills the field
+// (the author still edits and saves it), mirroring the cover-prompt suggestion.
+export async function suggestBlurbAction(
+  projectId: string,
+): Promise<SuggestBlurbResult> {
+  const supabase = await createClient();
+  const { data: project } = await supabase
+    .from("projects")
+    .select("title, topic, audience")
+    .eq("id", projectId)
+    .single();
+  if (!project) return { ok: false, error: "Projekt nicht gefunden." };
+
+  const { data: chapters } = await supabase
+    .from("chapters")
+    .select("position, heading, summary")
+    .eq("project_id", projectId)
+    .order("position");
+  const gliederung =
+    (chapters ?? [])
+      .map(
+        (c) =>
+          `${c.position}. ${c.heading}${c.summary ? ` — ${c.summary}` : ""}`,
+      )
+      .join("\n") || "(keine Gliederung vorhanden)";
+
+  try {
+    const prompt = await loadPrompt("klappentext", {
+      titel: project.title ?? project.topic,
+      thema: project.topic,
+      zielgruppe: project.audience ?? "allgemein interessierte Erwachsene",
+      gliederung,
+    });
+    const text = await claudeText({
+      messages: [{ role: "user", content: prompt }],
+      maxTokens: 400,
+    });
+    return { ok: true, blurb: text.trim() };
+  } catch {
+    return {
+      ok: false,
+      error: "Es konnte kein Klappentext vorgeschlagen werden.",
+    };
+  }
+}
 
 export async function suggestCoverPromptAction(
   projectId: string,
