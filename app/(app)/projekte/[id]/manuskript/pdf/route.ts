@@ -12,8 +12,14 @@ export const maxDuration = 60;
 // Wenn sich das ändert, den Trimm-Hinweis in publish-guide.tsx mitziehen.
 const PAGE_W = 396;
 const PAGE_H = 612;
-const MARGIN = 50;
-const CONTENT_W = PAGE_W - 2 * MARGIN;
+// KDP interior margins (points). Inside/gutter is wider than the outside edge and
+// is mirrored per page parity (binding side). Sized for up to ~300 pages —
+// buchwerk books are far shorter; KDP's minimum gutter for 24–150 pages is 0.375".
+const M_INSIDE = 36; // 0.5" gutter (binding side)
+const M_OUTSIDE = 27; // 0.375"
+const M_TOP = 40; // ~0.55"
+const M_BOTTOM = 46; // ~0.64" (leaves room for the page number)
+const CONTENT_W = PAGE_W - M_INSIDE - M_OUTSIDE;
 const INK = rgb(0.12, 0.12, 0.12);
 
 // Map characters WinAnsi (StandardFonts) can't render to safe equivalents.
@@ -127,7 +133,16 @@ export async function GET(
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
 
   let page = pdf.addPage([PAGE_W, PAGE_H]);
-  let y = PAGE_H - MARGIN;
+  let y = PAGE_H - M_TOP;
+  // Left text origin for the current page: on a recto (odd page number) the
+  // binding is on the left, so the gutter sits there; on a verso it flips.
+  let leftX = M_INSIDE;
+
+  function newPage(): void {
+    page = pdf.addPage([PAGE_W, PAGE_H]);
+    leftX = pdf.getPageCount() % 2 === 1 ? M_INSIDE : M_OUTSIDE;
+    y = PAGE_H - M_TOP;
+  }
 
   // Baseline cursor helper: draws one line, advancing to a new page as needed.
   function line(
@@ -136,12 +151,9 @@ export async function GET(
     size: number,
     lineHeight: number,
   ): void {
-    if (y - lineHeight < MARGIN) {
-      page = pdf.addPage([PAGE_W, PAGE_H]);
-      y = PAGE_H - MARGIN;
-    }
+    if (y - lineHeight < M_BOTTOM) newPage();
     y -= size;
-    page.drawText(text, { x: MARGIN, y, size, font, color: INK });
+    page.drawText(text, { x: leftX, y, size, font, color: INK });
     y -= lineHeight - size;
   }
 
@@ -168,8 +180,7 @@ export async function GET(
 
   // --- Chapters ---
   for (const chapter of written) {
-    page = pdf.addPage([PAGE_W, PAGE_H]);
-    y = PAGE_H - MARGIN;
+    newPage();
 
     paragraph(`Kapitel ${chapter.position}`, body, 10, 14, 4);
     paragraph(chapter.heading, bold, 18, 23, 18);
@@ -203,8 +214,7 @@ export async function GET(
   // --- Quellenverzeichnis (back matter), grouped by chapter, only chapters
   //     that actually used sources ---
   if (sourceGroups.length > 0) {
-    page = pdf.addPage([PAGE_W, PAGE_H]);
-    y = PAGE_H - MARGIN;
+    newPage();
     paragraph("Quellen", bold, 18, 23, 16);
     for (const group of sourceGroups) {
       paragraph(group.heading, bold, 13, 18, 8);
@@ -217,8 +227,7 @@ export async function GET(
   }
 
   // --- Impressum (mandatory, at the very end of the book) ---
-  page = pdf.addPage([PAGE_W, PAGE_H]);
-  y = PAGE_H - MARGIN;
+  newPage();
   const year = new Date().getFullYear();
   paragraph("Impressum", bold, 16, 22, 16);
   paragraph(`© ${year} ${imprint.name}`, body, 11, 16, 12);
@@ -232,6 +241,21 @@ export async function GET(
     15,
     0,
   );
+
+  // Page numbers, centered at the bottom — skip the title page (page 1).
+  const pages = pdf.getPages();
+  pages.forEach((p, index) => {
+    if (index === 0) return;
+    const label = String(index + 1);
+    const w = body.widthOfTextAtSize(label, 9);
+    p.drawText(label, {
+      x: (PAGE_W - w) / 2,
+      y: 24,
+      size: 9,
+      font: body,
+      color: INK,
+    });
+  });
 
   const pdfBytes = await pdf.save();
   return new NextResponse(Buffer.from(pdfBytes), {
