@@ -161,9 +161,16 @@ Grundmodell **Hub-and-Spoke** bestätigt. Weiter:
 ## 10. Umsetzung in Schnitten (iterativ)
 1. ~~**Schnitt 1 — größter Gewinn:** Seite `…/schreiben` rauslösen + Hub entschlacken.~~ **✅ erledigt (2026-07-13)**
 2. ~~**Schnitt 2:** Seite `…/veroeffentlichen` (Impressum + Downloads + Publish-Guide + Shop) rauslösen; Hub weiter entschlacken.~~ **✅ erledigt (2026-07-13)** — inkl. prominentem „Nächster Schritt"-CTA am Hub und Freischalt-Hinweis an der Gliederung für gesperrte Bücher; Stepper-Labels auf „Schreiben · Cover · Listing · Veröffentlichen".
-3. **Schnitt 3:** Zielgruppe beim Anlegen (Feld existiert bereits im Formular — nur Wirkung prüfen) + Gliederungs-Vorschau im Hub veredeln.
-4. **Schnitt 4:** Cover-/KDP-Seiten kosmetisch an das neue Kopf-/Stepper-Muster angleichen; Weiter-CTAs überall.
-5. **Separat (kein UX-Blocker):** `generateListingAction` auf Trigger+Polling.
+3. ~~**Schnitt 3:** Zielgruppe beim Anlegen + Gliederungs-Vorschau im Hub.~~ **✅ war bereits erledigt** — Zielgruppe wird beim Anlegen erfasst und fließt in die Gliederung; Vorschau lebt seit Schnitt 1 im Hub.
+4. ~~**Schnitt 4:** Weiter-CTAs auf Cover-/KDP-Seiten.~~ **✅ erledigt (2026-07-14)** — Cover → „Weiter zum KDP-Listing", KDP → „Weiter zum Veröffentlichen".
+5. **Separat (kein UX-Blocker, offen):** `generateListingAction` auf Trigger+Polling (letzter blockierender Flow).
+
+## 12. Weitere umgesetzte Verbesserungen (2026-07-13/14)
+- **Batch-Schreiben-Fortschritt** zog den fertigen Zustand nicht nach (zeigte „8/10 · schreibt noch" bei fertigem Buch) → Intervall-Poll während des Laufs + Timeout pro Kapitel-Fetch.
+- **Kapitel einklappbar** auf der Schreiben-Seite (fertige starten eingeklappt).
+- **Cover-Qualität** zeigt Generierungszeiten statt interner Cent-Kosten.
+- **Cover-Titel-Stil** wählbar (Klassisch/Kopf/Hell = Position + Ton), damit der Textbalken nichts Wichtiges überdeckt; inkl. RLS-Grant-Fix für die neue Spalte.
+- **Hub:** prominenter „Nächster Schritt"-CTA + Freischalt-Hinweis an der Gliederung für gesperrte Bücher.
 
 Jeder Schnitt ist eigenständig lauffähig und deploybar.
 
