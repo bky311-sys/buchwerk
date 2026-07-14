@@ -64,9 +64,16 @@ export function PublishGuide({
     {
       title: "Reiter „Inhalt des Kindle eBooks“",
       steps: [
-        "Manuskript hochladen: EPUB für das eBook (reflowt sauber am Kindle), PDF für das Taschenbuch.",
-        "Cover: „Bereits vorhandenes Cover hochladen“ → dein Cover-Bild bzw. das Cover-PDF.",
+        "Manuskript hochladen: EPUB für das eBook (reflowt sauber am Kindle).",
+        "Cover: „Bereits vorhandenes Cover hochladen“ → dein Cover-Bild als JPG (KDP nimmt fürs Cover kein PDF).",
         "KI-generierter Inhalt: „Ja“ angeben — Amazon verlangt diese Kennzeichnung.",
+      ],
+    },
+    {
+      title: "Nur fürs Taschenbuch (Print)",
+      steps: [
+        "Beim Anlegen als Buchgröße/Format 14,8 × 21 cm (A5) wählen — genau darauf ist die Manuskript-PDF gesetzt.",
+        "Als Buchinhalt die Manuskript-PDF hochladen (nicht die EPUB).",
       ],
     },
     {
