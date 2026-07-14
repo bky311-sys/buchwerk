@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/buchwerk/wordmark";
+import { BookCover } from "@/components/buchwerk/book-cover";
 import { Stars } from "@/components/buchwerk/stars";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { ReviewWidget } from "@/components/buchwerk/review-widget";
@@ -74,22 +75,13 @@ export default async function BuchDetailPage({
           </Link>
 
           <div className="mt-8 grid gap-10 sm:grid-cols-[minmax(0,240px)_1fr]">
-            <div className="overflow-hidden rounded-xl border border-border bg-muted shadow-sm">
-              {book.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={book.coverUrl}
-                  alt={`Cover: ${book.title}`}
-                  className="aspect-[2/3] w-full object-cover"
-                />
-              ) : (
-                <div className="flex aspect-[2/3] w-full items-center justify-center p-4 text-center">
-                  <span className="font-display text-sm font-semibold text-muted-foreground">
-                    {book.title}
-                  </span>
-                </div>
-              )}
-            </div>
+            <BookCover
+              imageUrl={book.coverUrl}
+              title={book.title}
+              author={book.author}
+              styleKey={book.coverStyle}
+              size="lg"
+            />
 
             <div>
               <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">

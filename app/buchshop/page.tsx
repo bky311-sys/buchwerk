@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/buchwerk/wordmark";
+import { BookCover } from "@/components/buchwerk/book-cover";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import {
   getPublishedBooks,
@@ -68,23 +69,16 @@ export default async function BuchshopPage() {
 function BookCard({ book, boosted }: { book: ShopBook; boosted: boolean }) {
   return (
     <Link href={`/buchshop/${book.slug}`} className="group block">
-      <div className="relative overflow-hidden rounded-xl border border-border bg-muted shadow-sm transition-shadow group-hover:shadow-md">
-        {book.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={book.coverUrl}
-            alt={`Cover: ${book.title}`}
-            className="aspect-[2/3] w-full object-cover"
-          />
-        ) : (
-          <div className="flex aspect-[2/3] w-full items-center justify-center p-4 text-center">
-            <span className="font-display text-sm font-semibold text-muted-foreground">
-              {book.title}
-            </span>
-          </div>
-        )}
+      <div className="relative transition-shadow group-hover:[&>div]:shadow-md">
+        <BookCover
+          imageUrl={book.coverUrl}
+          title={book.title}
+          author={book.author}
+          styleKey={book.coverStyle}
+          size="sm"
+        />
         {boosted ? (
-          <span className="absolute left-2 top-2">
+          <span className="absolute left-2 top-2 z-10">
             <StatusBadge intent="draft">Sucht Bewertungen</StatusBadge>
           </span>
         ) : null}
@@ -123,7 +117,12 @@ function ShopFooter() {
   return (
     <footer className="bg-background">
       <div className="mx-auto flex max-w-5xl flex-col gap-4 px-6 py-10 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <p>© {new Date().getFullYear()} Buchwerk — Benjamin Koch</p>
+        <p>
+          © {new Date().getFullYear()} Buchwerk — Benjamin Koch
+          <span className="mt-1 block text-xs">
+            Als Amazon-Partner verdienen wir an qualifizierten Käufen.
+          </span>
+        </p>
         <nav className="flex gap-6">
           <Link
             href="/impressum"

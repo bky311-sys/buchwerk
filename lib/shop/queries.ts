@@ -12,6 +12,7 @@ export type ShopBook = {
   author: string | null;
   description: string | null;
   coverUrl: string | null;
+  coverStyle: string | null;
   amazonUrl: string | null;
 };
 
@@ -22,12 +23,13 @@ type ProjectRow = {
   author: string | null;
   shop_slug: string | null;
   amazon_url: string | null;
+  cover_title_style: string | null;
   covers: { image_url: string; is_selected: boolean }[] | null;
   kdp_listings: { subtitle: string | null; description: string | null }[] | null;
 };
 
 const SELECT =
-  "id, title, topic, author, shop_slug, amazon_url, covers(image_url, is_selected), kdp_listings(subtitle, description)";
+  "id, title, topic, author, shop_slug, amazon_url, cover_title_style, covers(image_url, is_selected), kdp_listings(subtitle, description)";
 
 function toShopBook(row: ProjectRow): ShopBook | null {
   if (!row.shop_slug) return null;
@@ -42,6 +44,7 @@ function toShopBook(row: ProjectRow): ShopBook | null {
     author: row.author,
     description: listing?.description ?? null,
     coverUrl: cover?.image_url ?? null,
+    coverStyle: row.cover_title_style,
     amazonUrl: row.amazon_url,
   };
 }
