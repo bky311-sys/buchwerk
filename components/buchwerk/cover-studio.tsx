@@ -235,10 +235,10 @@ export function CoverStudio({
     });
   }
 
-  // Render the front cover (motif + title band) to a PNG and download it. KDP
-  // wants the cover as a PNG image, never a PDF — this composites the same way
+  // Render the front cover (motif + title band) to a JPG and download it. KDP
+  // wants the cover as a JPG image (never a PDF) — this composites the same way
   // the preview does, client-side on a canvas (no server rasteriser needed).
-  function downloadCoverPng() {
+  function downloadCoverImage() {
     if (!selectedCover) return;
     setError(null);
     const img = new window.Image();
@@ -321,8 +321,8 @@ export function CoverStudio({
             .replace(/^-+|-+$/g, "")
             .slice(0, 60) || "cover";
         const a = document.createElement("a");
-        a.href = canvas.toDataURL("image/png");
-        a.download = `${slug}-cover.png`;
+        a.href = canvas.toDataURL("image/jpeg", 0.92);
+        a.download = `${slug}-cover.jpg`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -662,10 +662,10 @@ export function CoverStudio({
                   type="button"
                   size="lg"
                   variant="ink"
-                  onClick={downloadCoverPng}
+                  onClick={downloadCoverImage}
                   disabled={busy}
                 >
-                  Cover-Bild (PNG) herunterladen
+                  Cover-Bild (JPG) herunterladen
                 </Button>
                 <Button
                   type="button"
@@ -679,7 +679,7 @@ export function CoverStudio({
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
                 Fürs eBook bei Amazon KDP lädst du das{" "}
-                <span className="font-medium">Cover-Bild als PNG</span> hoch — KDP
+                <span className="font-medium">Cover-Bild als JPG</span> hoch — KDP
                 nimmt für Cover kein PDF. Die PDF-Variante ist nur fürs Taschenbuch
                 (Print, mit Rückseite).
               </p>
