@@ -274,6 +274,14 @@ Status überlebt Reloads. Bewusst **kein** externer Worker/Queue (Over-Engineeri
 
 Bild und Text sind bewusst **entkoppelt** (Balken deckt Flux-Motiv, kein Text im Bild). `cover_title_style` speichert `"<position>-<ton>"`. Der Bild-Prompt (`prompts/cover-prompt.md`) ist geschärft: Objekte konkret/eindeutig, realistisch/zurückhaltend (gegen „goldene Schale statt Waschpfanne / zu viel Gold"). Balkenfarbe kommt aus der Motiv-Hauptfarbe (Front + Rückseite konsistent), Vorschau samplet sie client-seitig per Canvas (CORS-Fallback neutral).
 
+### 2026-07-14: KDP-Print (Taschenbuch) — Interior + Full-Wrap-Cover
+**Grund:** Der MVP war eBook-first; Print war nicht KDP-tauglich (Interior feste Ränder, Cover als 2 Hochkant-Seiten). KDPs Druckvorschau meldete den Cover-Blocker „Erwartete Größe 11.385×8.750, eingereicht 8.333×12.500".
+- **Format:** KDP-Standard 5,5 × 8,5 Zoll (14,0 × 21,6 cm) = 396 × 612 pt.
+- **Interior** (`lib/books/manuscript-pdf.ts`, `buildManuscriptPdf`): Spiegelränder mit Bundsteg (innen 0.5″/außen 0.375″, pro Seitenparität gespiegelt), Seitenzahlen. Liefert **Bytes + Seitenzahl**. Manuskript-Route nutzt ihn.
+- **Cover** (`cover/pdf`): **Full-Wrap** (ein Querformat-PDF: Rückseite + Rücken + Vorderseite + Beschnitt 0,125″). Rückenbreite = Interior-Seitenzahl × 0,002252″ (weißes Papier). Cover holt die Seitenzahl über denselben `buildManuscriptPdf` → Rücken passt **immer** zum tatsächlichen Interior. Vorderseite = Motiv randabfallend + Titel-Balken (`cover_title_style`); Rückseite = Hauptfarbe + Titel + Klappentext + freie Barcode-Fläche.
+- **eBook-Cover** dagegen = JPG (Client-Canvas), nie PDF.
+- **Noch offen:** Schrifteinbettung — pdf-lib nutzt Standard-Basisschriften; KDP bettet sie automatisch ein (Warnung, kein Blocker). Für 100 % sauber bräuchte es eine gebündelte Schrift + `@pdf-lib/fontkit` (neue Dependency). Print-Cover-Verifikation in KDPs Druckvorschau empfohlen.
+
 ## Bei Zweifeln
 
 Wenn du als Claude Code unsicher bist:

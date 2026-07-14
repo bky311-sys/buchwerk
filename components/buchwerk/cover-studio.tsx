@@ -680,8 +680,10 @@ export function CoverStudio({
               <p className="mt-2 text-xs text-muted-foreground">
                 Fürs eBook bei Amazon KDP lädst du das{" "}
                 <span className="font-medium">Cover-Bild als JPG</span> hoch — KDP
-                nimmt für Cover kein PDF. Die PDF-Variante ist nur fürs Taschenbuch
-                (Print, mit Rückseite).
+                nimmt fürs eBook-Cover kein PDF. Die PDF ist das{" "}
+                <span className="font-medium">Full-Wrap fürs Taschenbuch</span>{" "}
+                (Rückseite + Rücken + Vorderseite, Beschnitt und Rückenbreite
+                passend zur Seitenzahl).
               </p>
             </>
           ) : (
