@@ -33,6 +33,14 @@ export default async function CoverPage({
     .eq("project_id", id)
     .order("created_at", { ascending: false });
 
+  // Klappentext lives in the KDP listing; surface it here so it can be written
+  // before the listing step (the back cover needs it).
+  const { data: listing } = await supabase
+    .from("kdp_listings")
+    .select("description")
+    .eq("project_id", id)
+    .maybeSingle();
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <Link
@@ -59,6 +67,7 @@ export default async function CoverPage({
         title={project.title ?? project.topic}
         author={project.author ?? ""}
         titleStyle={project.cover_title_style}
+        blurb={listing?.description ?? ""}
         covers={covers ?? []}
       />
 

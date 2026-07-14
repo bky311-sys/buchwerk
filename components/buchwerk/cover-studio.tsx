@@ -12,6 +12,7 @@ import {
   deleteCoverAction,
   updateProjectAuthorAction,
   updateCoverTitleStyleAction,
+  updateBlurbAction,
 } from "@/lib/books/cover-actions";
 import type { CoverModel } from "@/lib/ai/replicate";
 import {
@@ -40,18 +41,21 @@ export function CoverStudio({
   title,
   author,
   titleStyle,
+  blurb,
   covers,
 }: {
   projectId: string;
   title: string;
   author: string;
   titleStyle: string;
+  blurb: string;
   covers: Cover[];
 }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState<CoverModel>("schnell");
   const [authorValue, setAuthorValue] = useState(author);
+  const [blurbValue, setBlurbValue] = useState(blurb);
   const [style, setStyle] = useState<CoverTitleStyle>(
     normalizeCoverTitleStyle(titleStyle),
   );
@@ -143,6 +147,15 @@ export function CoverStudio({
     });
   }
 
+  function saveBlurb() {
+    setError(null);
+    startTransition(async () => {
+      const result = await updateBlurbAction(projectId, blurbValue);
+      if (result.ok) router.refresh();
+      else setError(result.error ?? "Etwas ist schiefgelaufen.");
+    });
+  }
+
   function chooseStyle(next: CoverTitleStyle) {
     setStyle(next); // optimistic — the preview updates immediately
     setError(null);
@@ -152,12 +165,16 @@ export function CoverStudio({
     });
   }
 
-  // Persist the current author field, then trigger the PDF download — so
+  // Persist the current author + Klappentext, then trigger the PDF download — so
   // whatever is typed always lands on the cover, without a separate save step.
   function downloadCover() {
     setError(null);
     startTransition(async () => {
-      const result = await updateProjectAuthorAction(projectId, authorValue);
+      const [authorRes, blurbRes] = await Promise.all([
+        updateProjectAuthorAction(projectId, authorValue),
+        updateBlurbAction(projectId, blurbValue),
+      ]);
+      const result = !authorRes.ok ? authorRes : blurbRes;
       if (!result.ok) {
         setError(result.error ?? "Etwas ist schiefgelaufen.");
         return;
@@ -349,7 +366,6 @@ export function CoverStudio({
                   key={s.value}
                   type="button"
                   onClick={() => chooseStyle(s.value)}
-                  disabled={busy}
                   aria-pressed={style === s.value}
                   className={`rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
                     style === s.value
@@ -428,6 +444,34 @@ export function CoverStudio({
               disabled={busy}
             >
               Speichern
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-5 max-w-xl space-y-1">
+          <Label htmlFor="blurb">Klappentext (Rückseite)</Label>
+          <p className="text-xs text-muted-foreground">
+            Der Text für die Buchrückseite. Er ist derselbe wie die
+            KDP-Beschreibung — was du hier schreibst, steht später im Listing
+            schon bereit.
+          </p>
+          <textarea
+            id="blurb"
+            value={blurbValue}
+            onChange={(event) => setBlurbValue(event.target.value)}
+            disabled={busy}
+            rows={5}
+            placeholder="Worum geht es im Buch? 3–6 Sätze, die neugierig machen."
+            className={TEXTAREA_CLASS}
+          />
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={saveBlurb}
+              disabled={busy}
+            >
+              Klappentext speichern
             </Button>
           </div>
         </div>

@@ -92,6 +92,25 @@ export async function updateProjectAuthorAction(
   return { ok: true };
 }
 
+// The back cover prints the Klappentext (blurb). It lives in
+// kdp_listings.description — the same text KDP uses — but the cover step comes
+// before the listing step, so we let the author write it here already. Upsert by
+// project_id touches only the description; a later full listing generation fills
+// the rest.
+export async function updateBlurbAction(
+  projectId: string,
+  blurb: string,
+): Promise<CoverResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("kdp_listings").upsert(
+    { project_id: projectId, description: blurb.trim() || null },
+    { onConflict: "project_id" },
+  );
+  if (error) return { ok: false, error: "Konnte nicht gespeichert werden." };
+
+  return { ok: true };
+}
+
 export async function updateCoverTitleStyleAction(
   projectId: string,
   style: string,
@@ -104,6 +123,8 @@ export async function updateCoverTitleStyleAction(
     .eq("id", projectId);
   if (error) return { ok: false, error: "Konnte nicht gespeichert werden." };
 
-  revalidatePath(`/projekte/${projectId}/cover`);
+  // No revalidatePath on purpose: the preview is client state and the PDF reads
+  // the DB fresh on download, so a server re-render would only add a ~2 s lag
+  // that disables the style buttons and feels like they're stuck.
   return { ok: true };
 }
