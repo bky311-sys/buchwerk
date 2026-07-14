@@ -25,7 +25,12 @@ type ProjectRow = {
   amazon_url: string | null;
   cover_title_style: string | null;
   covers: { image_url: string; is_selected: boolean }[] | null;
-  kdp_listings: { subtitle: string | null; description: string | null }[] | null;
+  // PostgREST embeds this as a single object (project_id is the PK → one-to-one),
+  // but can also be an array depending on relationship detection — handle both.
+  kdp_listings:
+    | { subtitle: string | null; description: string | null }
+    | { subtitle: string | null; description: string | null }[]
+    | null;
 };
 
 const SELECT =
@@ -35,7 +40,9 @@ function toShopBook(row: ProjectRow): ShopBook | null {
   if (!row.shop_slug) return null;
   const covers = row.covers ?? [];
   const cover = covers.find((c) => c.is_selected) ?? covers[0] ?? null;
-  const listing = (row.kdp_listings ?? [])[0] ?? null;
+  const listing = Array.isArray(row.kdp_listings)
+    ? (row.kdp_listings[0] ?? null)
+    : (row.kdp_listings ?? null);
   return {
     id: row.id,
     slug: row.shop_slug,
