@@ -29,6 +29,9 @@ export interface Database {
           confirmation_token: string | null;
           confirmed_at: string | null;
           confirmation_sent_at: string | null;
+          test_access: boolean;
+          invited_at: string | null;
+          access_granted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -39,6 +42,9 @@ export interface Database {
           confirmation_token?: string | null;
           confirmed_at?: string | null;
           confirmation_sent_at?: string | null;
+          test_access?: boolean;
+          invited_at?: string | null;
+          access_granted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -49,6 +55,9 @@ export interface Database {
           confirmation_token?: string | null;
           confirmed_at?: string | null;
           confirmation_sent_at?: string | null;
+          test_access?: boolean;
+          invited_at?: string | null;
+          access_granted_at?: string | null;
         };
         Relationships: [];
       };

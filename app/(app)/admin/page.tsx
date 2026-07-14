@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PlanToggle } from "@/components/buchwerk/plan-toggle";
+import { WaitlistGrant } from "@/components/buchwerk/waitlist-grant";
 
 export const metadata: Metadata = {
   title: "Admin — Buchwerk",
@@ -33,7 +34,9 @@ export default async function AdminPage() {
   ] = await Promise.all([
     supabase
       .from("waitlist")
-      .select("email, source, confirmed_at, created_at")
+      .select(
+        "email, source, confirmed_at, created_at, test_access, access_granted_at",
+      )
       .order("created_at", { ascending: false }),
     supabase
       .from("profiles")
@@ -122,12 +125,15 @@ export default async function AdminPage() {
                     {w.email}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {fmtDate(w.created_at)} · {w.source ?? "—"}
+                    {fmtDate(w.created_at)} · {w.source ?? "—"} ·{" "}
+                    {w.confirmed_at ? "bestätigt" : "offen"}
                   </span>
                 </span>
-                <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                  {w.confirmed_at ? "bestätigt" : "offen"}
-                </span>
+                <WaitlistGrant
+                  email={w.email}
+                  invited={Boolean(w.test_access)}
+                  granted={Boolean(w.access_granted_at)}
+                />
               </li>
             ))}
           </ul>
