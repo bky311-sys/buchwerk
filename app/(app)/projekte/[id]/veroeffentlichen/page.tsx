@@ -136,6 +136,20 @@ export default async function VeroeffentlichenPage({
       ? ("not_subscriber" as const)
       : null;
 
+  // Whether cover and KDP listing already exist — drives the done-state in the
+  // publish checklist (best-effort so a lagging migration can't break the page).
+  const { data: selectedCover } = await supabase
+    .from("covers")
+    .select("id")
+    .eq("project_id", id)
+    .eq("is_selected", true)
+    .maybeSingle();
+  const { data: listingRow } = await supabase
+    .from("kdp_listings")
+    .select("project_id")
+    .eq("project_id", id)
+    .maybeSingle();
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       {backLink}
@@ -206,6 +220,8 @@ export default async function VeroeffentlichenPage({
           projectId={project.id}
           finished={finished}
           imprintComplete={imprintComplete}
+          hasListing={Boolean(listingRow)}
+          hasCover={Boolean(selectedCover)}
         />
       </div>
 
