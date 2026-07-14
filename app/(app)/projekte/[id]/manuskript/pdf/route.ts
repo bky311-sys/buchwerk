@@ -1,68 +1,12 @@
 import { NextResponse } from "next/server";
-import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
 import { isProjectUnlocked } from "@/lib/billing/access";
 import { coerceSources } from "@/lib/books/sources";
 import { manuscriptDisposition } from "@/lib/books/filename";
+import { buildManuscriptPdf } from "@/lib/books/manuscript-pdf";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-// KDP-Taschenbuch-Standardformat 5,5 × 8,5 Zoll (14,0 × 21,6 cm) = 396 × 612 pt.
-// Wenn sich das ändert, den Trimm-Hinweis in publish-guide.tsx mitziehen.
-const PAGE_W = 396;
-const PAGE_H = 612;
-// KDP interior margins (points). Inside/gutter is wider than the outside edge and
-// is mirrored per page parity (binding side). Sized for up to ~300 pages —
-// buchwerk books are far shorter; KDP's minimum gutter for 24–150 pages is 0.375".
-const M_INSIDE = 36; // 0.5" gutter (binding side)
-const M_OUTSIDE = 27; // 0.375"
-const M_TOP = 40; // ~0.55"
-const M_BOTTOM = 46; // ~0.64" (leaves room for the page number)
-const CONTENT_W = PAGE_W - M_INSIDE - M_OUTSIDE;
-const INK = rgb(0.12, 0.12, 0.12);
-
-// Map characters WinAnsi (StandardFonts) can't render to safe equivalents.
-function safe(text: string): string {
-  const mapped = text
-    .replace(/[‘’‚]/g, "'")
-    .replace(/[“”„]/g, '"')
-    .replace(/[–—]/g, "-")
-    .replace(/…/g, "...")
-    .replace(/ /g, " ");
-  let out = "";
-  for (const ch of mapped) {
-    const code = ch.charCodeAt(0);
-    if (ch === "\n" || (code >= 0x20 && code <= 0xff)) out += ch;
-  }
-  return out;
-}
-
-function wrap(
-  text: string,
-  font: PDFFont,
-  size: number,
-  maxWidth: number,
-): string[] {
-  const lines: string[] = [];
-  let line = "";
-  for (const word of text.split(/\s+/).filter(Boolean)) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (font.widthOfTextAtSize(candidate, size) > maxWidth && line) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = candidate;
-    }
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
-// Strip the inline markdown the chapter prompt emits (bold/italic markers).
-function stripInline(text: string): string {
-  return text.replace(/\*\*/g, "").replace(/(^|\s)\*(\S)/g, "$1$2");
-}
 
 export async function GET(
   _request: Request,
@@ -114,9 +58,7 @@ export async function GET(
   }
 
   // Per-chapter used sources → a Quellenverzeichnis grouped by chapter at the
-  // back of the book. Best-effort by chapter id: if the sources migration isn't
-  // applied yet this query errors and we export without sources instead of
-  // breaking the download.
+  // back of the book (best-effort; empty if the sources migration lags).
   const { data: sourceRows } = await supabase
     .from("chapters")
     .select("id, sources")
@@ -128,137 +70,21 @@ export async function GET(
     .map((c) => ({ heading: c.heading, sources: sourceById.get(c.id) ?? [] }))
     .filter((g) => g.sources.length > 0);
 
-  const pdf = await PDFDocument.create();
-  const body = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-
-  let page = pdf.addPage([PAGE_W, PAGE_H]);
-  let y = PAGE_H - M_TOP;
-  // Left text origin for the current page: on a recto (odd page number) the
-  // binding is on the left, so the gutter sits there; on a verso it flips.
-  let leftX = M_INSIDE;
-
-  function newPage(): void {
-    page = pdf.addPage([PAGE_W, PAGE_H]);
-    leftX = pdf.getPageCount() % 2 === 1 ? M_INSIDE : M_OUTSIDE;
-    y = PAGE_H - M_TOP;
-  }
-
-  // Baseline cursor helper: draws one line, advancing to a new page as needed.
-  function line(
-    text: string,
-    font: PDFFont,
-    size: number,
-    lineHeight: number,
-  ): void {
-    if (y - lineHeight < M_BOTTOM) newPage();
-    y -= size;
-    page.drawText(text, { x: leftX, y, size, font, color: INK });
-    y -= lineHeight - size;
-  }
-
-  function paragraph(
-    text: string,
-    font: PDFFont,
-    size: number,
-    lineHeight: number,
-    gapAfter: number,
-    indent = "",
-  ): void {
-    for (const l of wrap(safe(indent + stripInline(text)), font, size, CONTENT_W)) {
-      line(l, font, size, lineHeight);
-    }
-    y -= gapAfter;
-  }
-
-  // --- Title page ---
   const title = project.title ?? project.topic;
-  const author = project.author?.trim() ?? "";
-  y = PAGE_H * 0.62;
-  paragraph(title, bold, 26, 32, 16);
-  if (author) paragraph(author, body, 14, 20, 0);
-
-  // --- Chapters ---
-  for (const chapter of written) {
-    newPage();
-
-    paragraph(`Kapitel ${chapter.position}`, body, 10, 14, 4);
-    paragraph(chapter.heading, bold, 18, 23, 18);
-
-    const raw = (chapter.content ?? "").split("\n");
-    let firstHeadingSkipped = false;
-    for (const original of raw) {
-      const text = original.trim();
-      if (!text) {
-        y -= 6; // paragraph gap
-        continue;
-      }
-      if (text.startsWith("### ")) {
-        y -= 6;
-        paragraph(text.replace(/^###\s+/, ""), bold, 13, 18, 6);
-      } else if (text.startsWith("## ")) {
-        // First "## …" is the chapter title we already printed; skip it.
-        if (!firstHeadingSkipped) {
-          firstHeadingSkipped = true;
-          continue;
-        }
-        paragraph(text.replace(/^##\s+/, ""), bold, 15, 20, 8);
-      } else if (/^[-*]\s+/.test(text)) {
-        paragraph(text.replace(/^[-*]\s+/, ""), body, 11, 16, 4, "•  ");
-      } else {
-        paragraph(text, body, 11, 16, 8);
-      }
-    }
-  }
-
-  // --- Quellenverzeichnis (back matter), grouped by chapter, only chapters
-  //     that actually used sources ---
-  if (sourceGroups.length > 0) {
-    newPage();
-    paragraph("Quellen", bold, 18, 23, 16);
-    for (const group of sourceGroups) {
-      paragraph(group.heading, bold, 13, 18, 8);
-      for (const source of group.sources) {
-        paragraph(source.title, body, 11, 16, source.url ? 2 : 8, "•  ");
-        if (source.url) paragraph(source.url, body, 9, 13, 8, "   ");
-      }
-      y -= 6; // gap between chapters
-    }
-  }
-
-  // --- Impressum (mandatory, at the very end of the book) ---
-  newPage();
-  const year = new Date().getFullYear();
-  paragraph("Impressum", bold, 16, 22, 16);
-  paragraph(`© ${year} ${imprint.name}`, body, 11, 16, 12);
-  paragraph(imprint.name, body, 11, 16, 2);
-  paragraph(imprint.street, body, 11, 16, 2);
-  paragraph(`${imprint.zip} ${imprint.city}`, body, 11, 16, 14);
-  paragraph(
-    "Alle Rechte vorbehalten. Nachdruck oder Vervielfältigung, auch auszugsweise, nur mit ausdrücklicher Genehmigung des Autors.",
-    body,
-    10,
-    15,
-    0,
-  );
-
-  // Page numbers, centered at the bottom — skip the title page (page 1).
-  const pages = pdf.getPages();
-  pages.forEach((p, index) => {
-    if (index === 0) return;
-    const label = String(index + 1);
-    const w = body.widthOfTextAtSize(label, 9);
-    p.drawText(label, {
-      x: (PAGE_W - w) / 2,
-      y: 24,
-      size: 9,
-      font: body,
-      color: INK,
-    });
+  const { bytes } = await buildManuscriptPdf({
+    title,
+    author: project.author?.trim() ?? "",
+    imprint,
+    chapters: written.map((c) => ({
+      position: c.position,
+      heading: c.heading,
+      content: c.content,
+    })),
+    sourceGroups,
+    year: new Date().getFullYear(),
   });
 
-  const pdfBytes = await pdf.save();
-  return new NextResponse(Buffer.from(pdfBytes), {
+  return new NextResponse(Buffer.from(bytes), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": manuscriptDisposition(title, "pdf"),
