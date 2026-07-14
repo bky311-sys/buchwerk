@@ -282,6 +282,19 @@ Bild und Text sind bewusst **entkoppelt** (Balken deckt Flux-Motiv, kein Text im
 - **eBook-Cover** dagegen = JPG (Client-Canvas), nie PDF.
 - **Noch offen:** Schrifteinbettung — pdf-lib nutzt Standard-Basisschriften; KDP bettet sie automatisch ein (Warnung, kein Blocker). Für 100 % sauber bräuchte es eine gebündelte Schrift + `@pdf-lib/fontkit` (neue Dependency). Print-Cover-Verifikation in KDPs Druckvorschau empfohlen.
 
+### 2026-07-14: Beta-Test-Feedback — Veröffentlicht-Lock/Neuauflage, Löschen, Affiliate, Shop-Cover
+**Grund:** Sammel-Umsetzung aus einem Live-Testdurchlauf (André als erster Tester):
+1. **Veröffentlicht = gesperrt + Neuauflage:** Ein Buch mit `projects.published_at` ist schreibgeschützt. Die Gliederung wird read-only, die teuren AI-Endpunkte (`generateChapterContent`, `regenerateOutline`) lehnen serverseitig ab. Änderungen laufen über `createNewEditionAction` (`lib/books/actions.ts`): klont Projekt + Kapitel + Listing + gewähltes Cover in ein **neues** Projekt (Titel + „(Neuauflage)", alle Publish/Shop-Felder zurückgesetzt). Das neue Buch ist nicht freigeschaltet → muss neu freigeschaltet werden → zählt als eigenes Buch im Monatsbudget. Klon-Inserts laufen über den Admin-Client (Ownership vorher geprüft).
+2. **Projekte löschen (auch unfertig):** `deleteProjectAction` + `DeleteProjectButton` je Karte. RLS hat `projects_delete_own`; Kinder (chapters/covers/kdp_listings/reviews) via `on delete cascade`.
+3. **Amazon-Link nachträglich:** `updateAmazonUrlAction` — der optionale Link ist im Schritt „Bei Amazon veröffentlicht" auch nach dem Markieren editierbar (leert/setzt `amazon_url`, speist zugleich den Shop-Button).
+4. **Affiliate:** Eigener Partner-Tag wird auf **allen** ausgehenden Amazon-Links erzwungen (`buildAmazonUrl`, Default `meinersterh0c-21`, via `AMAZON_PARTNER_TAG` überschreibbar). Redundanter „Affiliate-Link"-Hinweis unter dem Button entfernt; stattdessen generische Pflicht-Offenlegung im Shop-Footer („Als Amazon-Partner verdienen wir an qualifizierten Käufen"). **Offen/Hinweis:** `meinersterh0c-21` ist der meinersterhund-Tag; für saubere Associates-Konformität sollte buchwerk.info als eigene Traffic-Quelle im Amazon-Partnerprogramm registriert (eigener Tracking-Tag) werden.
+5. **Shop zeigt echtes Cover:** Neue Serverkomponente `BookCover` rendert Motiv + Titel-Balken (Position/Ton aus `cover_title_style`, Balkenfarbe aus dem Motiv via `averagePngColor`/`getCoverMainColor`, in-process gecacht). Vorher zeigte der Shop nur das textlose Flux-Motiv.
+6. **Bug: Shop-Beschreibung fehlte immer.** `kdp_listings` ist eine 1:1-Relation (`project_id` = PK), PostgREST bettet sie als **Objekt** ein — `toShopBook` las `[0]` eines Arrays → subtitle/description immer `null`. Jetzt beide Formen behandelt.
+7. **Projekte-Seite:** Bestehende Projekte oben, „+ Neues Projekt starten" oben rechts, Anlege-Formular unten (`#neu`).
+
+### 2026-07-14: Coming-Soon-Gate — /auth/* ausgenommen + Preview-Token beim Bestätigungs-Redirect
+**Grund:** Eingeladene Tester (test_access auf der Warteliste → Auto-Grant im Auth-Callback) konnten sich nicht bestätigen: Das `SITE_LIVE`-Gate schrieb `/auth/callback?code=…` auf `/bald` um, wenn der Bestätigungslink in einem Browser **ohne** Preview-Cookie geöffnet wurde → der Einmal-Code verfiel ungenutzt. Fix in `middleware.ts`: `/auth/*` ist wie `/api` vom Gate ausgenommen. Zusätzlich hängt `app/auth/callback/route.ts` bei aktivem Gate den `SITE_BYPASS_TOKEN` an den Post-Bestätigungs-Redirect, sodass auch der öffnende Browser das Bypass-Cookie bekommt (nur Inhaber eines gültigen Einmal-Codes erreichen diesen Zweig).
+
 ## Bei Zweifeln
 
 Wenn du als Claude Code unsicher bist:
