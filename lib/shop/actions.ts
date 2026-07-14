@@ -75,10 +75,12 @@ export async function publishToShopAction(
   }
 
   const url = amazonUrl.trim();
-  if (!/^https?:\/\/([a-z0-9-]+\.)*amazon\.[a-z.]+\/.+/i.test(url)) {
+  // The Amazon link is optional (the "Bei Amazon kaufen" button only shows if
+  // it's set); validate only when one is provided.
+  if (url && !/^https?:\/\/([a-z0-9-]+\.)*amazon\.[a-z.]+\/.+/i.test(url)) {
     return {
       ok: false,
-      error: "Bitte gib einen gültigen Amazon-Link zu deinem Buch an.",
+      error: "Der Amazon-Link sieht nicht gültig aus — oder lass ihn leer.",
     };
   }
 
@@ -95,7 +97,7 @@ export async function publishToShopAction(
       shop_published: true,
       shop_published_at: new Date().toISOString(),
       shop_slug: slug,
-      amazon_url: url,
+      amazon_url: url || null,
     })
     .eq("id", projectId);
   if (error) {

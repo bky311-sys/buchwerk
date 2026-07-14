@@ -33,7 +33,7 @@ export default async function ProjektPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, topic, audience, status, updated_at")
+    .select("id, title, topic, audience, status, updated_at, published_at")
     .eq("id", id)
     .single();
   if (!project) notFound();
@@ -114,10 +114,9 @@ export default async function ProjektPage({
     {
       label: "Veröffentlichen",
       href: `/projekte/${project.id}/veroeffentlichen`,
-      cta: "Zum Veröffentlichen",
-      // External, manual step — we can't detect completion, so it stays the
-      // final call-to-action rather than auto-completing.
-      done: false,
+      cta: project.published_at ? "Ansehen" : "Zum Veröffentlichen",
+      // Manual milestone: the author marks the book as published on KDP.
+      done: Boolean(project.published_at),
       optional: true,
     },
   ];

@@ -36,7 +36,7 @@ export default async function ProjektePage({
   const supabase = await createClient();
   const { data: projects } = await supabase
     .from("projects")
-    .select("id, title, topic, status, created_at")
+    .select("id, title, topic, status, created_at, published_at")
     .order("created_at", { ascending: false });
 
   const list = projects ?? [];
@@ -114,9 +114,13 @@ export default async function ProjektePage({
                       </span>
                     ) : null}
                   </span>
-                  <StatusBadge intent={statusIntent(project.status)}>
-                    {STATUS_LABEL[project.status] ?? project.status}
-                  </StatusBadge>
+                  {project.published_at ? (
+                    <StatusBadge intent="done">✓ Veröffentlicht</StatusBadge>
+                  ) : (
+                    <StatusBadge intent={statusIntent(project.status)}>
+                      {STATUS_LABEL[project.status] ?? project.status}
+                    </StatusBadge>
+                  )}
                 </Link>
               </li>
             ))}

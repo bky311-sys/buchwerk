@@ -60,7 +60,9 @@ export function ShopPublish({
   }
 
   const boostActive =
-    boostedUntil !== null && new Date(boostedUntil).getTime() > Date.now();
+    boostedUntil !== null &&
+    // eslint-disable-next-line react-hooks/purity -- current time is exactly what we want
+    new Date(boostedUntil).getTime() > Date.now();
 
   return (
     <section className="rounded-2xl border border-border bg-card p-6 sm:p-7">
@@ -137,11 +139,12 @@ export function ShopPublish({
       ) : canPublish ? (
         <div className="mt-4 space-y-4">
           <p className="text-sm text-muted-foreground">
-            Zeig dein fertiges Buch im Buchshop. Der „Bei Amazon kaufen"-Button
-            führt Leser direkt zu deinem KDP-Buch. Gib dazu den Amazon-Link an.
+            Zeig dein fertiges Buch im Buchshop. Wenn du einen Amazon-Link
+            angibst, führt der „Bei Amazon kaufen“-Button Leser direkt zu deinem
+            KDP-Buch — der Link ist aber optional.
           </p>
           <div className="max-w-md space-y-1.5">
-            <Label htmlFor="amazon-url">Amazon-Link deines Buchs</Label>
+            <Label htmlFor="amazon-url">Amazon-Link (optional)</Label>
             <Input
               id="amazon-url"
               type="url"
@@ -152,11 +155,7 @@ export function ShopPublish({
               placeholder="https://www.amazon.de/dp/…"
             />
           </div>
-          <Button
-            type="button"
-            disabled={isPending || !amazon.trim()}
-            onClick={publish}
-          >
+          <Button type="button" disabled={isPending} onClick={publish}>
             {isPending ? "Wird veröffentlicht…" : "Im Buchshop veröffentlichen"}
           </Button>
         </div>

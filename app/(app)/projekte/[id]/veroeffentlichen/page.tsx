@@ -6,6 +6,7 @@ import { isProjectUnlocked, isSubscriber } from "@/lib/billing/access";
 import { Button } from "@/components/ui/button";
 import { ImprintForm } from "@/components/buchwerk/imprint-form";
 import { PublishGuide } from "@/components/buchwerk/publish-guide";
+import { PublishStatus } from "@/components/buchwerk/publish-status";
 import { ShopPublish } from "@/components/buchwerk/shop-publish";
 import { ReviewModeration } from "@/components/buchwerk/review-moderation";
 import { getPendingReviewsForAuthor } from "@/lib/shop/reviews";
@@ -106,10 +107,11 @@ export default async function VeroeffentlichenPage({
       imprint.city.trim(),
   );
 
-  // Buchshop (best-effort: section stays hidden if the shop migration lags).
+  // Buchshop + published milestone (best-effort: sections stay hidden if a
+  // migration lags).
   const { data: shopRow } = await supabase
     .from("projects")
-    .select("shop_published, shop_slug, amazon_url")
+    .select("shop_published, shop_slug, amazon_url, published_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -222,6 +224,14 @@ export default async function VeroeffentlichenPage({
           imprintComplete={imprintComplete}
           hasListing={Boolean(listingRow)}
           hasCover={Boolean(selectedCover)}
+        />
+      </div>
+
+      <div className="mt-4">
+        <PublishStatus
+          projectId={project.id}
+          publishedAt={shopRow?.published_at ?? null}
+          amazonUrl={shopRow?.amazon_url ?? null}
         />
       </div>
 

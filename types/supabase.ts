@@ -116,6 +116,7 @@ export interface Database {
           imprint_zip: string | null;
           imprint_city: string | null;
           cover_title_style: string;
+          published_at: string | null;
           shop_published: boolean;
           shop_published_at: string | null;
           shop_slug: string | null;
@@ -140,6 +141,7 @@ export interface Database {
           imprint_zip?: string | null;
           imprint_city?: string | null;
           cover_title_style?: string;
+          published_at?: string | null;
           shop_published?: boolean;
           shop_published_at?: string | null;
           shop_slug?: string | null;
@@ -164,6 +166,7 @@ export interface Database {
           imprint_zip?: string | null;
           imprint_city?: string | null;
           cover_title_style?: string;
+          published_at?: string | null;
           shop_published?: boolean;
           shop_published_at?: string | null;
           shop_slug?: string | null;
