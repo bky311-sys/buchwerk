@@ -471,6 +471,36 @@ Bruttomarge also ~90 %. **Das Abo ist das Verdienstmodell und es trägt.**
 Beides blutet **heute nicht**, weil `SITE_LIVE` das Gate zuhält und außer den
 Beta-Testern niemand produziert. Vor dem Live-Gang muss es zu sein.
 
+### Stand 15.07.2026: Kapitel-Deckel gebaut
+
+`CHAPTER_GENERATION_LIMIT = 10` in `lib/books/generate.ts`, gezählt in
+`chapters.generation_count` (Migration `20260715120000`). **Bewusst still** — die
+Zahl wird nicht angekündigt, sondern meldet sich nur, wenn jemand sie reißt: Eine
+angekündigte Zahl liest sich als Guthaben und lädt zum Ausschöpfen ein, und
+niemand, der ehrlich schreibt, kommt in die Nähe. Gezählt wird **vor** dem
+Modell-Aufruf, damit ein von der Function-Zeitgrenze gekillter Lauf mitzählt
+(sonst wäre Abbrechen ein Gratis-Retry).
+
+Die Migration schließt zugleich eine Lücke, die `chapters` seit jeher hatte:
+`chapters_update_own` kannte **keine** Spalten-Allowlist (anders als `projects`
+seit `20260712130000`). Ohne das wäre `generation_count` per PostgREST direkt auf
+0 zurücksetzbar gewesen. Alle 16 Schreibzugriffe im Code sind von der neuen
+Allowlist (`position, heading, summary, content, status, sources`) gedeckt;
+Insert und Delete sind eigene Privilegien und unberührt.
+
+**Bekannte, bewusst akzeptierte Lücke:** Kapitel löschen und neu anlegen setzt den
+Zähler zurück (Default 0). Das kostet den Nutzer aber seinen Kapiteltext, und
+Kapitel löschen ist eine legitime Funktion. Für eine Missbrauchs-Bremse reicht
+das; wasserdicht wäre nur ein Zähler außerhalb der Zeile (eigene Tabelle je
+Projekt+Position) — Over-Engineering beim aktuellen Volumen.
+
+**Noch ungedeckelt:** Cover (`cover-generate.ts`, ~$0,04/Bild — nach Kapiteln der
+zweitgrößte Posten), Gliederung neu (`outline-generate.ts`), Recherche
+(`research.ts`, ~0,21 €/Lauf), Listing, Kapitel-Vertiefen von Hand
+(`chapter-edit-actions.ts`). Alle laufen über `gateProduction` und damit über
+denselben Ein-Slot-pro-Buch. Kapitel waren der teuerste Pfad, aber nicht der
+einzige.
+
 ### Modell-Wahl
 
 - `lib/ai/anthropic.ts:13` nutzt `claude-sonnet-4-6` — **gültig und korrekt**.

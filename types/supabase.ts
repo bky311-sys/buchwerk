@@ -195,6 +195,7 @@ export interface Database {
           content: string | null;
           status: string;
           sources: Json;
+          generation_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -207,6 +208,7 @@ export interface Database {
           content?: string | null;
           status?: string;
           sources?: Json;
+          generation_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -219,6 +221,7 @@ export interface Database {
           content?: string | null;
           status?: string;
           sources?: Json;
+          generation_count?: number;
           created_at?: string;
           updated_at?: string;
         };

@@ -1,12 +1,23 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
 import { splitChapterSources } from "@/lib/books/sources";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
+
+// Abuse brake, not a product limit. gateProduction spends a slot per book, not
+// per generation, so regenerating a chapter is free for the user and costs us a
+// Claude call every time (~5–11 ct, up to 2 calls with the deepen pass).
+//
+// Deliberately NOT surfaced up front: announcing "you have N tries" reads as an
+// allowance and invites using it up. Nobody writing in good faith comes close to
+// this number, so the honest 99% never learn the limit exists — it only speaks
+// when someone hammers a single chapter.
+const CHAPTER_GENERATION_LIMIT = 10;
 
 export type GenerateResult = { ok: boolean; error?: string };
 
@@ -74,6 +85,32 @@ export async function generateChapterContent(
   // Production is gated behind payment.
   const gate = await gateProduction(supabase, chapter.project_id);
   if (!gate.ok) return { ok: false, error: gate.error };
+
+  // Abuse brake (see CHAPTER_GENERATION_LIMIT). Best-effort like the research
+  // dossier below: if this migration isn't applied yet the select errors and we
+  // generate without counting, instead of blocking chapter writing entirely.
+  const admin = createAdminClient();
+  const { data: countRow } = await admin
+    .from("chapters")
+    .select("generation_count")
+    .eq("id", chapterId)
+    .maybeSingle();
+  if (countRow && countRow.generation_count >= CHAPTER_GENERATION_LIMIT) {
+    return {
+      ok: false,
+      error:
+        "Für dieses Kapitel ist das Limit an Neuversuchen erreicht. Wenn du hier wirklich nicht weiterkommst, schreib uns an welcome@buchwerk.info.",
+    };
+  }
+  // Count the attempt BEFORE the model call. A run killed by the function time
+  // limit costs us the tokens all the same, so it has to count — otherwise
+  // aborting mid-generation would be an unlimited free retry.
+  if (countRow) {
+    await admin
+      .from("chapters")
+      .update({ generation_count: countRow.generation_count + 1 })
+      .eq("id", chapterId);
+  }
 
   const { data: project } = await supabase
     .from("projects")
