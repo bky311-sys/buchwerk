@@ -4,7 +4,7 @@
 leiten, später auf buchwerk bewerten und Leser belohnen. Single Source of Truth
 für dieses Feature.
 
-Status: **Phase 1–3 gebaut** (Migrationen einspielen, siehe Abschnitt 6).
+Status: **Phase 1–4 gebaut** (Migrationen einspielen, siehe Abschnitt 6).
 
 > ⚠️ **Abschnitt 4 ist in Teilen überholt.** Die Rezenzo-Begründung dort hält der
 > Prüfung nicht stand (Rezenzos Punkte *sind* monetarisiert), und die
@@ -105,8 +105,11 @@ Amazon-Konto-/KDP-Sperre, UWG-Abmahnung.
    OLG Frankfurt (6 U 232/21) als sachfremden Einfluss gewertet. Eine Ablehnung
    muss begründet werden (Art. 17 DSA) und holt keine Punkte zurück. Missbrauch
    regelt der Betreiber per negativem Ledger-Eintrag.
-4. **2-Stunden-Lesesperre:** Bewerten ist erst 2 h nach dem „Ich lese dieses
-   Buch"-Vermerk (`shop_acquisitions`) möglich.
+4. **Echtes Lesen statt Wartezeit** (geändert 15.07.2026). Bewerten kann nur, wer
+   das Buch im Buchwerk-Reader gelesen hat (≥80 % der Kapitel, je Kapitel
+   Scrolltiefe **und** aktive Lesezeit). Die alte 2h-Sperre auf einer
+   Dropdown-Selbstauskunft ist raus — sie band niemanden: Wer nicht liest, klickt
+   und wartet. Details: `docs/LESEN-UND-BEWERTEN.md` §5.0.
 5. **Punkte sind nie Geld/Abo-Rabatt.** Einlösen ausschließlich **intern** —
    das eigene Buch in den Review-Pool geben / im Shop „boosten".
 6. **Transparenz:** belohnte Bewertungen werden gekennzeichnet; eine Bewertung
@@ -115,8 +118,13 @@ Amazon-Konto-/KDP-Sperre, UWG-Abmahnung.
 
 ### Datenmodell (Phase 2)
 
-- `shop_acquisitions` — „ich lese dieses Buch" (kind: pdf/kindle/kauf),
-  `acquired_at` startet die 2h-Sperre.
+- ~~`shop_acquisitions` — „ich lese dieses Buch" (kind: pdf/kindle/kauf),
+  `acquired_at` startet die 2h-Sperre.~~ **Funktionslos seit 15.07.2026** —
+  ersetzt durch `reading_progress` (echter Lesefortschritt). Tabelle bewusst
+  nicht gedroppt, kann bei der nächsten Aufräum-Migration weg.
+- `reading_progress` — je (Leser, Kapitel): `max_scroll`, `seconds_active`.
+  Keine Write-Policy: die Zahlen gaten eine Belohnung, geschrieben wird nur über
+  `/api/lesen/heartbeat` mit service-role.
 - `shop_reviews` — rating (1..5), body, status (pending/approved/rejected),
   Autor-Moderation; Unique(book_id, user_id).
 - `point_ledger` — interner Punktestand (delta, reason, ref); Saldo = Summe.
@@ -127,8 +135,12 @@ Amazon-Konto-/KDP-Sperre, UWG-Abmahnung.
 ## 5. Phasenplan
 
 - **Phase 1 — Schaufenster:** ✅ gebaut (Migration ausstehend).
-- **Phase 2 — Bewertungen + Punkte** (Modell A): Erwerbsvermerk, 2h-Sperre,
-  Bewertung, Autor-Freigabe, Ø-Anzeige, internes Punktekonto. ⏳ in Arbeit.
+- **Phase 2 — Bewertungen + Punkte** (Modell A): ✅ gebaut. Bewertung,
+  Autor-Freigabe (nur Sichtbarkeit), Ø-Anzeige, internes Punktekonto.
+- **Phase 4 — Reader** (15.07.2026): ✅ gebaut. Volltext im Browser für
+  Abonnenten, Lesefortschritt gemessen, Bewerten daran gekoppelt. Ersetzt die
+  2h-Sperre und den Erwerbsvermerk (`shop_acquisitions` damit funktionslos).
+  Details: `docs/LESEN-UND-BEWERTEN.md` §5.0.
 - **Phase 3 — Punkte einlösen** (intern): ✅ gebaut. Autor setzt Punkte ein, um
   das eigene veröffentlichte Buch zu „boosten" (Standard: 30 Punkte → 7 Tage
   hervorgehoben, „Sucht Bewertungen"-Badge, oben im Shop). Verbucht als
@@ -151,6 +163,9 @@ Amazon-Konto-/KDP-Sperre, UWG-Abmahnung.
    - `20260715130000_shop_reviews_add_rejection_reason.sql` — Art.-17-Begründung.
      **Ohne diese Migration schlägt das Ablehnen fehl** (die Spalte fehlt) —
      anders als die übrigen ist sie nicht best-effort.
+   - `20260715140000_reader.sql` — Lesefreigabe (`projects.shop_readable`) +
+     `reading_progress`. **Ohne sie bleibt jedes Buch „nicht freigegeben"** und
+     damit unbewertbar (best-effort: der Shop bricht nicht, das Lesen fehlt nur).
 2. **`AMAZON_PARTNER_TAG`** (Env) setzen, sonst wird der rohe Amazon-Link genutzt.
    Offen: `meinersterh0c-21` ist der meinersterhund-Tag; buchwerk.info sollte als
    eigene Traffic-Quelle im Partnerprogramm registriert werden.
@@ -159,3 +174,7 @@ Amazon-Konto-/KDP-Sperre, UWG-Abmahnung.
 4. **Vor Live-Gang zu klären:** Der Autor kuratiert derzeit die Sichtbarkeit der
    Bewertungen seines eigenen Buches. Das ist im Transparenzblock offengelegt
    (`review-disclosure.tsx`), bleibt aber ein Interessenkonflikt im Aggregat.
+5. **Autoren müssen ihr Buch aktiv zum Lesen freigeben** (`shop_readable`,
+   Default false) — sonst sammelt der Shop-Eintrag keine Bewertungen. Das gehört
+   in die Onboarding-Kommunikation, sonst wundern sich Autoren über null
+   Bewertungen.

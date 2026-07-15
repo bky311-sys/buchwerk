@@ -3,60 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { REVIEW_LOCK_MS } from "@/lib/shop/reviews";
+import { getBookReadingState } from "@/lib/shop/reading";
 import { POINTS_PER_REVIEW } from "@/lib/shop/points";
 
 export type ReviewActionResult = { ok: boolean; error?: string };
-
-const KINDS = new Set(["pdf", "kindle", "kauf"]);
 
 // Art. 17 DSA wants a "klare und spezifische Begründung" — short enough not to
 // block the author, long enough to rule out "nein".
 const MIN_REJECTION_REASON = 15;
 
-// Marks a published book as "being read", which starts the 2-hour lock before a
-// review can be submitted. A reader cannot mark their own book.
-export async function markReadingAction(
-  bookId: string,
-  kind: string,
-): Promise<ReviewActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Bitte melde dich an." };
-
-  const admin = createAdminClient();
-  const { data: book } = await admin
-    .from("projects")
-    .select("user_id, shop_published, shop_slug")
-    .eq("id", bookId)
-    .maybeSingle();
-  if (!book || !book.shop_published) {
-    return { ok: false, error: "Buch nicht gefunden." };
-  }
-  if (book.user_id === user.id) {
-    return { ok: false, error: "Du kannst dein eigenes Buch nicht bewerten." };
-  }
-
-  const { error } = await supabase
-    .from("shop_acquisitions")
-    .upsert(
-      {
-        book_id: bookId,
-        user_id: user.id,
-        kind: KINDS.has(kind) ? kind : "kauf",
-      },
-      { onConflict: "book_id,user_id", ignoreDuplicates: true },
-    );
-  if (error) return { ok: false, error: "Konnte nicht gespeichert werden." };
-
-  if (book.shop_slug) revalidatePath(`/buchshop/${book.shop_slug}`);
-  return { ok: true };
-}
-
 // Submits a review for a published book. Requires: not the reader's own book,
-// the book marked as read at least 2 hours ago, and no existing review.
+// the book opened for reading by its author, enough of it actually read in the
+// Buchwerk reader, and no existing review.
 export async function submitReviewAction(
   bookId: string,
   rating: number,
@@ -75,7 +33,7 @@ export async function submitReviewAction(
   const admin = createAdminClient();
   const { data: book } = await admin
     .from("projects")
-    .select("user_id, shop_published, shop_slug")
+    .select("user_id, shop_published, shop_readable, shop_slug")
     .eq("id", bookId)
     .maybeSingle();
   if (!book || !book.shop_published) {
@@ -85,24 +43,24 @@ export async function submitReviewAction(
     return { ok: false, error: "Du kannst dein eigenes Buch nicht bewerten." };
   }
 
-  const { data: acq } = await supabase
-    .from("shop_acquisitions")
-    .select("acquired_at")
-    .eq("book_id", bookId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (!acq) {
-    return {
-      ok: false,
-      error: "Markiere das Buch zuerst als gelesen, dann kannst du bewerten.",
-    };
-  }
-  const unlockAt = new Date(acq.acquired_at).getTime() + REVIEW_LOCK_MS;
-  if (Date.now() < unlockAt) {
+  // Bewerten setzt echtes Lesen im Buchwerk-Reader voraus. Die alte Schranke —
+  // Dropdown-Selbstauskunft plus 2 Stunden Wartezeit — hat niemanden gebunden:
+  // Wer nicht liest, klickt und wartet; Warten kostet ihn nichts. Ein Timer auf
+  // eine Behauptung ist keine Überprüfung, sondern die Behauptung noch einmal.
+  // Anhang Nr. 23b UWG verlangt "angemessene und verhältnismäßige Maßnahmen" —
+  // gemessen an dem, was uns möglich ist, und uns gehört der Text.
+  if (!book.shop_readable) {
     return {
       ok: false,
       error:
-        "Bewertungen sind erst 2 Stunden nach dem Start möglich — damit das Buch wirklich gelesen wird.",
+        "Dieses Buch ist nicht zum Lesen freigegeben und kann deshalb nicht bewertet werden.",
+    };
+  }
+  const state = await getBookReadingState(bookId, user.id);
+  if (!state.hasReadEnough) {
+    return {
+      ok: false,
+      error: `Du hast ${state.chaptersRead} von ${state.chaptersTotal} Kapiteln gelesen. Ab ${state.chaptersRequired} kannst du bewerten.`,
     };
   }
 

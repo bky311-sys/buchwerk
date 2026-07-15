@@ -273,7 +273,61 @@ Wochen **< 40 %**, bei ungeprüften Rezensenten **10–15 %**. Die beworbenen
 
 ## 5. Vorschlag
 
-### 5.1 Zuerst: der Reader (Voraussetzung für alles)
+### 5.0 Stand 15.07.2026: Reader ist gebaut ✅
+
+Migration `20260715140000_reader.sql`.
+
+| Baustein | Datei |
+|---|---|
+| Lesefreigabe (Opt-in, getrennt vom Listing) | `projects.shop_readable`, `setShopReadableAction` |
+| Reader-Seiten | `app/buchshop/[slug]/lesen/[position]/page.tsx` |
+| Text laden (nur `shop_published` **und** `shop_readable`, nur Kapitel „fertig") | `lib/shop/reader-queries.ts` |
+| Markdown → React, ohne neue Dependency | `components/buchwerk/chapter-prose.tsx` |
+| Heartbeat-Client | `components/buchwerk/reading-tracker.tsx` |
+| Heartbeat-Endpunkt (einzige Schreibstelle) | `app/api/lesen/heartbeat/route.ts` |
+| „Genug gelesen?" | `lib/shop/reading.ts` |
+
+**Regeln:**
+- **Lesen ≠ Listen.** `shop_published` = Schaufenster (niedrige Hürde → viele
+  Bücher). `shop_readable` = Autor gibt den Volltext frei, Default **false**.
+  Ohne Freigabe: keine Bewertungen. *Wer bewertet werden will, muss lesen lassen.*
+- **Lesen ist Abo-Leistung.** Autor liest sein eigenes Buch gratis, sammelt dabei
+  aber keinen Fortschritt (nichts zu beweisen, nichts zu bewerten).
+- **Gemessen wird aktive Zeit**, nicht Wanduhr: Heartbeat nur bei sichtbarem Tab
+  **und** Interaktion in den letzten 60 s. Server schreibt pro Beat höchstens
+  `HEARTBEAT_SECONDS` und lehnt zu schnelle Beats ab → Request-Replay bringt nichts.
+- **Kapitel gilt als gelesen** bei ≥90 % Scrolltiefe **und** ≥ Wörter/400 wpm
+  Sekunden aktiv (400 wpm = hastiges Überfliegen; deutsche Prosa liegt bei
+  200–250). Beides nötig: In 3 Sekunden nach unten scrollen ist kein Lesen, eine
+  Stunde auf Seite 1 sitzen auch nicht.
+- **Buch bewertbar** ab 80 % der Kapitel. Nicht 100 % — wer ehrlich ein Kapitel
+  von acht überspringt, hat trotzdem eine Meinung, und ein 100-%-Zwang würde nur
+  antrainieren, das letzte Kapitel blind durchzuscrollen.
+- **`reading_progress` hat keine Write-Policy.** Die Zahlen gaten eine Belohnung;
+  über den öffentlichen anon-Key dürfte man sonst genau das fälschen, was sie
+  beweisen sollen. Alle Schreibzugriffe laufen über den Heartbeat mit
+  service-role.
+- **Reader ist `noindex`** — das Manuskript ist das Produkt des Autors, an einen
+  geschlossenen Kreis gegeben, nicht ins Web gestellt.
+
+**Ersetzt:** Die 2h-Sperre und der „PDF/Kindle/Kauf"-Erwerbsvermerk sind raus
+(`markReadingAction`, `REVIEW_LOCK_MS` gelöscht). Sie banden niemanden: Wer nicht
+liest, klickt und wartet, und Warten kostet nichts. Die Tabelle
+**`shop_acquisitions` ist damit funktionslos** — bewusst nicht gedroppt (Migration
+bleibt gültig, leere Tabelle schadet nicht), kann bei der nächsten Aufräum-Migration weg.
+
+**Was ehrlich bleibt:** Das ist eine **Messung, kein Beweis**. Ein Skript schlägt
+jedes clientseitige Signal. Der Anspruch ist, Schummeln teurer und langweiliger
+zu machen als Lesen — genau so steht es auch im Transparenzblock, und mehr darf
+dort nie stehen (sonst Nr. 23b). Der Text in `review-disclosure.tsx` wurde
+entsprechend von „wir prüfen nicht" auf die reale Mechanik umgestellt.
+
+**Offen:** Kein Wiedereinstiegs-Merker („zuletzt gelesen"); Fortschritt zählt nur
+vorwärts, Wiederlesen bringt nichts. Beides bewusst, kann später kommen.
+
+---
+
+### 5.1 Warum der Reader die Voraussetzung für alles war
 
 **Bücher im Browser lesbar machen.** Der Text liegt in `chapters.content`. Es
 braucht eine Leseansicht unter `/buchshop/<slug>/lesen` und eine Tabelle für den

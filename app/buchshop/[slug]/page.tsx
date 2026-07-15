@@ -14,6 +14,8 @@ import {
 import { getPublishedBookBySlug } from "@/lib/shop/queries";
 import { buildAmazonUrl } from "@/lib/shop/amazon";
 import { createClient } from "@/lib/supabase/server";
+import { getBookReadingState } from "@/lib/shop/reading";
+import { isSubscriber } from "@/lib/billing/access";
 import {
   getApprovedReviews,
   getUserReviewState,
@@ -54,14 +56,19 @@ export default async function BuchDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [reviews, ownRow, reviewState] = await Promise.all([
-    getApprovedReviews(book.id),
-    // RLS returns the project row only to its owner → detects the author's own book.
-    user
-      ? supabase.from("projects").select("id").eq("id", book.id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    user ? getUserReviewState(supabase, book.id, user.id) : Promise.resolve(null),
-  ]);
+  const [reviews, ownRow, reviewState, readingState, subscriber] =
+    await Promise.all([
+      getApprovedReviews(book.id),
+      // RLS returns the project row only to its owner → detects the author's own book.
+      user
+        ? supabase.from("projects").select("id").eq("id", book.id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      user
+        ? getUserReviewState(supabase, book.id, user.id)
+        : Promise.resolve(null),
+      user ? getBookReadingState(book.id, user.id) : Promise.resolve(null),
+      user ? isSubscriber(supabase, user.id) : Promise.resolve(false),
+    ]);
   const summary = summarize(reviews);
   const isOwnBook = Boolean(ownRow?.data);
   const loginHref = `/anmelden?weiter=${encodeURIComponent(`/buchshop/${slug}`)}`;
@@ -115,9 +122,20 @@ export default async function BuchDetailPage({
                 </div>
               ) : null}
 
-              {book.amazonUrl ? (
-                <div className="mt-6">
+              <div className="mt-6 flex flex-wrap gap-3">
+                {book.isReadable && !isOwnBook ? (
                   <Button asChild size="lg">
+                    <Link href={`/buchshop/${slug}/lesen`}>
+                      Hier lesen
+                    </Link>
+                  </Button>
+                ) : null}
+                {book.amazonUrl ? (
+                  <Button
+                    asChild
+                    size="lg"
+                    variant={book.isReadable && !isOwnBook ? "outline" : "default"}
+                  >
                     <a
                       href={buildAmazonUrl(book.amazonUrl)}
                       target="_blank"
@@ -126,8 +144,8 @@ export default async function BuchDetailPage({
                       Bei Amazon kaufen
                     </a>
                   </Button>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
 
               {book.description ? (
                 <div className="mt-8">
@@ -146,10 +164,15 @@ export default async function BuchDetailPage({
             <ReviewDisclosure />
             <ReviewWidget
               bookId={book.id}
+              slug={slug}
               loggedIn={Boolean(user)}
               isOwnBook={isOwnBook}
-              acquiredAt={reviewState?.acquiredAt ?? null}
-              canReviewAt={reviewState?.canReviewAt ?? null}
+              isReadable={book.isReadable}
+              isSubscriber={subscriber}
+              chaptersRead={readingState?.chaptersRead ?? 0}
+              chaptersTotal={readingState?.chaptersTotal ?? 0}
+              chaptersRequired={readingState?.chaptersRequired ?? 0}
+              hasReadEnough={readingState?.hasReadEnough ?? false}
               hasReviewed={reviewState?.hasReviewed ?? false}
               reviewStatus={reviewState?.reviewStatus ?? null}
               rejectionReason={reviewState?.rejectionReason ?? null}

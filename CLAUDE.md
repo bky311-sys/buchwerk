@@ -324,7 +324,19 @@ Merksatz fürs Produkt: **„Wer einen freigeschalteten Account (Abo) oder das B
 
 **Harte Linie, die bleibt:** Punkte nie käuflich, nie in Geld/Abo-Rabatt wandelbar, nie an eine Amazon-Rezension gekoppelt — auch nicht über Zwischenschritte oder als „Selbstverständlichkeit". Amazon verbietet gegenseitige Rezensionen auch ohne Geldfluss; im Präzedenzfall LG Hamburg 315 O 464/19 war der **Vermittler** Beklagter und Amazon Klägerin. Der Amazon-CTA bleibt freiwillig, unbezahlt, ohne Kopplung.
 
-**Noch offen:** Reader (Voraussetzung für echte Lesekontrolle → erst damit wird Nr. 23b erfüllbar und der § 5b-Text besser); Deckel für Cover/Gliederung/Recherche/Listing; Autor kuratiert weiterhin die Sichtbarkeit im eigenen Aggregat (offengelegt, aber Interessenkonflikt).
+**Noch offen:** Deckel für Cover/Gliederung/Recherche/Listing; Autor kuratiert weiterhin die Sichtbarkeit im eigenen Aggregat (offengelegt, aber Interessenkonflikt).
+
+### 2026-07-15: Buchwerk-Reader — Lesen im Browser, Bewerten daran gekoppelt
+**Grund:** Buchwerk besitzt den Text (`chapters.content`). Das ist das Einzige, was Rezenzo und Pubby strukturell nicht können — die verschicken eine PDF und sind danach blind. Deshalb konnten sie nur eine Selbstauskunft plus Timer anbieten, und genau die hatten wir nachgebaut (`shop_acquisitions` + 2h-Sperre). Eine Uhr auf einer Behauptung ist keine Überprüfung, sondern die Behauptung noch einmal — und sie bindet niemanden, weil Warten den Schummler nichts kostet. Anhang Nr. 23b UWG verlangt „angemessene und verhältnismäßige Maßnahmen", **gemessen an dem, was uns möglich ist**. Migration `20260715140000_reader.sql`.
+
+- **Lesen ≠ Listen.** `shop_published` = Schaufenster (niedrige Hürde, wir wollen viele Bücher). `shop_readable` = Autor gibt den Volltext frei, Default **false** — ein gelistetes Buch darf nie stillschweigend lesbar werden. Regel: **wer bewertet werden will, muss lesen lassen.** Ohne Freigabe sammelt der Eintrag keine Bewertungen.
+- **Lesen ist Abo-Leistung.** Der Autor liest sein eigenes Buch gratis, sammelt aber keinen Fortschritt.
+- **Aktive Zeit, nicht Wanduhr.** Heartbeat nur bei sichtbarem Tab **und** Interaktion in den letzten 60 s. Der Server schreibt pro Beat höchstens `HEARTBEAT_SECONDS` und lehnt zu schnelle Beats ab → Request-Replay bringt nichts. Kapitel gilt als gelesen bei ≥90 % Scrolltiefe **und** ≥ Wörter/400 wpm aktiven Sekunden; Buch bewertbar ab 80 % der Kapitel.
+- **`reading_progress` hat keine Write-Policy** — die Zahlen gaten eine Belohnung, über den anon-Key dürfte man sonst genau das fälschen, was sie beweisen sollen. Reader ist `noindex`.
+- **Markdown → React von Hand** (`chapter-prose.tsx`), gleicher Subset wie `lib/books/epub.ts`: es darf **keine neue Dependency** dazu (`pnpm-lock.yaml` ist nicht regenerierbar, siehe `lib/ai/anthropic.ts`).
+- **Der § 5b-Text sagt jetzt die neue Wahrheit** — „Bewerten kann nur, wer das Buch hier gelesen hat" statt „wir prüfen nicht". Bewusst bleibt drin: **Messung, kein Beweis.** Ein Skript schlägt jedes clientseitige Signal; der Anspruch ist, Schummeln teurer und langweiliger zu machen als Lesen. Mehr darf dort nie stehen, sonst ist es Nr. 23b.
+
+**Entfernt:** `markReadingAction`, `REVIEW_LOCK_MS`, das „PDF/Kindle/Kauf"-Dropdown. `shop_acquisitions` ist funktionslos, aber nicht gedroppt.
 
 ---
 

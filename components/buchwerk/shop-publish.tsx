@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/buchwerk/status-badge";
 import {
   publishToShopAction,
   unpublishFromShopAction,
+  setShopReadableAction,
 } from "@/lib/shop/actions";
 import { boostBookAction } from "@/lib/shop/boost";
 import { BOOST_COST, BOOST_DAYS } from "@/lib/shop/boost-config";
@@ -25,6 +26,7 @@ type Props = {
   blockReason: BlockReason;
   pointsBalance: number;
   boostedUntil: string | null;
+  isReadable: boolean;
 };
 
 export function ShopPublish({
@@ -36,6 +38,7 @@ export function ShopPublish({
   blockReason,
   pointsBalance,
   boostedUntil,
+  isReadable,
 }: Props) {
   const router = useRouter();
   const [amazon, setAmazon] = useState(amazonUrl ?? "");
@@ -89,6 +92,40 @@ export function ShopPublish({
               Zur Shop-Seite ansehen →
             </Link>
           ) : null}
+
+          <div className="rounded-xl border border-border bg-muted p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-semibold">
+                Zum Lesen freigeben
+              </span>
+              {isReadable ? (
+                <StatusBadge intent="done">Freigegeben</StatusBadge>
+              ) : (
+                <StatusBadge intent="neutral">Nicht freigegeben</StatusBadge>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isReadable
+                ? "Abonnenten können dein Buch hier vollständig lesen — und es danach bewerten. Du kannst die Freigabe jederzeit zurücknehmen; bereits abgegebene Bewertungen bleiben."
+                : "Ohne Freigabe ist dein Eintrag ein Schaufenster mit Amazon-Link — bewerten kann ihn niemand, weil niemand das Buch gelesen haben kann. Mit Freigabe lesen Abonnenten den vollen Text hier im Browser und können ihn bewerten."}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Eine Bewertung ist nie Bedingung fürs Lesen, und niemand wird für
+              gute Sterne belohnt.
+            </p>
+            <div className="mt-3">
+              <Button
+                type="button"
+                variant={isReadable ? "outline" : "secondary"}
+                disabled={isPending}
+                onClick={() =>
+                  run(() => setShopReadableAction(projectId, !isReadable))
+                }
+              >
+                {isReadable ? "Freigabe zurücknehmen" : "Zum Lesen freigeben"}
+              </Button>
+            </div>
+          </div>
 
           <div className="rounded-xl border border-border bg-muted p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">

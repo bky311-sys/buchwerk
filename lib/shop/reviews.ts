@@ -4,10 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
-// The 2-hour reading lock: a review may only be submitted this long after the
-// reader marked the book as "being read" (shop_acquisitions.acquired_at).
-export const REVIEW_LOCK_MS = 2 * 60 * 60 * 1000;
-
 export type PublicReview = {
   id: string;
   rating: number;
@@ -19,8 +15,6 @@ export type PublicReview = {
 export type ReviewSummary = { count: number; average: number };
 
 export type UserReviewState = {
-  acquiredAt: string | null;
-  canReviewAt: number | null; // epoch ms, or null if not acquired yet
   hasReviewed: boolean;
   reviewStatus: string | null; // 'pending' | 'approved' | 'rejected'
   // Art. 17 DSA: the reviewer must learn why their review was hidden.
@@ -65,34 +59,22 @@ export function summarize(reviews: PublicReview[]): ReviewSummary {
   };
 }
 
-// The current user's relationship to a book: has it been marked as read, may a
-// review be submitted yet, was one already left. Uses the user-context client.
+// Whether the current user already reviewed this book, and what became of it.
+// Whether they MAY review is a reading question, not a review question — see
+// getBookReadingState in lib/shop/reading.ts.
 export async function getUserReviewState(
   supabase: SupabaseClient,
   bookId: string,
   userId: string,
 ): Promise<UserReviewState> {
-  const [{ data: acq }, { data: review }] = await Promise.all([
-    supabase
-      .from("shop_acquisitions")
-      .select("acquired_at")
-      .eq("book_id", bookId)
-      .eq("user_id", userId)
-      .maybeSingle(),
-    supabase
-      .from("shop_reviews")
-      .select("status, rejection_reason")
-      .eq("book_id", bookId)
-      .eq("user_id", userId)
-      .maybeSingle(),
-  ]);
+  const { data: review } = await supabase
+    .from("shop_reviews")
+    .select("status, rejection_reason")
+    .eq("book_id", bookId)
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  const acquiredAt = acq?.acquired_at ?? null;
   return {
-    acquiredAt,
-    canReviewAt: acquiredAt
-      ? new Date(acquiredAt).getTime() + REVIEW_LOCK_MS
-      : null,
     hasReviewed: Boolean(review),
     reviewStatus: review?.status ?? null,
     rejectionReason: review?.rejection_reason ?? null,

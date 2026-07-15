@@ -14,6 +14,9 @@ export type ShopBook = {
   coverUrl: string | null;
   coverStyle: string | null;
   amazonUrl: string | null;
+  // Author opted in to letting subscribers read the full text (separate from
+  // being listed — see supabase/migrations/20260715140000_reader.sql).
+  isReadable: boolean;
 };
 
 type ProjectRow = {
@@ -22,6 +25,7 @@ type ProjectRow = {
   topic: string;
   author: string | null;
   shop_slug: string | null;
+  shop_readable: boolean | null;
   amazon_url: string | null;
   cover_title_style: string | null;
   covers: { image_url: string; is_selected: boolean }[] | null;
@@ -34,7 +38,7 @@ type ProjectRow = {
 };
 
 const SELECT =
-  "id, title, topic, author, shop_slug, amazon_url, cover_title_style, covers(image_url, is_selected), kdp_listings(subtitle, description)";
+  "id, title, topic, author, shop_slug, shop_readable, amazon_url, cover_title_style, covers(image_url, is_selected), kdp_listings(subtitle, description)";
 
 function toShopBook(row: ProjectRow): ShopBook | null {
   if (!row.shop_slug) return null;
@@ -53,6 +57,9 @@ function toShopBook(row: ProjectRow): ShopBook | null {
     coverUrl: cover?.image_url ?? null,
     coverStyle: row.cover_title_style,
     amazonUrl: row.amazon_url,
+    // Best-effort: without the reader migration the column is absent → not
+    // readable, rather than breaking the whole shop.
+    isReadable: row.shop_readable === true,
   };
 }
 

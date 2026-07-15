@@ -2,11 +2,12 @@
 //
 // 1) § 5b Abs. 3 UWG — we must state whether and how we make sure reviews come
 //    from people who actually used the product. The norm does not force us to
-//    verify; it forces us to tell the truth about verifying. "We don't check" is
-//    a lawful answer — claiming otherwise without adequate measures would hit
-//    Anhang Nr. 23b (per-se prohibition). So this text says plainly that the
-//    reading is self-declared. It must be rewritten the day the reader lands and
-//    reading becomes measurable — see docs/LESEN-UND-BEWERTEN.md §5.1.
+//    verify; it forces us to tell the truth about verifying.
+//    Since the reader shipped (15.07.2026) that answer changed: reading now
+//    happens in our own reader and is measured, so this text describes the real
+//    mechanism instead of admitting a self-declaration. Two limits stay in the
+//    wording on purpose — we say "measured", never "proven", and we say what the
+//    author can and cannot do. Overclaiming here would be Anhang Nr. 23b.
 //
 // 2) OLG Frankfurt 6 U 232/21 — incentivised reviews must be marked, and the
 //    marking has to reach the AGGREGATE, not just the single review. Hence
@@ -33,12 +34,14 @@ export function ReviewDisclosure() {
       <h3 className="text-sm font-medium">So entstehen diese Bewertungen</h3>
       <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
         <li>
-          Bewerten kann jede angemeldete Person, die angibt, das Buch zu lesen —
-          frühestens zwei Stunden nach dieser Angabe.{" "}
           <strong className="font-medium text-foreground">
-            Ob das Buch wirklich gelesen wurde, prüfen wir nicht nach.
+            Bewerten kann nur, wer das Buch hier gelesen hat.
           </strong>{" "}
-          Die Angabe ist eine Selbstauskunft.
+          Gelesen wird im Buchwerk-Reader; wir messen dabei je Kapitel, wie weit
+          gelesen wurde und wie lange aktiv — und geben das Bewerten erst frei,
+          wenn der größte Teil des Buches so gelesen wurde. Das ist eine
+          Messung, kein Beweis: Wer sie umgehen will, kann das mit Aufwand. Sie
+          macht Schummeln unattraktiver als Lesen, mehr behaupten wir nicht.
         </li>
         <li>
           Für eine Bewertung gibt es {POINTS_PER_REVIEW} Punkte — immer gleich
