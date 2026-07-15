@@ -31,17 +31,16 @@ function snippet(text: string | null, max = 140): string {
 
 export default async function AdminPosteingangPage() {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  // Best-effort: the inbound_emails table is created by the (not-yet-applied)
+  // IMAP-poller migration. If it's missing, show an empty inbox instead of
+  // crashing the whole admin Mails page.
+  const { data } = await supabase
     .from("inbound_emails")
     .select(
       "id, from_name, from_address, subject, text_body, received_at, is_read",
     )
     .order("received_at", { ascending: false, nullsFirst: false })
     .limit(200);
-
-  if (error) {
-    throw new Error(`Posteingang konnte nicht geladen werden: ${error.message}`);
-  }
 
   const mails = data ?? [];
   const unread = mails.filter((m) => !m.is_read).length;
