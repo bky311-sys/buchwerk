@@ -34,25 +34,33 @@ export async function BookBackCover({
   const main = imageUrl ? await getCoverMainColor(imageUrl) : NEUTRAL_MAIN;
   const { title: titleCss, body: bodyCss } = textColors(main);
 
+  // The container-query context and the cqw consumers must be DIFFERENT elements:
+  // an element cannot query itself. Putting [container-type:inline-size] and
+  // p-[8cqw] on the same div made the padding resolve against the viewport
+  // instead (~125px per side on a 240px column) — the text was squeezed to zero
+  // width and the box blew past its column. Root = container, inner = consumer,
+  // same split BookCover uses.
   return (
     <div
-      className={`flex aspect-[2/3] w-full flex-col overflow-hidden rounded-xl border border-border p-[8cqw] shadow-sm [container-type:inline-size] ${className}`}
+      className={`aspect-[2/3] w-full overflow-hidden rounded-xl border border-border shadow-sm [container-type:inline-size] ${className}`}
       style={{ backgroundColor: rgbCss(main) }}
     >
-      <p
-        className="font-display font-bold leading-[4.4cqw] text-[3.6cqw]"
-        style={{ color: titleCss }}
-      >
-        {title}
-      </p>
-      {blurb ? (
+      <div className="flex h-full flex-col p-[8cqw]">
         <p
-          className="mt-[4cqw] whitespace-pre-wrap leading-[3.4cqw] text-[2.5cqw]"
-          style={{ color: bodyCss }}
+          className="font-display font-bold leading-[4.4cqw] text-[3.6cqw]"
+          style={{ color: titleCss }}
         >
-          {blurb}
+          {title}
         </p>
-      ) : null}
+        {blurb ? (
+          <p
+            className="mt-[4cqw] whitespace-pre-wrap leading-[3.4cqw] text-[2.5cqw]"
+            style={{ color: bodyCss }}
+          >
+            {blurb}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

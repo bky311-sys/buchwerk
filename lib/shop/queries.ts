@@ -14,9 +14,6 @@ export type ShopBook = {
   coverUrl: string | null;
   coverStyle: string | null;
   amazonUrl: string | null;
-  // Author opted in to letting subscribers read the full text (separate from
-  // being listed — see supabase/migrations/20260715140000_reader.sql).
-  isReadable: boolean;
 };
 
 type ProjectRow = {
@@ -25,7 +22,6 @@ type ProjectRow = {
   topic: string;
   author: string | null;
   shop_slug: string | null;
-  shop_readable: boolean | null;
   amazon_url: string | null;
   cover_title_style: string | null;
   covers: { image_url: string; is_selected: boolean }[] | null;
@@ -38,7 +34,7 @@ type ProjectRow = {
 };
 
 const SELECT =
-  "id, title, topic, author, shop_slug, shop_readable, amazon_url, cover_title_style, covers(image_url, is_selected), kdp_listings(subtitle, description)";
+  "id, title, topic, author, shop_slug, amazon_url, cover_title_style, covers(image_url, is_selected), kdp_listings(subtitle, description)";
 
 function toShopBook(row: ProjectRow): ShopBook | null {
   if (!row.shop_slug) return null;
@@ -57,9 +53,6 @@ function toShopBook(row: ProjectRow): ShopBook | null {
     coverUrl: cover?.image_url ?? null,
     coverStyle: row.cover_title_style,
     amazonUrl: row.amazon_url,
-    // Best-effort: without the reader migration the column is absent → not
-    // readable, rather than breaking the whole shop.
-    isReadable: row.shop_readable === true,
   };
 }
 
@@ -103,4 +96,24 @@ export async function getPublishedBookBySlug(
     .maybeSingle();
 
   return data ? toShopBook(data as unknown as ProjectRow) : null;
+}
+
+/**
+ * Whether the author opted this book into the Buchwerk-Reader.
+ *
+ * A SEPARATE query on purpose. Putting shop_readable into the shared SELECT
+ * above took the whole shop down while the reader migration was not applied yet:
+ * PostgREST answers 400 ("column does not exist") for the ENTIRE select, so the
+ * query returned null and every detail page 404'd. Selecting a column that may
+ * not exist is never best-effort — isolating it in its own query is.
+ */
+export async function isBookReadable(bookId: string): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .select("shop_readable")
+    .eq("id", bookId)
+    .maybeSingle();
+  if (error) return false; // migration not applied yet → nothing is readable
+  return data?.shop_readable === true;
 }

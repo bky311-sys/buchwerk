@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBookReadingState } from "@/lib/shop/reading";
+import { isBookReadable } from "@/lib/shop/queries";
 import { POINTS_PER_REVIEW } from "@/lib/shop/points";
 
 export type ReviewActionResult = { ok: boolean; error?: string };
@@ -33,7 +34,7 @@ export async function submitReviewAction(
   const admin = createAdminClient();
   const { data: book } = await admin
     .from("projects")
-    .select("user_id, shop_published, shop_readable, shop_slug")
+    .select("user_id, shop_published, shop_slug")
     .eq("id", bookId)
     .maybeSingle();
   if (!book || !book.shop_published) {
@@ -49,7 +50,7 @@ export async function submitReviewAction(
   // eine Behauptung ist keine Überprüfung, sondern die Behauptung noch einmal.
   // Anhang Nr. 23b UWG verlangt "angemessene und verhältnismäßige Maßnahmen" —
   // gemessen an dem, was uns möglich ist, und uns gehört der Text.
-  if (!book.shop_readable) {
+  if (!(await isBookReadable(bookId))) {
     return {
       ok: false,
       error:

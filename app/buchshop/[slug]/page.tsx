@@ -12,7 +12,7 @@ import {
   ReviewDisclosure,
   ReviewAggregateNote,
 } from "@/components/buchwerk/review-disclosure";
-import { getPublishedBookBySlug } from "@/lib/shop/queries";
+import { getPublishedBookBySlug, isBookReadable } from "@/lib/shop/queries";
 import { buildAmazonUrl } from "@/lib/shop/amazon";
 import { createClient } from "@/lib/supabase/server";
 import { getBookReadingState } from "@/lib/shop/reading";
@@ -57,7 +57,7 @@ export default async function BuchDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [reviews, ownRow, reviewState, readingState, subscriber] =
+  const [reviews, ownRow, reviewState, readingState, subscriber, readable] =
     await Promise.all([
       getApprovedReviews(book.id),
       // RLS returns the project row only to its owner → detects the author's own book.
@@ -69,6 +69,7 @@ export default async function BuchDetailPage({
         : Promise.resolve(null),
       user ? getBookReadingState(book.id, user.id) : Promise.resolve(null),
       user ? isSubscriber(supabase, user.id) : Promise.resolve(false),
+      isBookReadable(book.id),
     ]);
   const summary = summarize(reviews);
   const isOwnBook = Boolean(ownRow?.data);
@@ -138,7 +139,7 @@ export default async function BuchDetailPage({
               ) : null}
 
               <div className="mt-6 flex flex-wrap gap-3">
-                {book.isReadable && !isOwnBook ? (
+                {readable && !isOwnBook ? (
                   <Button asChild size="lg">
                     <Link href={`/buchshop/${slug}/lesen`}>
                       Hier lesen
@@ -149,7 +150,7 @@ export default async function BuchDetailPage({
                   <Button
                     asChild
                     size="lg"
-                    variant={book.isReadable && !isOwnBook ? "outline" : "default"}
+                    variant={readable && !isOwnBook ? "outline" : "default"}
                   >
                     <a
                       href={buildAmazonUrl(book.amazonUrl)}
@@ -182,7 +183,7 @@ export default async function BuchDetailPage({
               slug={slug}
               loggedIn={Boolean(user)}
               isOwnBook={isOwnBook}
-              isReadable={book.isReadable}
+              isReadable={readable}
               isSubscriber={subscriber}
               chaptersRead={readingState?.chaptersRead ?? 0}
               chaptersTotal={readingState?.chaptersTotal ?? 0}
