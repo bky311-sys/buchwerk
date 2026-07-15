@@ -5,11 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { canAccessProject } from "@/lib/billing/access";
 import { Button } from "@/components/ui/button";
 import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
+import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
 import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 import { Spinner } from "@/components/buchwerk/spinner";
 import { STALE_GENERATION_MS, MIN_TOTAL_WORDS } from "@/lib/books/generate";
 import { computeChapterView } from "@/lib/books/project-view";
+import { RESEARCH_TOTAL_STAGES } from "@/lib/books/research";
 import { OUTLINE_RUNNING_STATUS } from "@/lib/books/outline-generate";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
 import { OutlineActions } from "@/components/buchwerk/outline-actions";
@@ -53,14 +55,17 @@ export default async function ProjektPage({
     .eq("project_id", id)
     .maybeSingle();
 
-  const [{ data: chapters }, unlocked] = await Promise.all([
-    supabase
-      .from("chapters")
-      .select("id, position, heading, summary, content, status, updated_at")
-      .eq("project_id", id)
-      .order("position"),
-    canAccessProject(supabase, id),
-  ]);
+  const [{ data: chapters }, unlocked, { data: researchRow }] =
+    await Promise.all([
+      supabase
+        .from("chapters")
+        .select("id, position, heading, summary, content, status, updated_at")
+        .eq("project_id", id)
+        .order("position"),
+      canAccessProject(supabase, id),
+      supabase.from("projects").select("research").eq("id", id).maybeSingle(),
+    ]);
+  const hasResearch = Boolean(researchRow?.research?.trim());
 
   // Server Component: the per-request wall clock is exactly what we want here —
   // the poller re-renders this page every few seconds, so staleness is
@@ -76,6 +81,7 @@ export default async function ProjektPage({
     totalWords,
     belowMinimum,
     anyGenerating,
+    firstUnwrittenId,
   } = computeChapterView(chapters, now);
 
   // A fresh "gliederung_läuft" status means a new outline is being generated.
@@ -279,9 +285,9 @@ export default async function ProjektPage({
             Gliederung
           </h2>
           {unlocked && !published ? (
-            <Button asChild size="sm">
+            <Button asChild size="sm" variant="outline">
               <Link href={`/projekte/${project.id}/schreiben`}>
-                {hasWrittenChapters ? "Weiter schreiben" : "Kapitel schreiben"}
+                Alle auf einmal schreiben
               </Link>
             </Button>
           ) : null}
@@ -289,7 +295,9 @@ export default async function ProjektPage({
         <p className="mt-1 text-sm text-muted-foreground">
           {published
             ? "Das Buch ist veröffentlicht — die Gliederung ist schreibgeschützt. Änderungen laufen über eine Neuauflage."
-            : "Passe Reihenfolge, Überschriften und Kurzbeschreibungen an — kostenlos. Geschrieben wird im Schritt „Schreiben“."}
+            : unlocked
+              ? "Schreib jedes Kapitel einzeln über den Button darunter — oder alle nacheinander (dauert länger). Reihenfolge, Überschriften und Kurzbeschreibungen kannst du jederzeit anpassen."
+              : "Passe Reihenfolge, Überschriften und Kurzbeschreibungen an — kostenlos. Geschrieben wird im Schritt „Schreiben“."}
         </p>
         {!unlocked && !published ? (
           <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
@@ -345,6 +353,24 @@ export default async function ProjektPage({
                   isGenerating={chapter.isGenerating}
                   isStale={chapter.isStale}
                 />
+                {/* Per-chapter writing right here in the outline — write (or
+                    retry) a single chapter without leaving the cockpit. The
+                    batch "alle auf einmal" flow lives on the Schreiben page. */}
+                {unlocked ? (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <ChapterGenerator
+                      chapterId={chapter.id}
+                      projectId={project.id}
+                      hasContent={Boolean(chapter.content)}
+                      isGenerating={chapter.isGenerating}
+                      isStale={chapter.isStale}
+                      willResearch={
+                        !hasResearch && chapter.id === firstUnwrittenId
+                      }
+                      researchStages={RESEARCH_TOTAL_STAGES}
+                    />
+                  </div>
+                ) : null}
               </article>
             ),
           )}
