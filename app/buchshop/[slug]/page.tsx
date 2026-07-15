@@ -139,11 +139,13 @@ export default async function BuchDetailPage({
               ) : null}
 
               <div className="mt-6 flex flex-wrap gap-3">
+                {/* Points at the review section, not straight into the reader.
+                    "Hier lesen" dropped people into a chapter with no idea why
+                    reading was being measured or what it was for; the section
+                    below explains both, and the reader starts from there. */}
                 {readable && !isOwnBook ? (
                   <Button asChild size="lg">
-                    <Link href={`/buchshop/${slug}/lesen`}>
-                      Hier lesen
-                    </Link>
+                    <Link href="#bewerten">Lesen und bewerten</Link>
                   </Button>
                 ) : null}
                 {book.amazonUrl ? (

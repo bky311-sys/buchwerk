@@ -56,6 +56,46 @@ export function chapterCounts(
   );
 }
 
+export type ChapterProgress = {
+  secondsActive: number;
+  secondsNeeded: number;
+  reachedEnd: boolean;
+  counted: boolean;
+};
+
+/**
+ * Progress on ONE chapter, for the reader's own status bar.
+ *
+ * These numbers are shown to the reader on purpose. Hiding the rule was the
+ * earlier design and it was wrong twice over: it made an honest reader conclude
+ * the tracking was broken, and it bought no protection. Secrecy is not the
+ * defence here — simulating interaction every 60 s plus 90 % scroll depth for
+ * every chapter is, and that costs the same whether the threshold is public or
+ * not. See docs/LESEN-UND-BEWERTEN.md §5.0.
+ */
+export async function getChapterProgress(
+  chapterId: string,
+  userId: string,
+  content: string | null,
+): Promise<ChapterProgress> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("reading_progress")
+    .select("max_scroll, seconds_active")
+    .eq("chapter_id", chapterId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const secondsActive = data?.seconds_active ?? 0;
+  const maxScroll = data?.max_scroll ?? 0;
+  return {
+    secondsActive,
+    secondsNeeded: chapterMinSeconds(content),
+    reachedEnd: maxScroll >= CHAPTER_SCROLL_REQUIRED,
+    counted: chapterCounts(content, maxScroll, secondsActive),
+  };
+}
+
 // Minimum active seconds for a chapter of this length.
 export function chapterMinSeconds(text: string | null): number {
   const words = countWords(text ?? "");

@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   if (book.user_id === user.id) {
     // Authors may read their own book, but it earns no progress — there is
     // nothing to review and nothing to prove.
-    return NextResponse.json({ ok: true, counted: false });
+    return NextResponse.json({ ok: true, secondsActive: 0, chapterRead: false });
   }
   if (!(await isSubscriber(supabase, user.id))) {
     return NextResponse.json({ error: "Kein Zugriff." }, { status: 402 });
@@ -82,6 +82,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({
       ok: true,
+      secondsActive: HEARTBEAT_SECONDS,
       chapterRead: chapterCounts(chapter.content, scroll, HEARTBEAT_SECONDS),
     });
   }
@@ -113,6 +114,7 @@ export async function POST(request: Request) {
   // happened on the very first real read-through.
   return NextResponse.json({
     ok: true,
+    secondsActive,
     chapterRead: chapterCounts(chapter.content, maxScroll, secondsActive),
   });
 }
