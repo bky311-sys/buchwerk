@@ -102,12 +102,16 @@ export async function submitReviewAction(
     };
   }
 
-  const { error } = await supabase.from("shop_reviews").insert({
-    book_id: bookId,
-    user_id: user.id,
-    rating,
-    body: body.trim() || null,
-  });
+  const { data: inserted, error } = await supabase
+    .from("shop_reviews")
+    .insert({
+      book_id: bookId,
+      user_id: user.id,
+      rating,
+      body: body.trim() || null,
+    })
+    .select("id")
+    .single();
   if (error) {
     // Unique(book_id, user_id) → already reviewed.
     if (error.code === "23505") {
@@ -115,6 +119,29 @@ export async function submitReviewAction(
     }
     return { ok: false, error: "Konnte die Bewertung nicht speichern." };
   }
+
+  // Credit points HERE, on submission — never on the author's approval.
+  //
+  // The reviewed author must not decide whether the reviewer gets paid. Gating
+  // the payout on their approval makes the reward de facto sentiment-dependent
+  // (a 2-star review can simply be rejected), which is exactly the "Hoffnung,
+  // weiter am Programm teilnehmen zu können" that OLG Frankfurt 6 U 232/21 held
+  // to be an unlawful sachfremder Einfluss — and it would defeat the
+  // sentiment-neutrality that Modell A is built on (docs/BUCHSHOP.md).
+  //
+  // Points are therefore credited once per review, independent of the rating and
+  // independent of any later moderation. Abuse is handled by the operator
+  // revoking points (negative ledger entry), not by the author withholding them.
+  await admin.from("point_ledger").insert({
+    user_id: user.id,
+    delta: POINTS_PER_REVIEW,
+    reason: "review_submitted",
+    review_id: inserted.id,
+  });
+  await admin
+    .from("shop_reviews")
+    .update({ rewarded: true })
+    .eq("id", inserted.id);
 
   if (book.shop_slug) revalidatePath(`/buchshop/${book.shop_slug}`);
   return { ok: true };
@@ -125,11 +152,11 @@ export async function submitReviewAction(
 async function authorizeModeration(
   reviewId: string,
   callerId: string,
-): Promise<{ bookId: string; reviewerId: string; rewarded: boolean } | null> {
+): Promise<{ bookId: string; reviewerId: string } | null> {
   const admin = createAdminClient();
   const { data: review } = await admin
     .from("shop_reviews")
-    .select("id, book_id, user_id, rewarded")
+    .select("id, book_id, user_id")
     .eq("id", reviewId)
     .maybeSingle();
   if (!review) return null;
@@ -144,12 +171,12 @@ async function authorizeModeration(
   return {
     bookId: review.book_id,
     reviewerId: review.user_id,
-    rewarded: review.rewarded,
   };
 }
 
-// Author approves a review. On first approval the reviewer is credited points
-// (sentiment-neutral: same points regardless of the star rating).
+// Author approves a review for publication. Deliberately does NOT touch points —
+// the reviewer was already credited on submission (see submitReviewAction). This
+// action only controls visibility, never the reward.
 export async function approveReviewAction(
   reviewId: string,
 ): Promise<ReviewActionResult> {
@@ -168,26 +195,19 @@ export async function approveReviewAction(
     .update({
       status: "approved",
       approved_at: new Date().toISOString(),
-      rewarded: true,
     })
     .eq("id", reviewId);
   if (error) return { ok: false, error: "Konnte nicht freigeben." };
-
-  // Credit points only once, and independent of the rating.
-  if (!ctx.rewarded) {
-    await admin.from("point_ledger").insert({
-      user_id: ctx.reviewerId,
-      delta: POINTS_PER_REVIEW,
-      reason: "review_approved",
-      review_id: reviewId,
-    });
-  }
 
   revalidatePath(`/projekte/${ctx.bookId}`);
   return { ok: true };
 }
 
-// Author rejects a pending review. No points are credited.
+// Author rejects a pending review, hiding it from the shop. Points already
+// credited on submission are deliberately NOT clawed back — otherwise rejection
+// would again make the reward sentiment-dependent through the back door.
+// TODO(Art. 17 DSA): a rejection is a "Beschränkung" and owes the reviewer a
+// reasoned notice. Tracked in docs/LESEN-UND-BEWERTEN.md §3.5.
 export async function rejectReviewAction(
   reviewId: string,
 ): Promise<ReviewActionResult> {

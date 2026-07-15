@@ -90,10 +90,10 @@ export function ReviewWidget(props: Props) {
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           {reviewStatus === "approved"
-            ? "Danke! Deine Bewertung ist veröffentlicht und die Punkte sind gutgeschrieben."
+            ? "Danke! Deine Bewertung ist veröffentlicht. Deine Punkte sind gutgeschrieben."
             : reviewStatus === "rejected"
-              ? "Der Autor hat deine Bewertung nicht freigegeben."
-              : "Der Autor prüft deine Bewertung. Nach der Freigabe bekommst du deine Punkte."}
+              ? "Der Autor hat deine Bewertung nicht freigegeben. Deine Punkte behältst du."
+              : "Der Autor prüft, ob deine Bewertung öffentlich erscheint. Deine Punkte sind unabhängig davon bereits gutgeschrieben."}
         </p>
       </div>
     );
@@ -220,7 +220,8 @@ export function ReviewWidget(props: Props) {
         </Button>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Deine Bewertung wird nach Freigabe durch den Autor veröffentlicht.
+        Deine Punkte bekommst du sofort — unabhängig von den Sternen und davon,
+        ob der Autor die Bewertung öffentlich stellt.
       </p>
       {error ? (
         <p role="alert" className="mt-3 text-sm text-destructive">

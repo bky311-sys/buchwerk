@@ -37,7 +37,9 @@ export function ReviewModeration({ reviews }: { reviews: PendingReview[] }) {
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
         Prüfe eingegangene Bewertungen. Nach der Freigabe wird die Bewertung
-        öffentlich sichtbar und der Leser erhält seine Punkte.
+        öffentlich sichtbar. Auf die Punkte des Lesers hat das keinen Einfluss —
+        die sind schon gutgeschrieben, unabhängig von den Sternen und von deiner
+        Entscheidung.
       </p>
 
       <ul className="mt-4 space-y-3">
