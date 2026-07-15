@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { isSubscriber } from "@/lib/billing/access";
 import { NewProjectForm } from "@/components/buchwerk/new-project-form";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { DeleteProjectButton } from "@/components/buchwerk/delete-project-button";
@@ -36,13 +37,24 @@ export default async function ProjektePage({
   const defaultTopic =
     typeof thema === "string" ? thema.trim().slice(0, 300) : undefined;
   const supabase = await createClient();
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("id, title, topic, status, created_at, published_at")
-    .order("created_at", { ascending: false });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const [{ data: projects }, subscriber] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, title, topic, status, created_at, published_at")
+      .order("created_at", { ascending: false }),
+    user ? isSubscriber(supabase, user.id) : Promise.resolve(false),
+  ]);
 
   const list = projects ?? [];
   const hasProjects = list.length > 0;
+
+  // Subscribers write/produce within their monthly quota — no per-book payment.
+  const produceCost = subscriber
+    ? "Als Abonnent ist das im Rahmen deines Monatskontingents ohne Extrakosten."
+    : "Ab hier einmalig 19,99 € pro Buch (oder im Abo inklusive).";
 
   const stepsIntro = (
     <ol className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -53,7 +65,7 @@ export default async function ProjektePage({
         },
         {
           t: "2 · Schreiben, Cover, Listing",
-          d: "Kapitel recherchiert ausschreiben, Cover gestalten, KDP-Texte erzeugen. Ab hier einmalig 19,99 € pro Buch.",
+          d: `Kapitel recherchiert ausschreiben, Cover gestalten, KDP-Texte erzeugen. ${produceCost}`,
         },
         {
           t: "3 · Bei Amazon veröffentlichen",
@@ -81,8 +93,10 @@ export default async function ProjektePage({
       <h2 className="font-display text-lg font-semibold">Neues Buch starten</h2>
       <p className="mt-1 mb-5 text-sm text-muted-foreground">
         Beschreib dein Thema. Buchwerk erstellt daraus eine Kapitel-Gliederung —{" "}
-        <span className="font-medium text-foreground">kostenlos</span>. Erst zum
-        Schreiben, Cover und KDP-Listing zahlst du.
+        <span className="font-medium text-foreground">kostenlos</span>.{" "}
+        {subscriber
+          ? "Schreiben, Cover und KDP-Listing sind mit deinem Abo abgedeckt."
+          : "Erst zum Schreiben, Cover und KDP-Listing zahlst du."}
       </p>
       <NewProjectForm defaultTopic={defaultTopic} />
     </section>
@@ -120,6 +134,7 @@ export default async function ProjektePage({
               <DeleteProjectButton
                 projectId={project.id}
                 title={project.title ?? project.topic}
+                published={Boolean(project.published_at)}
               />
             </div>
           </li>

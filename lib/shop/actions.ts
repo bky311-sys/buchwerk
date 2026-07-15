@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriber } from "@/lib/billing/access";
 import { slugify } from "@/lib/shop/slug";
+import { checkShopContent } from "@/lib/shop/content-policy";
 
 export type ShopActionResult = { ok: boolean; error?: string };
 
@@ -71,6 +72,27 @@ export async function publishToShopAction(
       ok: false,
       error:
         "Das Buch ist noch nicht fertig — alle Kapitel müssen geschrieben sein, bevor du es im Shop veröffentlichst.",
+    };
+  }
+
+  // Keep clearly adult/explicit content out of the public shop (no age
+  // verification there). Checks the shop-facing metadata; narrow by design.
+  const { data: listingForCheck } = await supabase
+    .from("kdp_listings")
+    .select("subtitle, description")
+    .eq("project_id", projectId)
+    .maybeSingle();
+  const policy = checkShopContent(
+    project.title,
+    project.topic,
+    listingForCheck?.subtitle,
+    listingForCheck?.description,
+  );
+  if (!policy.allowed) {
+    return {
+      ok: false,
+      error:
+        "Dieses Buch kann nicht im Buchshop veröffentlicht werden: Der Shop ist jugendfrei, explizite/18+-Inhalte sind hier nicht erlaubt. Du kannst dein Buch aber weiterhin direkt bei Amazon KDP veröffentlichen. Ist das ein Irrtum, melde dich bei welcome@buchwerk.info.",
     };
   }
 

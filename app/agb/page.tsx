@@ -80,6 +80,7 @@ const SECTIONS: Section[] = [
       `(3) Die Verantwortung für die Verwendung, Veröffentlichung und Verwertung der erstellten Inhalte — einschließlich der Einhaltung von Plattformregeln (z. B. Amazon KDP) und gesetzlicher Vorgaben — liegt ausschließlich beim Kunden.`,
       `(4) Der Kunde stellt den Anbieter von Ansprüchen Dritter frei, die auf einer rechtswidrigen Nutzung oder Veröffentlichung der von ihm erstellten Inhalte beruhen, soweit der Kunde die Rechtsverletzung zu vertreten hat.`,
       `(5) Der Anbieter ist berechtigt, offensichtlich rechtswidrige Inhalte zu entfernen oder Konten zu sperren.`,
+      `(6) Der öffentlich zugängliche Buchshop des Anbieters (www.buchwerk.info/buchshop) ist jugendfrei und verfügt über keine Altersverifikation. Der Kunde darf dort keine pornografischen, jugendgefährdenden, gewaltverherrlichenden oder sonst nur für Erwachsene bestimmten (18+) Inhalte einstellen. Der Anbieter kann die Aufnahme solcher Bücher in den Buchshop verweigern oder sie entfernen. Die eigenständige Veröffentlichung solcher Titel über Dritt-Plattformen (z. B. Amazon KDP) mit dortiger Alterskennzeichnung bleibt hiervon unberührt.`,
     ],
   },
   {

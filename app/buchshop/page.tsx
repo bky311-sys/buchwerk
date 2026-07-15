@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Wordmark } from "@/components/buchwerk/wordmark";
+import { SiteHeader } from "@/components/buchwerk/site-header";
 import { BookCover } from "@/components/buchwerk/book-cover";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import {
@@ -32,7 +31,7 @@ export default async function BuchshopPage() {
 
   return (
     <>
-      <ShopHeader />
+      <SiteHeader />
       <main className="flex-1">
         <div className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
@@ -75,7 +74,6 @@ function BookCard({ book, boosted }: { book: ShopBook; boosted: boolean }) {
           title={book.title}
           author={book.author}
           styleKey={book.coverStyle}
-          size="sm"
         />
         {boosted ? (
           <span className="absolute left-2 top-2 z-10">
@@ -90,26 +88,6 @@ function BookCard({ book, boosted }: { book: ShopBook; boosted: boolean }) {
         <p className="mt-0.5 text-sm text-muted-foreground">{book.author}</p>
       ) : null}
     </Link>
-  );
-}
-
-function ShopHeader() {
-  return (
-    <header className="border-b border-border bg-card">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link href="/" aria-label="buchwerk – Startseite">
-          <Wordmark />
-        </Link>
-        <nav className="flex items-center gap-2 sm:gap-3">
-          <Button asChild variant="ghost" size="lg">
-            <Link href="/anmelden">Anmelden</Link>
-          </Button>
-          <Button asChild size="lg">
-            <Link href="/registrieren">Registrieren</Link>
-          </Button>
-        </nav>
-      </div>
-    </header>
   );
 }
 

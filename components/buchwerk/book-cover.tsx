@@ -8,25 +8,25 @@ import {
 import { getCoverMainColor } from "@/lib/books/cover-main-color";
 
 // The real, composed front cover as shown to buyers: the Flux motif with the
-// title band overlaid (position + tone from cover_title_style, band colour
-// derived from the motif) — matching the downloaded cover. Async server
-// component: it samples the motif colour itself.
+// title band overlaid — matching the downloaded cover JPG pixel-proportionally.
+// Async server component: it samples the motif colour itself.
 //
-// `size` scales the band typography: "lg" for the detail hero, "sm" for list
-// thumbnails.
+// Layout uses container-query units (cqw = 1% of this element's width) so the
+// exact same composition scales cleanly from the large detail hero down to a
+// small list thumbnail — mirroring the canvas export in cover-studio (which
+// composits on a 1600px-wide canvas: pad 96 ≈ 6cqw, title 84 ≈ 5.25cqw,
+// line-height 104 ≈ 6.5cqw, an 8px ≈ 0.5cqw accent strip).
 export async function BookCover({
   imageUrl,
   title,
   author,
   styleKey,
-  size = "lg",
   className = "",
 }: {
   imageUrl: string | null;
   title: string;
   author?: string | null;
   styleKey?: string | null;
-  size?: "lg" | "sm";
   className?: string;
 }) {
   if (!imageUrl) {
@@ -46,21 +46,11 @@ export async function BookCover({
   const bandCss = rgbCss(bandColorFromMain(main, tone));
   const titleCss = rgbCss(bandTitleColor(tone));
   const authorCss = rgbCss(bandAuthorColor(tone));
-
-  const titleClass =
-    size === "lg"
-      ? "font-display font-bold leading-tight text-[clamp(0.9rem,3.2cqw,1.6rem)]"
-      : "font-display font-bold leading-tight text-[11px]";
-  const authorClass =
-    size === "lg"
-      ? "mt-1 font-medium text-[clamp(0.6rem,2cqw,0.95rem)]"
-      : "mt-0.5 text-[9px]";
-  const pad = size === "lg" ? "px-4 py-4" : "px-2 py-2";
+  const atTop = position === "oben";
 
   return (
     <div
-      className={`relative w-full overflow-hidden rounded-xl border border-border bg-muted shadow-sm ${className}`}
-      style={{ containerType: "inline-size" }}
+      className={`relative w-full overflow-hidden rounded-xl border border-border bg-muted shadow-sm [container-type:inline-size] ${className}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -69,14 +59,25 @@ export async function BookCover({
         className="aspect-[2/3] w-full object-cover"
       />
       <div
-        className={`absolute inset-x-0 ${pad} ${position === "oben" ? "top-0" : "bottom-0"}`}
+        className={`absolute inset-x-0 ${atTop ? "top-0" : "bottom-0"} px-[6cqw] pt-[4cqw] pb-[3.5cqw]`}
         style={{ backgroundColor: bandCss }}
       >
-        <p className={titleClass} style={{ color: titleCss }}>
+        {/* Accent strip on the band's inner edge (Buchwerk green), matching the
+            8px strip in the exported cover. */}
+        <span
+          className={`absolute inset-x-0 h-[0.5cqw] bg-primary ${atTop ? "bottom-0" : "top-0"}`}
+        />
+        <p
+          className="font-display font-bold leading-[6.5cqw] text-[5.25cqw]"
+          style={{ color: titleCss }}
+        >
           {title}
         </p>
         {author ? (
-          <p className={authorClass} style={{ color: authorCss }}>
+          <p
+            className="mt-[3cqw] font-medium text-[2.9cqw]"
+            style={{ color: authorCss }}
+          >
             {author}
           </p>
         ) : null}

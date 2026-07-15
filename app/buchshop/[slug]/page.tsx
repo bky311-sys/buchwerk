@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Wordmark } from "@/components/buchwerk/wordmark";
+import { SiteHeader } from "@/components/buchwerk/site-header";
 import { BookCover } from "@/components/buchwerk/book-cover";
 import { Stars } from "@/components/buchwerk/stars";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
@@ -64,7 +64,7 @@ export default async function BuchDetailPage({
 
   return (
     <>
-      <ShopHeader />
+      <SiteHeader />
       <main className="flex-1">
         <div className="mx-auto max-w-4xl px-6 py-16">
           <Link
@@ -80,7 +80,6 @@ export default async function BuchDetailPage({
               title={book.title}
               author={book.author}
               styleKey={book.coverStyle}
-              size="lg"
             />
 
             <div>
@@ -182,26 +181,6 @@ export default async function BuchDetailPage({
       </main>
       <ShopFooter />
     </>
-  );
-}
-
-function ShopHeader() {
-  return (
-    <header className="border-b border-border bg-card">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link href="/" aria-label="buchwerk – Startseite">
-          <Wordmark />
-        </Link>
-        <nav className="flex items-center gap-2 sm:gap-3">
-          <Button asChild variant="ghost" size="lg">
-            <Link href="/buchshop">Buchshop</Link>
-          </Button>
-          <Button asChild size="lg">
-            <Link href="/registrieren">Registrieren</Link>
-          </Button>
-        </nav>
-      </div>
-    </header>
   );
 }
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Wordmark } from "@/components/buchwerk/wordmark";
+import { SiteHeader } from "@/components/buchwerk/site-header";
 import { HeroLeadForm } from "@/components/buchwerk/hero-lead-form";
 import { ProductPreview } from "@/components/buchwerk/product-preview";
 
@@ -25,33 +25,6 @@ export default function Home() {
   );
 }
 
-function SiteHeader() {
-  return (
-    <header className="border-b border-border bg-card">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link href="/" aria-label="buchwerk – Startseite">
-          <Wordmark />
-        </Link>
-        <nav className="flex items-center gap-1 sm:gap-3">
-          <Button
-            asChild
-            variant="ghost"
-            size="lg"
-            className="hidden sm:inline-flex"
-          >
-            <Link href="/buchshop">Buchshop</Link>
-          </Button>
-          <Button asChild variant="ghost" size="lg">
-            <Link href="/anmelden">Anmelden</Link>
-          </Button>
-          <Button asChild size="lg">
-            <Link href="/registrieren">Kostenlos starten</Link>
-          </Button>
-        </nav>
-      </div>
-    </header>
-  );
-}
 
 function HeroSection() {
   return (

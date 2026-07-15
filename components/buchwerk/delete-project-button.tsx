@@ -10,18 +10,24 @@ import { deleteProjectAction } from "@/lib/books/actions";
 export function DeleteProjectButton({
   projectId,
   title,
+  published = false,
 }: {
   projectId: string;
   title: string;
+  published?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   function onDelete() {
-    const ok = window.confirm(
-      `„${title}“ wirklich löschen? Das Buch mit allen Kapiteln, Cover und Texten wird endgültig entfernt.`,
-    );
+    // A published book still lives on Amazon, but deleting it here destroys the
+    // manuscript source — so no more corrections or new editions are possible.
+    // Warn much more explicitly in that case.
+    const message = published
+      ? `ACHTUNG: „${title}“ ist bei Amazon veröffentlicht.\n\nWenn du es hier löschst, verlierst du unwiderruflich das Manuskript, die Kapitel und das Cover — die Grundlage für Korrekturen und Neuauflagen. Das Buch bei Amazon bleibt bestehen, lässt sich aber aus Buchwerk nicht mehr überarbeiten.\n\nWirklich endgültig löschen?`
+      : `„${title}“ wirklich löschen? Das Buch mit allen Kapiteln, Cover und Texten wird endgültig entfernt.`;
+    const ok = window.confirm(message);
     if (!ok) return;
     setError(null);
     startTransition(async () => {
