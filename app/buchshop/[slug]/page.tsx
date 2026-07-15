@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/buchwerk/site-header";
 import { BookCover } from "@/components/buchwerk/book-cover";
+import { BookBackCover } from "@/components/buchwerk/book-back-cover";
 import { Stars } from "@/components/buchwerk/stars";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { ReviewWidget } from "@/components/buchwerk/review-widget";
@@ -85,13 +86,27 @@ export default async function BuchDetailPage({
             ← Zum Buchshop
           </Link>
 
-          <div className="mt-8 grid gap-10 sm:grid-cols-[minmax(0,240px)_1fr]">
-            <BookCover
-              imageUrl={book.coverUrl}
-              title={book.title}
-              author={book.author}
-              styleKey={book.coverStyle}
-            />
+          {/* items-start: grid items stretch to the row height by default, which
+              blew the cover column up to the height of the text column — the
+              motif sat at the top, the muted background filled the rest, and the
+              title band (absolute bottom-0) ended up hundreds of px below the
+              image instead of on it. */}
+          <div className="mt-8 grid items-start gap-10 sm:grid-cols-[minmax(0,240px)_1fr]">
+            <div className="space-y-4">
+              <BookCover
+                imageUrl={book.coverUrl}
+                title={book.title}
+                author={book.author}
+                styleKey={book.coverStyle}
+              />
+              {book.coverUrl ? (
+                <BookBackCover
+                  imageUrl={book.coverUrl}
+                  title={book.title}
+                  blurb={book.description}
+                />
+              ) : null}
+            </div>
 
             <div>
               <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
