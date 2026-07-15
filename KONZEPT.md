@@ -224,7 +224,9 @@ Der Nutzer kommt mit einer Idee und geht mit:
 - **Reibungsfreier Start:** Bei 19,99 € ist der Kauf kein Commitment, sondern ein Spontanversuch. Das maximiert die Anzahl realer Nutzungen in der frühen Phase, die wir für Feedback und Produktreife brauchen.
 - **Keine Preisdiskussion im UX:** Eine Stufe = keine Vergleichstabelle, kein Upsell-Overlay, kein "welches Paket passt zu mir". Der Flow bleibt auf das Produkt konzentriert.
 - **Datenbasis vor Preisoptimierung:** Wir entscheiden über weitere Stufen oder Abo *nachdem* wir sehen, wie Nutzer wirklich arbeiten — wie viele Bücher pro Nutzer, wie oft neue Projekte, welche Features tatsächlich genutzt werden. Ohne diese Daten ist jedes Pricing-Tier geraten.
-- **Margen bewusst in Kauf genommen:** Bei Claude-API-Kosten von 2–5 € pro Buch bleibt bei 19,99 € brutto (minus Stripe-Gebühr ca. 0,60 €) eine dünne, aber positive Marge. Das reicht für die Lernphase, nicht für Skalierung. Das ist okay — Skalierung kommt mit Stufen/Abo.
+- ~~**Margen bewusst in Kauf genommen:** Bei Claude-API-Kosten von 2–5 € pro Buch bleibt bei 19,99 € brutto (minus Stripe-Gebühr ca. 0,60 €) eine dünne, aber positive Marge. Das reicht für die Lernphase, nicht für Skalierung.~~
+
+  > **Korrektur 15.07.2026 (gegen den Code gerechnet):** Die Schätzung „2–5 €" war um Faktor 2–5 zu pessimistisch. Reale API-Kosten: **0,66 € (6 Kap.) bis 1,73 € (10 Kap., volle Vertiefung, 15 Cover-Iterationen)**, realistisch ~1,05 €. Marge Einmalkauf: **17,73–18,80 €**. Marge Abo (29,99 €): **28,27 €** bei 1 Buch, **12,00 €** selbst am 10-Bücher-Limit im schweren Fall. Die Marge ist nicht dünn, sie liegt bei ~90 %. Rechenweg und Annahmen: `docs/LESEN-UND-BEWERTEN.md` §6a.
 
 **Bewusst verschoben, nicht verworfen:**
 
@@ -441,7 +443,9 @@ Export
 
 3. **Qualität der generierten Bücher:** Es wird Mist-Bücher geben, die Nutzer veröffentlichen. Das schadet der Marke, wenn es zu sichtbar wird. Gegenmaßnahme: Qualitäts-Check vor Export, Warnhinweis bei zu niedriger Qualität.
 
-4. **Skalierung der KI-Kosten:** Bei 100 Büchern/Monat gehen die API-Kosten auf 300–500€. Margen-Rechnung notwendig.
+4. ~~**Skalierung der KI-Kosten:** Bei 100 Büchern/Monat gehen die API-Kosten auf 300–500€. Margen-Rechnung notwendig.~~
+
+   > **Erledigt/korrigiert 15.07.2026.** 100 Bücher/Monat kosten **~105 €**, nicht 300–500 €. Die Kostenseite ist nicht das Risiko. Das reale Leck war ein anderes: `gateProduction` verbraucht einen Slot pro **Buch**, nicht pro Generierung — Regenerieren war unbegrenzt. Kapitel sind seit 15.07. gedeckelt (`CHAPTER_GENERATION_LIMIT`); Cover, Gliederung, Recherche und Listing sind es **noch nicht**. Siehe `docs/LESEN-UND-BEWERTEN.md` §6a.
 
 5. **Wettbewerb:** Sudowrite (englisch), Novelcrafter, Draft2Digital, Atticus — aber keiner davon bietet End-to-End für den deutschen Markt. Das ist der Vorsprung, solange er hält.
 

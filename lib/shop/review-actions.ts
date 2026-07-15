@@ -10,6 +10,10 @@ export type ReviewActionResult = { ok: boolean; error?: string };
 
 const KINDS = new Set(["pdf", "kindle", "kauf"]);
 
+// Art. 17 DSA wants a "klare und spezifische Begründung" — short enough not to
+// block the author, long enough to rule out "nein".
+const MIN_REJECTION_REASON = 15;
+
 // Marks a published book as "being read", which starts the 2-hour lock before a
 // review can be submitted. A reader cannot mark their own book.
 export async function markReadingAction(
@@ -210,6 +214,7 @@ export async function approveReviewAction(
 // reasoned notice. Tracked in docs/LESEN-UND-BEWERTEN.md §3.5.
 export async function rejectReviewAction(
   reviewId: string,
+  reason: string,
 ): Promise<ReviewActionResult> {
   const supabase = await createClient();
   const {
@@ -217,13 +222,23 @@ export async function rejectReviewAction(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Bitte melde dich an." };
 
+  // Art. 17 DSA: the reason is not optional. A bare "rejected" would leave the
+  // reviewer with no idea what happened and nothing to object to.
+  const trimmed = reason.trim();
+  if (trimmed.length < MIN_REJECTION_REASON) {
+    return {
+      ok: false,
+      error: `Bitte begründe die Ablehnung in mindestens ${MIN_REJECTION_REASON} Zeichen — der Leser bekommt die Begründung zu sehen.`,
+    };
+  }
+
   const ctx = await authorizeModeration(reviewId, user.id);
   if (!ctx) return { ok: false, error: "Bewertung nicht gefunden." };
 
   const admin = createAdminClient();
   const { error } = await admin
     .from("shop_reviews")
-    .update({ status: "rejected" })
+    .update({ status: "rejected", rejection_reason: trimmed })
     .eq("id", reviewId);
   if (error) return { ok: false, error: "Konnte nicht ablehnen." };
 

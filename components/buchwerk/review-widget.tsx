@@ -18,6 +18,7 @@ type Props = {
   canReviewAt: number | null;
   hasReviewed: boolean;
   reviewStatus: string | null;
+  rejectionReason: string | null;
   loginHref: string;
 };
 
@@ -36,6 +37,7 @@ export function ReviewWidget(props: Props) {
     canReviewAt,
     hasReviewed,
     reviewStatus,
+    rejectionReason,
     loginHref,
   } = props;
 
@@ -95,6 +97,24 @@ export function ReviewWidget(props: Props) {
               ? "Der Autor hat deine Bewertung nicht freigegeben. Deine Punkte behältst du."
               : "Der Autor prüft, ob deine Bewertung öffentlich erscheint. Deine Punkte sind unabhängig davon bereits gutgeschrieben."}
         </p>
+        {reviewStatus === "rejected" ? (
+          <div className="mt-3 rounded-xl border border-border bg-muted p-4">
+            <p className="text-sm font-medium">Begründung des Autors</p>
+            <p className="mt-1 text-sm whitespace-pre-wrap text-foreground">
+              {rejectionReason ?? "Keine Begründung hinterlegt."}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Du hältst das für falsch? Schreib uns an{" "}
+              <a
+                href="mailto:welcome@buchwerk.info"
+                className="underline underline-offset-2"
+              >
+                welcome@buchwerk.info
+              </a>{" "}
+              — wir sehen uns das an.
+            </p>
+          </div>
+        ) : null}
       </div>
     );
   }

@@ -539,6 +539,7 @@ export interface Database {
           body: string | null;
           status: string;
           rewarded: boolean;
+          rejection_reason: string | null;
           created_at: string;
           approved_at: string | null;
         };
@@ -550,6 +551,7 @@ export interface Database {
           body?: string | null;
           status?: string;
           rewarded?: boolean;
+          rejection_reason?: string | null;
           created_at?: string;
           approved_at?: string | null;
         };
@@ -561,6 +563,7 @@ export interface Database {
           body?: string | null;
           status?: string;
           rewarded?: boolean;
+          rejection_reason?: string | null;
           created_at?: string;
           approved_at?: string | null;
         };

@@ -4,7 +4,13 @@
 leiten, später auf buchwerk bewerten und Leser belohnen. Single Source of Truth
 für dieses Feature.
 
-Status: **Phase 1 gebaut** (Migration muss noch eingespielt werden). Phase 2/3 offen.
+Status: **Phase 1–3 gebaut** (Migrationen einspielen, siehe Abschnitt 6).
+
+> ⚠️ **Abschnitt 4 ist in Teilen überholt.** Die Rezenzo-Begründung dort hält der
+> Prüfung nicht stand (Rezenzos Punkte *sind* monetarisiert), und die
+> Punkte-Kopplung an die Autor-Freigabe wurde am 15.07.2026 entfernt.
+> Maßgeblich ist **`docs/LESEN-UND-BEWERTEN.md`** — dort stehen Recherche,
+> Rechtslage, Kostenrechnung und der offene Entscheidungsbedarf.
 
 ---
 
@@ -66,10 +72,21 @@ Pre-Launch-Gate: `/buchshop` liegt hinter dem bestehenden Gate — bis `SITE_LIV
 
 ## 4. Bewertungen & Punkte — Modell A (entschieden 2026-07-11)
 
-Vorbild: Rezenzo. Deren Punkte sind bewusst **kein Geldwert** („Punkte können
+> ⚠️ **Korrektur 15.07.2026.** Der folgende Absatz war die tragende Begründung
+> für Modell A und ist sachlich falsch. Prüfung der Primärquellen: Rezenzos
+> Punkte sind über Digistore24 **mit Geld kaufbar**, und die „Externe
+> Veröffentlichung" (= Amazon) **kostet 45 Punkte** — die Kette Geld → Punkte →
+> Amazon-Rezension ist dort geschlossen. Rezenzo taugt nicht als
+> Konformitätsbeleg. Details: `docs/LESEN-UND-BEWERTEN.md` §2.4.
+>
+> Die Regeln unten (sentiment-neutral, kein Geldwert, kein Amazon-Bezug) bleiben
+> richtig — nur nicht, weil Rezenzo sie vormacht, sondern weil UWG und Amazons
+> Regeln sie verlangen.
+
+~~Vorbild: Rezenzo. Deren Punkte sind bewusst **kein Geldwert** („Punkte können
 nicht als Geld ausgezahlt werden"), sondern ein rein **internes
 Plattforminstrument**, unabhängig von der Sternebewertung. Genau diese
-Nicht-Monetarisierung hält das Modell Amazon-ToS- und UWG-konform. Buchwerk
+Nicht-Monetarisierung hält das Modell Amazon-ToS- und UWG-konform.~~ Buchwerk
 übernimmt dieses Prinzip.
 
 **Verworfen:** Punkte/Geld **für Amazon-Bewertungen** und jede Umwandlung
@@ -81,8 +98,13 @@ Amazon-Konto-/KDP-Sperre, UWG-Abmahnung.
 1. **Verdient** werden Punkte nur durch eine **buchwerk-interne** Bewertung
    eines *fremden* Buchs — nicht des eigenen, nicht auf Amazon.
 2. **Sentiment-neutral:** die Punktzahl hängt **nicht** von den Sternen ab.
-3. **Autor-Freigabe:** Punkte werden erst gutgeschrieben, wenn der Autor die
-   Bewertung freigibt (Qualitäts-/Spam-Schutz).
+3. **Autor-Freigabe steuert nur die Sichtbarkeit, nie die Punkte** (geändert
+   15.07.2026). Punkte gibt es bei der Abgabe. Der bewertete Autor darf nicht
+   entscheiden, ob der Rezensent bezahlt wird — sonst ist die Belohnung faktisch
+   sentiment-abhängig (2 Sterne → Ablehnung → kein Geld), und genau das hat das
+   OLG Frankfurt (6 U 232/21) als sachfremden Einfluss gewertet. Eine Ablehnung
+   muss begründet werden (Art. 17 DSA) und holt keine Punkte zurück. Missbrauch
+   regelt der Betreiber per negativem Ledger-Eintrag.
 4. **2-Stunden-Lesesperre:** Bewerten ist erst 2 h nach dem „Ich lese dieses
    Buch"-Vermerk (`shop_acquisitions`) möglich.
 5. **Punkte sind nie Geld/Abo-Rabatt.** Einlösen ausschließlich **intern** —
@@ -116,8 +138,24 @@ Amazon-Konto-/KDP-Sperre, UWG-Abmahnung.
 
 ## 6. To-do vor dem Live-Gang
 
-1. **Migration einspielen:** `supabase/migrations/20260711120000_projects_add_shop.sql`
-   (Supabase-Dashboard SQL-Editor oder CLI). Vorher: Buchshop bricht nicht,
-   bleibt nur leer / Sektion aus.
+1. **Migrationen einspielen** (Supabase-Dashboard SQL-Editor oder CLI):
+   - `20260711120000_projects_add_shop.sql` — Shop-Spalten. Vorher: Buchshop
+     bricht nicht, bleibt nur leer / Sektion aus.
+   - `20260711130000_buchshop_reviews.sql` — Bewertungen + Punkte.
+   - `20260711140000_projects_add_boost.sql` — Boost.
+   - `20260715120000_chapters_add_generation_count.sql` — Kapitel-Deckel
+     **+ Spalten-Allowlist für `chapters`** (schließt eine Altlast: bisher konnte
+     ein Nutzer beliebige Kapitel-Spalten per PostgREST schreiben). Ohne die
+     Migration läuft der Deckel best-effort ins Leere, die Generierung bricht aber
+     nicht.
+   - `20260715130000_shop_reviews_add_rejection_reason.sql` — Art.-17-Begründung.
+     **Ohne diese Migration schlägt das Ablehnen fehl** (die Spalte fehlt) —
+     anders als die übrigen ist sie nicht best-effort.
 2. **`AMAZON_PARTNER_TAG`** (Env) setzen, sonst wird der rohe Amazon-Link genutzt.
-3. Entscheidung Belohnungsmodell (Abschnitt 4) → Phase 2/3.
+   Offen: `meinersterh0c-21` ist der meinersterhund-Tag; buchwerk.info sollte als
+   eigene Traffic-Quelle im Partnerprogramm registriert werden.
+3. **Entscheidung offen** (siehe `docs/LESEN-UND-BEWERTEN.md` §7): Testleser-Kreis
+   vs. Weiterbau der Shop-Bewertungen. Beide brauchen zuerst den Reader.
+4. **Vor Live-Gang zu klären:** Der Autor kuratiert derzeit die Sichtbarkeit der
+   Bewertungen seines eigenen Buches. Das ist im Transparenzblock offengelegt
+   (`review-disclosure.tsx`), bleibt aber ein Interessenkonflikt im Aggregat.

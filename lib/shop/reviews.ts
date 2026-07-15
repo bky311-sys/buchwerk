@@ -23,6 +23,8 @@ export type UserReviewState = {
   canReviewAt: number | null; // epoch ms, or null if not acquired yet
   hasReviewed: boolean;
   reviewStatus: string | null; // 'pending' | 'approved' | 'rejected'
+  // Art. 17 DSA: the reviewer must learn why their review was hidden.
+  rejectionReason: string | null;
 };
 
 export type PendingReview = {
@@ -79,7 +81,7 @@ export async function getUserReviewState(
       .maybeSingle(),
     supabase
       .from("shop_reviews")
-      .select("status")
+      .select("status, rejection_reason")
       .eq("book_id", bookId)
       .eq("user_id", userId)
       .maybeSingle(),
@@ -93,6 +95,7 @@ export async function getUserReviewState(
       : null,
     hasReviewed: Boolean(review),
     reviewStatus: review?.status ?? null,
+    rejectionReason: review?.rejection_reason ?? null,
   };
 }
 

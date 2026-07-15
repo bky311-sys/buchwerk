@@ -7,6 +7,10 @@ import { BookCover } from "@/components/buchwerk/book-cover";
 import { Stars } from "@/components/buchwerk/stars";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { ReviewWidget } from "@/components/buchwerk/review-widget";
+import {
+  ReviewDisclosure,
+  ReviewAggregateNote,
+} from "@/components/buchwerk/review-disclosure";
 import { getPublishedBookBySlug } from "@/lib/shop/queries";
 import { buildAmazonUrl } from "@/lib/shop/amazon";
 import { createClient } from "@/lib/supabase/server";
@@ -98,13 +102,16 @@ export default async function BuchDetailPage({
               ) : null}
 
               {summary.count > 0 ? (
-                <div className="mt-3 flex items-center gap-2">
-                  <Stars value={summary.average} />
-                  <span className="text-sm text-muted-foreground">
-                    {summary.average.toFixed(1)} ·{" "}
-                    {summary.count}{" "}
-                    {summary.count === 1 ? "Bewertung" : "Bewertungen"}
-                  </span>
+                <div className="mt-3">
+                  <div className="flex items-center gap-2">
+                    <Stars value={summary.average} />
+                    <span className="text-sm text-muted-foreground">
+                      {summary.average.toFixed(1)} ·{" "}
+                      {summary.count}{" "}
+                      {summary.count === 1 ? "Bewertung" : "Bewertungen"}
+                    </span>
+                  </div>
+                  <ReviewAggregateNote />
                 </div>
               ) : null}
 
@@ -136,6 +143,7 @@ export default async function BuchDetailPage({
           </div>
 
           <div className="mt-14 space-y-6">
+            <ReviewDisclosure />
             <ReviewWidget
               bookId={book.id}
               loggedIn={Boolean(user)}
@@ -144,6 +152,7 @@ export default async function BuchDetailPage({
               canReviewAt={reviewState?.canReviewAt ?? null}
               hasReviewed={reviewState?.hasReviewed ?? false}
               reviewStatus={reviewState?.reviewStatus ?? null}
+              rejectionReason={reviewState?.rejectionReason ?? null}
               loginHref={loginHref}
             />
 
