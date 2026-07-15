@@ -132,6 +132,53 @@ export async function publishToShopAction(
   return { ok: true };
 }
 
+/**
+ * Toggles whether subscribers may read the full text in the Buchwerk-Reader.
+ *
+ * Deliberately separate from publishToShopAction: being listed is a low-barrier
+ * shop window (we want many books), while handing out the manuscript is a real
+ * decision the author has to make on purpose. An already-listed book must never
+ * silently become readable.
+ *
+ * This is what makes reviews possible at all — without readable text there is no
+ * reading to verify, and an unverified review is one we may not present as
+ * coming from an actual reader (Anhang Nr. 23b UWG).
+ */
+export async function setShopReadableAction(
+  projectId: string,
+  readable: boolean,
+): Promise<ShopActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Nicht angemeldet." };
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, user_id, shop_slug")
+    .eq("id", projectId)
+    .single();
+  if (!project || project.user_id !== user.id) {
+    return { ok: false, error: "Projekt nicht gefunden." };
+  }
+
+  // shop_* columns are not writable via RLS (security migration); ownership was
+  // verified above, so write through the service-role client.
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("projects")
+    .update({ shop_readable: readable })
+    .eq("id", projectId);
+  if (error) {
+    return { ok: false, error: "Konnte die Lesefreigabe nicht ändern." };
+  }
+
+  if (project.shop_slug) revalidatePath(`/buchshop/${project.shop_slug}`);
+  revalidatePath(`/projekte/${projectId}`);
+  return { ok: true };
+}
+
 // Removes a book from the Buchshop. The slug is kept so a later re-publish
 // reuses the same URL.
 export async function unpublishFromShopAction(

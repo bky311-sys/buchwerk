@@ -3,9 +3,13 @@ import type { createClient } from "@/lib/supabase/server";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
-// Points awarded for one approved, buchwerk-internal review (Modell A).
-// Points are a purely internal instrument — never money, never redeemable for
-// cash or subscription discount. See docs/BUCHSHOP.md.
+// Points awarded for one submitted, buchwerk-internal review (Modell A).
+//
+// Credited on submission, independent of the star rating AND independent of the
+// reviewed author's moderation — the author must never gate the reviewer's
+// payout. Points are a purely internal instrument: never money, never buyable,
+// never redeemable for cash or subscription discount, and never tied to a review
+// on Amazon. See docs/BUCHSHOP.md and docs/LESEN-UND-BEWERTEN.md.
 export const POINTS_PER_REVIEW = 20;
 
 // Current internal point balance for a user (sum of ledger deltas).

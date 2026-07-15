@@ -111,7 +111,7 @@ export default async function VeroeffentlichenPage({
   // migration lags).
   const { data: shopRow } = await supabase
     .from("projects")
-    .select("shop_published, shop_slug, amazon_url, published_at")
+    .select("shop_published, shop_readable, shop_slug, amazon_url, published_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -246,6 +246,7 @@ export default async function VeroeffentlichenPage({
             blockReason={blockReason}
             pointsBalance={pointsBalance}
             boostedUntil={boostedUntil}
+            isReadable={shopRow.shop_readable === true}
           />
         </div>
       ) : null}

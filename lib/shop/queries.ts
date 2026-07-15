@@ -97,3 +97,23 @@ export async function getPublishedBookBySlug(
 
   return data ? toShopBook(data as unknown as ProjectRow) : null;
 }
+
+/**
+ * Whether the author opted this book into the Buchwerk-Reader.
+ *
+ * A SEPARATE query on purpose. Putting shop_readable into the shared SELECT
+ * above took the whole shop down while the reader migration was not applied yet:
+ * PostgREST answers 400 ("column does not exist") for the ENTIRE select, so the
+ * query returned null and every detail page 404'd. Selecting a column that may
+ * not exist is never best-effort — isolating it in its own query is.
+ */
+export async function isBookReadable(bookId: string): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .select("shop_readable")
+    .eq("id", bookId)
+    .maybeSingle();
+  if (error) return false; // migration not applied yet → nothing is readable
+  return data?.shop_readable === true;
+}

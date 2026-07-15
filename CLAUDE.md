@@ -54,7 +54,11 @@ Benjamin ist der Gründer und einzige Entwickler. Er hat Erfahrung mit Swift/iOS
 - **Mollie** als deutsche Alternative für SEPA-Lastschrift (später, nicht im MVP)
 
 ### KI-Dienste
-- **Anthropic Claude API** (claude-sonnet-4-5 für Manuskript und Lektorat)
+- **Anthropic Claude API** — `claude-sonnet-4-6` für Manuskript und Lektorat
+  (Single Source of Truth: `lib/ai/anthropic.ts`, per `ANTHROPIC_MODEL`
+  überschreibbar). $3/$15 pro MTok. **Nicht auf Sonnet 5 wechseln:** scheinbar
+  billiger ($2/$10 bis 31.08.2026), nutzt aber einen ~30 % dichteren Tokenizer
+  und geht ab 01.09.2026 auf $3/$15 → effektiv teurer.
 - **Flux via Replicate API** für Cover-Bildgenerierung
   - Flux Schnell (~0,003 $/Bild) für Entwürfe
   - Flux Pro 1.1 (~0,04 $/Bild) für finale Cover
@@ -309,6 +313,32 @@ Merksatz fürs Produkt: **„Wer einen freigeschalteten Account (Abo) oder das B
 
 ### 2026-07-15: Admin-Mailversand-Log (`outbound_emails`)
 **Grund:** Der Admin soll neben dem Posteingang (IMAP-Spiegel, [[inbound_emails]]) auch **verschickte** Mails sehen. Resend hat keinen zuverlässigen „list all sent"-Endpoint, daher protokollieren wir jeden Versand selbst: neue Tabelle `public.outbound_emails` (Migration `20260715060000`), Helper `logSentEmail` (`lib/email/log.ts`, best-effort — bricht nie den Versand, no-op ohne Tabelle), verdrahtet in Warteliste-Bestätigung + Widerruf-Mails (`lib/email/resend.ts`) und Testzugang-Einladung (`lib/admin/waitlist-actions.ts`). Admin-Ansicht „Mails" (`/admin/posteingang`) zeigt **Gesendet** + **Posteingang**. **Nicht erfasst:** Anmelde-/DOI-/Willkommensmails laufen über Supabase Auth, nicht Resend. **Go-live:** Migration in der Prod-DB einspielen (Tabelle wird sonst best-effort ignoriert; Log ist erst danach aktiv, nur ab-dann-Versand).
+
+### 2026-07-15: Bewertungen entkoppelt, Kapitel-Deckel, Transparenzpflichten
+**Grund:** Vorbereitung des „gegenseitig lesen und bewerten"-Ausbaus. Die Recherche (Rezenzo/Pubby-Mechanik, UWG/DSA/Amazon, Verhaltensforschung, Kostenrechnung) steht in `docs/LESEN-UND-BEWERTEN.md` — **Entscheidungsvorlage, Richtung noch offen**. Umgesetzt wurde nur, was unabhängig von der Richtung richtig ist:
+
+1. **Punkte entkoppelt von der Autor-Freigabe** (`lib/shop/review-actions.ts`). Bisher entschied der bewertete Autor über die Gutschrift → die Belohnung war faktisch sentiment-abhängig (2 Sterne → Ablehnung → kein Geld). Genau das hat OLG Frankfurt 6 U 232/21 als sachfremden Einfluss gewertet, und zwar ausdrücklich auch bei inhaltsneutraler Ausgestaltung — damit stand die tragende Begründung von Modell A auf sich selbst. Punkte gibt es jetzt bei der Abgabe, die Freigabe steuert nur noch Sichtbarkeit. Ablehnung holt keine Punkte zurück (sonst käme die Kopplung durch die Hintertür).
+2. **Kapitel-Deckel** `CHAPTER_GENERATION_LIMIT = 10` (`lib/books/generate.ts`, Migration `20260715120000`). `gateProduction` verbraucht einen Slot pro **Buch**, nicht pro Generierung → Regenerieren war unbegrenzt. Bewusst **still**: eine angekündigte Zahl liest sich als Guthaben und lädt zum Ausschöpfen ein. Gezählt wird **vor** dem Modell-Call (gekillter Lauf kostet Tokens, muss zählen). Die Migration schließt zugleich eine Altlast — `chapters` hatte nie die Spalten-Allowlist, die `projects` in `20260712130000` bekam.
+3. **Transparenz** (`components/buchwerk/review-disclosure.tsx`): § 5b Abs. 3 UWG verlangt die Aussage, **ob und wie** wir Echtheit sicherstellen. Der Text sagt ehrlich, dass die Lese-Angabe eine **Selbstauskunft** ist und nicht geprüft wird — „wir prüfen nicht" ist zulässig, das Gegenteil zu behaupten wäre Anhang Nr. 23b (Per-se-Verbot). Kennzeichnung jetzt auch **am Sterne-Durchschnitt**, nicht nur an der Einzelbewertung (OLG Frankfurt). Ablehnung erfordert eine Begründung, die der Rezensent zu sehen bekommt, samt Widerspruchsweg (Art. 17 DSA — größenunabhängig; Art. 20 entfällt für Kleinstunternehmen über Art. 19).
+4. **Doku korrigiert:** `BUCHSHOP.md` behauptete „Phase 2/3 offen" (alles gebaut) und begründete Modell A mit Rezenzos „Nicht-Monetarisierung" — deren Punkte sind über Digistore24 kaufbar und die externe Veröffentlichung kostet 45 Punkte, die Kette Geld → Punkte → Amazon-Rezension ist dort geschlossen. `KONZEPT.md` schätzte 2–5 €/Buch API-Kosten; real sind es **0,66–1,73 €**, Abo-Marge ~90 %.
+
+**Harte Linie, die bleibt:** Punkte nie käuflich, nie in Geld/Abo-Rabatt wandelbar, nie an eine Amazon-Rezension gekoppelt — auch nicht über Zwischenschritte oder als „Selbstverständlichkeit". Amazon verbietet gegenseitige Rezensionen auch ohne Geldfluss; im Präzedenzfall LG Hamburg 315 O 464/19 war der **Vermittler** Beklagter und Amazon Klägerin. Der Amazon-CTA bleibt freiwillig, unbezahlt, ohne Kopplung.
+
+**Noch offen:** Deckel für Cover/Gliederung/Recherche/Listing; Autor kuratiert weiterhin die Sichtbarkeit im eigenen Aggregat (offengelegt, aber Interessenkonflikt).
+
+### 2026-07-15: Buchwerk-Reader — Lesen im Browser, Bewerten daran gekoppelt
+**Grund:** Buchwerk besitzt den Text (`chapters.content`). Das ist das Einzige, was Rezenzo und Pubby strukturell nicht können — die verschicken eine PDF und sind danach blind. Deshalb konnten sie nur eine Selbstauskunft plus Timer anbieten, und genau die hatten wir nachgebaut (`shop_acquisitions` + 2h-Sperre). Eine Uhr auf einer Behauptung ist keine Überprüfung, sondern die Behauptung noch einmal — und sie bindet niemanden, weil Warten den Schummler nichts kostet. Anhang Nr. 23b UWG verlangt „angemessene und verhältnismäßige Maßnahmen", **gemessen an dem, was uns möglich ist**. Migration `20260715140000_reader.sql`.
+
+- **Lesen ≠ Listen.** `shop_published` = Schaufenster (niedrige Hürde, wir wollen viele Bücher). `shop_readable` = Autor gibt den Volltext frei, Default **false** — ein gelistetes Buch darf nie stillschweigend lesbar werden. Regel: **wer bewertet werden will, muss lesen lassen.** Ohne Freigabe sammelt der Eintrag keine Bewertungen.
+- **Lesen ist Abo-Leistung.** Der Autor liest sein eigenes Buch gratis, sammelt aber keinen Fortschritt.
+- **Aktive Zeit, nicht Wanduhr.** Heartbeat nur bei sichtbarem Tab **und** Interaktion in den letzten 60 s. Der Server schreibt pro Beat höchstens `HEARTBEAT_SECONDS` und lehnt zu schnelle Beats ab → Request-Replay bringt nichts. Kapitel gilt als gelesen bei ≥90 % Scrolltiefe **und** ≥ Wörter/400 wpm aktiven Sekunden; Buch bewertbar ab 80 % der Kapitel.
+- **`reading_progress` hat keine Write-Policy** — die Zahlen gaten eine Belohnung, über den anon-Key dürfte man sonst genau das fälschen, was sie beweisen sollen. Reader ist `noindex`.
+- **Markdown → React von Hand** (`chapter-prose.tsx`), gleicher Subset wie `lib/books/epub.ts`: es darf **keine neue Dependency** dazu (`pnpm-lock.yaml` ist nicht regenerierbar, siehe `lib/ai/anthropic.ts`).
+- **Der § 5b-Text sagt jetzt die neue Wahrheit** — „Bewerten kann nur, wer das Buch hier gelesen hat" statt „wir prüfen nicht". Bewusst bleibt drin: **Messung, kein Beweis.** Ein Skript schlägt jedes clientseitige Signal; der Anspruch ist, Schummeln teurer und langweiliger zu machen als Lesen. Mehr darf dort nie stehen, sonst ist es Nr. 23b.
+
+**Entfernt:** `markReadingAction`, `REVIEW_LOCK_MS`, das „PDF/Kindle/Kauf"-Dropdown. `shop_acquisitions` ist funktionslos, aber nicht gedroppt.
+
+---
 
 ## Bei Zweifeln
 

@@ -4,12 +4,19 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/buchwerk/site-header";
 import { BookCover } from "@/components/buchwerk/book-cover";
+import { BookBackCover } from "@/components/buchwerk/book-back-cover";
 import { Stars } from "@/components/buchwerk/stars";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { ReviewWidget } from "@/components/buchwerk/review-widget";
-import { getPublishedBookBySlug } from "@/lib/shop/queries";
+import {
+  ReviewDisclosure,
+  ReviewAggregateNote,
+} from "@/components/buchwerk/review-disclosure";
+import { getPublishedBookBySlug, isBookReadable } from "@/lib/shop/queries";
 import { buildAmazonUrl } from "@/lib/shop/amazon";
 import { createClient } from "@/lib/supabase/server";
+import { getBookReadingState } from "@/lib/shop/reading";
+import { isSubscriber } from "@/lib/billing/access";
 import {
   getApprovedReviews,
   getUserReviewState,
@@ -50,14 +57,20 @@ export default async function BuchDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [reviews, ownRow, reviewState] = await Promise.all([
-    getApprovedReviews(book.id),
-    // RLS returns the project row only to its owner → detects the author's own book.
-    user
-      ? supabase.from("projects").select("id").eq("id", book.id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    user ? getUserReviewState(supabase, book.id, user.id) : Promise.resolve(null),
-  ]);
+  const [reviews, ownRow, reviewState, readingState, subscriber, readable] =
+    await Promise.all([
+      getApprovedReviews(book.id),
+      // RLS returns the project row only to its owner → detects the author's own book.
+      user
+        ? supabase.from("projects").select("id").eq("id", book.id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      user
+        ? getUserReviewState(supabase, book.id, user.id)
+        : Promise.resolve(null),
+      user ? getBookReadingState(book.id, user.id) : Promise.resolve(null),
+      user ? isSubscriber(supabase, user.id) : Promise.resolve(false),
+      isBookReadable(book.id),
+    ]);
   const summary = summarize(reviews);
   const isOwnBook = Boolean(ownRow?.data);
   const loginHref = `/anmelden?weiter=${encodeURIComponent(`/buchshop/${slug}`)}`;
@@ -74,13 +87,27 @@ export default async function BuchDetailPage({
             ← Zum Buchshop
           </Link>
 
-          <div className="mt-8 grid gap-10 sm:grid-cols-[minmax(0,240px)_1fr]">
-            <BookCover
-              imageUrl={book.coverUrl}
-              title={book.title}
-              author={book.author}
-              styleKey={book.coverStyle}
-            />
+          {/* items-start: grid items stretch to the row height by default, which
+              blew the cover column up to the height of the text column — the
+              motif sat at the top, the muted background filled the rest, and the
+              title band (absolute bottom-0) ended up hundreds of px below the
+              image instead of on it. */}
+          <div className="mt-8 grid items-start gap-10 sm:grid-cols-[minmax(0,240px)_1fr]">
+            <div className="space-y-4">
+              <BookCover
+                imageUrl={book.coverUrl}
+                title={book.title}
+                author={book.author}
+                styleKey={book.coverStyle}
+              />
+              {book.coverUrl ? (
+                <BookBackCover
+                  imageUrl={book.coverUrl}
+                  title={book.title}
+                  blurb={book.description}
+                />
+              ) : null}
+            </div>
 
             <div>
               <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
@@ -98,19 +125,33 @@ export default async function BuchDetailPage({
               ) : null}
 
               {summary.count > 0 ? (
-                <div className="mt-3 flex items-center gap-2">
-                  <Stars value={summary.average} />
-                  <span className="text-sm text-muted-foreground">
-                    {summary.average.toFixed(1)} ·{" "}
-                    {summary.count}{" "}
-                    {summary.count === 1 ? "Bewertung" : "Bewertungen"}
-                  </span>
+                <div className="mt-3">
+                  <div className="flex items-center gap-2">
+                    <Stars value={summary.average} />
+                    <span className="text-sm text-muted-foreground">
+                      {summary.average.toFixed(1)} ·{" "}
+                      {summary.count}{" "}
+                      {summary.count === 1 ? "Bewertung" : "Bewertungen"}
+                    </span>
+                  </div>
+                  <ReviewAggregateNote />
                 </div>
               ) : null}
 
-              {book.amazonUrl ? (
-                <div className="mt-6">
+              <div className="mt-6 flex flex-wrap gap-3">
+                {readable && !isOwnBook ? (
                   <Button asChild size="lg">
+                    <Link href={`/buchshop/${slug}/lesen`}>
+                      Hier lesen
+                    </Link>
+                  </Button>
+                ) : null}
+                {book.amazonUrl ? (
+                  <Button
+                    asChild
+                    size="lg"
+                    variant={readable && !isOwnBook ? "outline" : "default"}
+                  >
                     <a
                       href={buildAmazonUrl(book.amazonUrl)}
                       target="_blank"
@@ -119,8 +160,8 @@ export default async function BuchDetailPage({
                       Bei Amazon kaufen
                     </a>
                   </Button>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
 
               {book.description ? (
                 <div className="mt-8">
@@ -136,14 +177,21 @@ export default async function BuchDetailPage({
           </div>
 
           <div className="mt-14 space-y-6">
+            <ReviewDisclosure />
             <ReviewWidget
               bookId={book.id}
+              slug={slug}
               loggedIn={Boolean(user)}
               isOwnBook={isOwnBook}
-              acquiredAt={reviewState?.acquiredAt ?? null}
-              canReviewAt={reviewState?.canReviewAt ?? null}
+              isReadable={readable}
+              isSubscriber={subscriber}
+              chaptersRead={readingState?.chaptersRead ?? 0}
+              chaptersTotal={readingState?.chaptersTotal ?? 0}
+              chaptersRequired={readingState?.chaptersRequired ?? 0}
+              hasReadEnough={readingState?.hasReadEnough ?? false}
               hasReviewed={reviewState?.hasReviewed ?? false}
               reviewStatus={reviewState?.reviewStatus ?? null}
+              rejectionReason={reviewState?.rejectionReason ?? null}
               loginHref={loginHref}
             />
 

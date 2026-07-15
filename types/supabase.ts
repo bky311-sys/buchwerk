@@ -119,6 +119,7 @@ export interface Database {
           published_at: string | null;
           shop_published: boolean;
           shop_published_at: string | null;
+          shop_readable: boolean;
           shop_slug: string | null;
           amazon_url: string | null;
           boosted_until: string | null;
@@ -144,6 +145,7 @@ export interface Database {
           published_at?: string | null;
           shop_published?: boolean;
           shop_published_at?: string | null;
+          shop_readable?: boolean;
           shop_slug?: string | null;
           amazon_url?: string | null;
           boosted_until?: string | null;
@@ -169,6 +171,7 @@ export interface Database {
           published_at?: string | null;
           shop_published?: boolean;
           shop_published_at?: string | null;
+          shop_readable?: boolean;
           shop_slug?: string | null;
           amazon_url?: string | null;
           boosted_until?: string | null;
@@ -195,6 +198,7 @@ export interface Database {
           content: string | null;
           status: string;
           sources: Json;
+          generation_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -207,6 +211,7 @@ export interface Database {
           content?: string | null;
           status?: string;
           sources?: Json;
+          generation_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -219,6 +224,7 @@ export interface Database {
           content?: string | null;
           status?: string;
           sources?: Json;
+          generation_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -503,6 +509,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      reading_progress: {
+        Row: {
+          id: string;
+          chapter_id: string;
+          book_id: string;
+          user_id: string;
+          max_scroll: number;
+          seconds_active: number;
+          first_opened_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          chapter_id: string;
+          book_id: string;
+          user_id: string;
+          max_scroll?: number;
+          seconds_active?: number;
+          first_opened_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          chapter_id?: string;
+          book_id?: string;
+          user_id?: string;
+          max_scroll?: number;
+          seconds_active?: number;
+          first_opened_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       shop_acquisitions: {
         Row: {
           id: string;
@@ -536,6 +575,7 @@ export interface Database {
           body: string | null;
           status: string;
           rewarded: boolean;
+          rejection_reason: string | null;
           created_at: string;
           approved_at: string | null;
         };
@@ -547,6 +587,7 @@ export interface Database {
           body?: string | null;
           status?: string;
           rewarded?: boolean;
+          rejection_reason?: string | null;
           created_at?: string;
           approved_at?: string | null;
         };
@@ -558,6 +599,7 @@ export interface Database {
           body?: string | null;
           status?: string;
           rewarded?: boolean;
+          rejection_reason?: string | null;
           created_at?: string;
           approved_at?: string | null;
         };
