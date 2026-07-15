@@ -295,6 +295,21 @@ Bild und Text sind bewusst **entkoppelt** (Balken deckt Flux-Motiv, kein Text im
 ### 2026-07-14: Coming-Soon-Gate — /auth/* ausgenommen + Preview-Token beim Bestätigungs-Redirect
 **Grund:** Eingeladene Tester (test_access auf der Warteliste → Auto-Grant im Auth-Callback) konnten sich nicht bestätigen: Das `SITE_LIVE`-Gate schrieb `/auth/callback?code=…` auf `/bald` um, wenn der Bestätigungslink in einem Browser **ohne** Preview-Cookie geöffnet wurde → der Einmal-Code verfiel ungenutzt. Fix in `middleware.ts`: `/auth/*` ist wie `/api` vom Gate ausgenommen. Zusätzlich hängt `app/auth/callback/route.ts` bei aktivem Gate den `SITE_BYPASS_TOKEN` an den Post-Bestätigungs-Redirect, sodass auch der öffnende Browser das Bypass-Cookie bekommt (nur Inhaber eines gültigen Einmal-Codes erreichen diesen Zweig).
 
+### 2026-07-15: Zugriffsmodell vereinheitlicht — `canAccessProject` (Abo schaltet ALLE eigenen Bücher frei)
+**Grund:** Kritischer Bug. UI-Gate und Produktions-Gate liefen auseinander. `isProjectUnlocked` prüft nur `book_unlocks` **pro Buch** — ein Abonnent hatte aber nur für einzeln gekaufte Bücher einen Eintrag. Für jedes **neue** Buch zeigte die UI daher „Buch freischalten" und versteckte den Schreiben-Flow, obwohl `gateProduction` den Abonnenten längst zugelassen hätte (es vergibt beim ersten Generieren einen Monats-Slot). Ergebnis: Abonnenten (inkl. der manuell gegrantete Beta-Tester wie André) konnten neue Bücher gar nicht erst starten.
+
+**Klare, stabile Regel** — eine Single Source of Truth für „darf dieser Account dieses Buch produzieren?": neue Funktion `canAccessProject(supabase, projectId)` in `lib/billing/access.ts` = **Buch einzeln gekauft (`book_unlocks`) ODER Account hat aktives Abo (`isSubscriber`)**. Genutzt in allen UI-Seiten (Projekt-Hub, Schreiben, Veröffentlichen, Freischalten) und allen Download-Routen (Manuskript-PDF/EPUB, Cover-PDF).
+
+**Rollenverteilung bleibt sauber getrennt:**
+- `isProjectUnlocked` = reiner **Pro-Buch**-Check (`book_unlocks`). Bleibt **nur** in `gateProduction` als Kurzschluss, damit dort weiterhin korrekt ein Slot verbraucht wird.
+- `gateProduction` = die eigentliche **Durchsetzung** bei jeder Produktions-Aktion (Kapitel, Cover, Listing, Recherche, Vertiefen): Buch schon frei → ok; sonst zahlender Abonnent unter Monatslimit → Slot verbrauchen + ok; sonst Paywall/Limit-Fehler. Fair-Use-Limit `SUBSCRIPTION_MONTHLY_LIMIT` (10/Monat) wird also **beim Generieren** durchgesetzt, nicht mehr vorab in der UI.
+- `canAccessProject` = **UI/Download-Sichtbarkeit**. Ein Abonnent sieht alle eigenen Bücher als bearbeitbar; hängt er am Monatslimit, greift die klare Fehlermeldung erst beim Generieren.
+
+Merksatz fürs Produkt: **„Wer einen freigeschalteten Account (Abo) oder das Buch einzeln gekauft hat, darf generieren."** Neue produktions-gatende Stellen nutzen `canAccessProject` (UI/Download) bzw. `gateProduction` (Ausführung) — **nie** `isProjectUnlocked` direkt außerhalb von `gateProduction`.
+
+### 2026-07-15: Admin-Mailversand-Log (`outbound_emails`)
+**Grund:** Der Admin soll neben dem Posteingang (IMAP-Spiegel, [[inbound_emails]]) auch **verschickte** Mails sehen. Resend hat keinen zuverlässigen „list all sent"-Endpoint, daher protokollieren wir jeden Versand selbst: neue Tabelle `public.outbound_emails` (Migration `20260715060000`), Helper `logSentEmail` (`lib/email/log.ts`, best-effort — bricht nie den Versand, no-op ohne Tabelle), verdrahtet in Warteliste-Bestätigung + Widerruf-Mails (`lib/email/resend.ts`) und Testzugang-Einladung (`lib/admin/waitlist-actions.ts`). Admin-Ansicht „Mails" (`/admin/posteingang`) zeigt **Gesendet** + **Posteingang**. **Nicht erfasst:** Anmelde-/DOI-/Willkommensmails laufen über Supabase Auth, nicht Resend. **Go-live:** Migration in der Prod-DB einspielen (Tabelle wird sonst best-effort ignoriert; Log ist erst danach aktiv, nur ab-dann-Versand).
+
 ## Bei Zweifeln
 
 Wenn du als Claude Code unsicher bist:
