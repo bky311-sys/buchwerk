@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { isProjectUnlocked } from "@/lib/billing/access";
+import { canAccessProject } from "@/lib/billing/access";
 import { buildEpub } from "@/lib/books/epub";
 import { coerceSources } from "@/lib/books/sources";
 import { manuscriptDisposition } from "@/lib/books/filename";
@@ -24,7 +24,7 @@ export async function GET(
     .single();
   if (!project) return new NextResponse("Nicht gefunden", { status: 404 });
 
-  if (!(await isProjectUnlocked(supabase, id))) {
+  if (!(await canAccessProject(supabase, id))) {
     return new NextResponse("Bitte zuerst freischalten", { status: 402 });
   }
 

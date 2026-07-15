@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { logSentEmail } from "@/lib/email/log";
 
 let cachedClient: Resend | null = null;
 
@@ -43,6 +44,12 @@ export async function sendConfirmationEmail({
   if (error) {
     return { error: error.message ?? "Unknown Resend error." };
   }
+  await logSentEmail({
+    toEmail: to,
+    subject,
+    kind: "waitlist_confirmation",
+    resendId: data?.id ?? null,
+  });
   return { id: data?.id ?? "unknown" };
 }
 
@@ -86,17 +93,29 @@ export async function sendWithdrawalEmails(
   if (consumer.error) {
     return { ok: false, error: consumer.error.message ?? "Resend-Fehler." };
   }
+  await logSentEmail({
+    toEmail: args.email,
+    subject: "Eingangsbestätigung deines Widerrufs — Buchwerk",
+    kind: "withdrawal_receipt",
+    resendId: consumer.data?.id ?? null,
+  });
 
+  const noticeSubject = `Neuer Widerruf: ${args.name}`;
   // Best-effort notification to the merchant; failure here doesn't fail the flow.
   await client.emails
     .send({
       from: FROM_ADDRESS,
       to: [REPLY_TO],
       replyTo: args.email,
-      subject: `Neuer Widerruf: ${args.name}`,
+      subject: noticeSubject,
       text: `Ein Widerruf ist eingegangen:\n\n${details}`,
     })
     .catch(() => undefined);
+  await logSentEmail({
+    toEmail: REPLY_TO,
+    subject: noticeSubject,
+    kind: "withdrawal_notice",
+  });
 
   return { ok: true };
 }

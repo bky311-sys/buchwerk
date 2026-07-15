@@ -25,7 +25,7 @@ export default async function AdminLayout({
       <nav className="mt-4 flex flex-wrap gap-4 border-b border-border pb-4 text-sm">
         {[
           { href: "/admin", label: "Übersicht" },
-          { href: "/admin/posteingang", label: "Posteingang" },
+          { href: "/admin/posteingang", label: "Mails" },
         ].map((item) => (
           <Link
             key={item.href}

@@ -476,6 +476,33 @@ export interface Database {
         };
         Relationships: [];
       };
+      outbound_emails: {
+        Row: {
+          id: string;
+          to_email: string | null;
+          subject: string | null;
+          kind: string | null;
+          resend_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          to_email?: string | null;
+          subject?: string | null;
+          kind?: string | null;
+          resend_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          to_email?: string | null;
+          subject?: string | null;
+          kind?: string | null;
+          resend_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       shop_acquisitions: {
         Row: {
           id: string;

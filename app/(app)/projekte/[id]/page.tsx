@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isProjectUnlocked } from "@/lib/billing/access";
+import { canAccessProject } from "@/lib/billing/access";
 import { Button } from "@/components/ui/button";
 import { ChapterEditor } from "@/components/buchwerk/chapter-editor";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
@@ -59,7 +59,7 @@ export default async function ProjektPage({
       .select("id, position, heading, summary, content, status, updated_at")
       .eq("project_id", id)
       .order("position"),
-    isProjectUnlocked(supabase, id),
+    canAccessProject(supabase, id),
   ]);
 
   // Server Component: the per-request wall clock is exactly what we want here —

@@ -42,7 +42,11 @@ export async function isSubscriber(
   return isPayingSubscription(sub);
 }
 
-// True if the project already has a production unlock (purchase or subscription).
+// True if this specific project already has a per-book unlock row (a one-time
+// purchase, or a subscription slot that was already consumed for it). This is
+// the PER-BOOK check — used inside gateProduction to decide whether a slot still
+// needs to be consumed. For "may the user work on this book?" in the UI, use
+// canAccessProject (which also covers active subscribers).
 export async function isProjectUnlocked(
   supabase: SupabaseClient,
   projectId: string,
@@ -53,6 +57,27 @@ export async function isProjectUnlocked(
     .eq("project_id", projectId)
     .maybeSingle();
   return Boolean(data);
+}
+
+// The single source of truth for "may this account use production features on
+// this book?" — used by every UI page and download route. Clear, stable rule:
+//   • the book was unlocked individually (one-time purchase), OR
+//   • the account has an active subscription (a "freigeschalteter Account").
+// A subscriber may therefore start any of their books without a per-book
+// paywall; the monthly fair-use limit is enforced at generation time in
+// gateProduction (which also records the consumed slot). This fixes the earlier
+// split where the UI (per-book only) hid the writing flow from subscribers on
+// freshly created books.
+export async function canAccessProject(
+  supabase: SupabaseClient,
+  projectId: string,
+): Promise<boolean> {
+  if (await isProjectUnlocked(supabase, projectId)) return true;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+  return isSubscriber(supabase, user.id);
 }
 
 type GateResult = { ok: boolean; error?: string };

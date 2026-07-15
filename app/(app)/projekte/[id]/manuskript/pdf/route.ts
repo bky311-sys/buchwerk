@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { isProjectUnlocked } from "@/lib/billing/access";
+import { canAccessProject } from "@/lib/billing/access";
 import { coerceSources } from "@/lib/books/sources";
 import { manuscriptDisposition } from "@/lib/books/filename";
 import { buildManuscriptPdf } from "@/lib/books/manuscript-pdf";
@@ -25,7 +25,7 @@ export async function GET(
   if (!project) return new NextResponse("Nicht gefunden", { status: 404 });
 
   // Manuscript export is part of production — only for unlocked projects.
-  if (!(await isProjectUnlocked(supabase, id))) {
+  if (!(await canAccessProject(supabase, id))) {
     return new NextResponse("Bitte zuerst freischalten", { status: 402 });
   }
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isProjectUnlocked } from "@/lib/billing/access";
+import { canAccessProject } from "@/lib/billing/access";
 import { CheckoutForm } from "@/components/buchwerk/checkout-form";
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export default async function FreischaltenPage({
     .single();
   if (!project) notFound();
 
-  if (await isProjectUnlocked(supabase, id)) {
+  if (await canAccessProject(supabase, id)) {
     redirect(`/projekte/${id}`);
   }
 

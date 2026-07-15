@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isProjectUnlocked } from "@/lib/billing/access";
+import { canAccessProject } from "@/lib/billing/access";
 import { Button } from "@/components/ui/button";
 import { ChapterContent } from "@/components/buchwerk/chapter-content";
 import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
@@ -43,7 +43,7 @@ export default async function SchreibenPage({
         .select("id, position, heading, summary, content, status, updated_at")
         .eq("project_id", id)
         .order("position"),
-      isProjectUnlocked(supabase, id),
+      canAccessProject(supabase, id),
       supabase
         .from("projects")
         .select("research")

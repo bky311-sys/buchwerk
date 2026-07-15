@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { PDFDocument, rgb, type PDFFont } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
 import { embedBookFonts } from "@/lib/books/pdf-fonts";
-import { isProjectUnlocked } from "@/lib/billing/access";
+import { canAccessProject } from "@/lib/billing/access";
 import { averagePngColor } from "@/lib/books/image-color";
 import {
   parseCoverStyle,
@@ -77,7 +77,7 @@ export async function GET(
     .single();
   if (!project) return new NextResponse("Nicht gefunden", { status: 404 });
 
-  if (!(await isProjectUnlocked(supabase, id))) {
+  if (!(await canAccessProject(supabase, id))) {
     return new NextResponse("Bitte zuerst freischalten", { status: 402 });
   }
 

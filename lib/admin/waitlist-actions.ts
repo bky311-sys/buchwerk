@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAdminUser } from "@/lib/admin/access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { grantManualSubscription } from "@/lib/billing/grant";
+import { logSentEmail } from "@/lib/email/log";
 
 export type AdminResult = { ok: boolean; error?: string };
 
@@ -54,6 +55,11 @@ Benjamin – Buchwerk`;
         html,
         text,
       }),
+    });
+    await logSentEmail({
+      toEmail: to,
+      subject: "Dein Zugangs-Link für Buchwerk",
+      kind: "access_invite",
     });
   } catch {
     // non-fatal

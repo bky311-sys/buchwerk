@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isProjectUnlocked, isSubscriber } from "@/lib/billing/access";
+import { canAccessProject, isSubscriber } from "@/lib/billing/access";
 import { Button } from "@/components/ui/button";
 import { ImprintForm } from "@/components/buchwerk/imprint-form";
 import { PublishGuide } from "@/components/buchwerk/publish-guide";
@@ -38,7 +38,7 @@ export default async function VeroeffentlichenPage({
   } = await supabase.auth.getUser();
 
   const [unlocked, { data: chapters }, subscriber] = await Promise.all([
-    isProjectUnlocked(supabase, id),
+    canAccessProject(supabase, id),
     supabase.from("chapters").select("content").eq("project_id", id),
     user ? isSubscriber(supabase, user.id) : Promise.resolve(false),
   ]);
