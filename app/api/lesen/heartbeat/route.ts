@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriber } from "@/lib/billing/access";
-import { HEARTBEAT_SECONDS } from "@/lib/shop/reading";
+import { HEARTBEAT_SECONDS, chapterCounts } from "@/lib/shop/reading";
 
 // Records reading progress for one chapter. The client calls this every
 // HEARTBEAT_SECONDS while the tab is visible and recently interacted with.
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   // API route is reachable without ever loading that page.
   const { data: chapter } = await admin
     .from("chapters")
-    .select("id, project_id")
+    .select("id, project_id, content")
     .eq("id", chapterId)
     .maybeSingle();
   if (!chapter) {
@@ -80,7 +80,10 @@ export async function POST(request: Request) {
       max_scroll: scroll,
       seconds_active: HEARTBEAT_SECONDS,
     });
-    return NextResponse.json({ ok: true, counted: true });
+    return NextResponse.json({
+      ok: true,
+      chapterRead: chapterCounts(chapter.content, scroll, HEARTBEAT_SECONDS),
+    });
   }
 
   // Rate gate: credit time only if a real interval has passed since the last
@@ -89,17 +92,27 @@ export async function POST(request: Request) {
   const sinceLast = Date.now() - new Date(existing.updated_at).getTime();
   const counted = sinceLast >= (HEARTBEAT_SECONDS - 2) * 1000;
 
+  // Scroll only ever moves forward.
+  const maxScroll = Math.max(existing.max_scroll, scroll);
+  const secondsActive = counted
+    ? existing.seconds_active + HEARTBEAT_SECONDS
+    : existing.seconds_active;
+
   await admin
     .from("reading_progress")
     .update({
-      // Scroll only ever moves forward.
-      max_scroll: Math.max(existing.max_scroll, scroll),
-      seconds_active: counted
-        ? existing.seconds_active + HEARTBEAT_SECONDS
-        : existing.seconds_active,
+      max_scroll: maxScroll,
+      seconds_active: secondsActive,
       updated_at: new Date().toISOString(),
     })
     .eq("id", existing.id);
 
-  return NextResponse.json({ ok: true, counted });
+  // Report back whether this chapter now counts, so the reader can say so
+  // immediately. Without live feedback the book-level counter sits at 0 for
+  // minutes and honest readers conclude the tracking is broken — which is what
+  // happened on the very first real read-through.
+  return NextResponse.json({
+    ok: true,
+    chapterRead: chapterCounts(chapter.content, maxScroll, secondsActive),
+  });
 }

@@ -78,7 +78,13 @@ export default async function ReaderPage({ params }: Props) {
     <>
       <SiteHeader />
       {/* Own reading is not tracked: nothing to prove, nothing to review. */}
-      {isOwn ? null : <ReadingTracker chapterId={chapter.id} />}
+      {isOwn ? null : (
+        <ReadingTracker
+          key={chapter.id}
+          chapterId={chapter.id}
+          alreadyRead={state?.readChapterIds.includes(chapter.id) ?? false}
+        />
+      )}
 
       <main className="mx-auto max-w-3xl px-6 py-10">
         <div className="flex items-baseline justify-between gap-4">
@@ -134,9 +140,24 @@ export default async function ReaderPage({ params }: Props) {
 
         {state ? (
           <p className="mt-6 text-sm text-muted-foreground">
-            {state.hasReadEnough
-              ? "Du hast genug gelesen, um dieses Buch zu bewerten."
-              : `Gelesen: ${state.chaptersRead} von ${state.chaptersTotal} Kapiteln. Ab ${state.chaptersRequired} kannst du bewerten.`}
+            {state.hasReadEnough ? (
+              <>
+                Du hast genug gelesen, um dieses Buch zu bewerten.{" "}
+                <Link
+                  href={`/buchshop/${slug}#bewerten`}
+                  className="underline underline-offset-2"
+                >
+                  Jetzt bewerten
+                </Link>
+              </>
+            ) : (
+              <>
+                Gelesen: {state.chaptersRead} von {state.chaptersTotal} Kapiteln.
+                Ab {state.chaptersRequired} kannst du bewerten. Ein Kapitel zählt,
+                wenn du es bis zum Ende und in Lesegeschwindigkeit gelesen hast —
+                Durchklicken zählt nicht.
+              </>
+            )}
           </p>
         ) : null}
       </main>

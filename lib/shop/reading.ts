@@ -39,7 +39,22 @@ export type BookReadingState = {
   chaptersRead: number;
   chaptersRequired: number;
   hasReadEnough: boolean;
+  // Ids of the chapters that already count — so the reader can show "this one is
+  // done" instead of only a book-level number that sits at 0 for many minutes.
+  readChapterIds: string[];
 };
+
+// Does this single chapter count as read? Same rule as in getBookReadingState.
+export function chapterCounts(
+  content: string | null,
+  maxScroll: number,
+  secondsActive: number,
+): boolean {
+  return (
+    maxScroll >= CHAPTER_SCROLL_REQUIRED &&
+    secondsActive >= chapterMinSeconds(content)
+  );
+}
 
 // Minimum active seconds for a chapter of this length.
 export function chapterMinSeconds(text: string | null): number {
@@ -73,16 +88,15 @@ export async function getBookReadingState(
     (progress ?? []).map((p) => [p.chapter_id, p] as const),
   );
 
-  const chaptersRead = all.filter((c) => {
-    const p = byChapter.get(c.id);
-    if (!p) return false;
-    return (
-      p.max_scroll >= CHAPTER_SCROLL_REQUIRED &&
-      p.seconds_active >= chapterMinSeconds(c.content)
-    );
-  }).length;
+  const readChapterIds = all
+    .filter((c) => {
+      const p = byChapter.get(c.id);
+      return p ? chapterCounts(c.content, p.max_scroll, p.seconds_active) : false;
+    })
+    .map((c) => c.id);
 
   const chaptersTotal = all.length;
+  const chaptersRead = readChapterIds.length;
   const chaptersRequired = Math.ceil(chaptersTotal * BOOK_CHAPTER_SHARE_REQUIRED);
 
   return {
@@ -92,5 +106,6 @@ export async function getBookReadingState(
     // A book with no chapters can never be "read enough" — otherwise an empty
     // project would be a free review slot.
     hasReadEnough: chaptersTotal > 0 && chaptersRead >= chaptersRequired,
+    readChapterIds,
   };
 }
