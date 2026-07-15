@@ -338,6 +338,25 @@ Merksatz fürs Produkt: **„Wer einen freigeschalteten Account (Abo) oder das B
 
 **Entfernt:** `markReadingAction`, `REVIEW_LOCK_MS`, das „PDF/Kindle/Kauf"-Dropdown. `shop_acquisitions` ist funktionslos, aber nicht gedroppt.
 
+### 2026-07-15: Deploys laufen über `git push` auf `main` — nie direkt via Vercel-Tool 🔴
+**Grund:** Heute stand `origin/main` auf `03a559d` (14.07., 21:29), während auf buchwerk.info Commit `06c0c40` lief — sechs Production-Deploys weiter. Die betroffenen Deploys tragen `"actor": "claude-code_2-1-207_agent"` und haben keine `repoPushedAt`/`branchAlias`-Metadaten: Eine frühere Session hat **direkt zu Vercel deployt und GitHub übersprungen**. Folge: Das Repo war nicht mehr die Wahrheit über das, was läuft. Wir haben über zwei Stunden einen Cover-Bug diskutiert, bei dem Benjamin auf eine Version schaute, die im Repo nicht existierte — und ich habe aus dem Code „das kann nicht sein" abgeleitet, statt ihm zu glauben.
+
+**Regel:** Produktion wird ausschließlich über `git push origin main` deployt. Das Vercel-`deploy_to_vercel`-Tool nicht für Production benutzen. Bei jeder Fehlersuche an einem Live-Symptom **zuerst** `git fetch && git log origin/main -1` gegen den laufenden Deploy prüfen, bevor Code gelesen wird.
+
+**Migrationen zuerst, dann Merge.** `supabase db push --linked` funktioniert (CLI ist verlinkt, Projekt-Ref `bzwddrltgnyzyoexxruk`). Additive Änderungen stören den laufenden alten Code nicht; umgekehrt trifft neuer Code auf fehlende Spalten.
+
+### 2026-07-15: Nie eine „vielleicht fehlende" Spalte in einen Sammel-SELECT 🔴
+**Grund:** Der Reader-Commit legte `shop_readable` in den gemeinsamen SELECT von `lib/shop/queries.ts`, mit dem Kommentar „best-effort". Das war falsch und hat **den ganzen Shop offline genommen**: PostgREST antwortet mit **400 für die gesamte Abfrage**, wenn eine Spalte fehlt (`column projects.shop_readable does not exist`) → `data` ist null → jede Detailseite 404. Typecheck und Build waren dabei grün; gefunden wurde es erst beim Verifizieren gegen die echte DB auf localhost.
+
+**Regel:** Eine Spalte, die vielleicht noch nicht migriert ist, gehört in eine **eigene** Abfrage, die im Fehlerfall einen Default liefert (Muster: `getBoostedBookIds`, jetzt auch `isBookReadable`). Und: Kein Feld im Typ, das ohne Migration still „false" lügt — das ist eine Falle für den nächsten Leser.
+
+### 2026-07-15: Eine Messung, die dem Nutzer nichts sagt, ist ein Bug
+**Grund:** Der erste Reader maß korrekt und schwieg. Benjamin las mehrere Kapitel, sah „Gelesen: 0 von 10" und schloss auf einen Defekt — zu Recht, denn er hatte sich durchgeklickt und ein Kapitel braucht ~160 s. Die Zahl stimmte, die Anzeige war wertlos. Die Fortschrittsbalken-Metaanalyse in `docs/LESEN-UND-BEWERTEN.md` §6 sagt genau das vorher; wir hatten sie zitiert und den Fehler trotzdem gebaut.
+
+Dazu ein zweiter Denkfehler: Der Countdown fehlte bewusst („Anleitung zum Aussitzen"). Der Schutz liegt aber nicht in der Geheimhaltung der Schwelle, sondern darin, dass man Interaktion alle 60 s **und** 90 % Scrolltiefe **pro Kapitel** simulieren muss — das kostet gleich viel, ob die Zahl bekannt ist oder nicht. Geheimhaltung bestrafte nur die Ehrlichen.
+
+**Umgesetzt:** `ReadingBar` sticky **unten** (oben erhöht laut Metaanalyse den Drop-off) mit sichtbarer Lesezeit; Kapitel als Karte („Frame") statt loser Text; Kapitelleiste, deren Einträge grün werden, sobald sie zählen; Erklärung beim ersten Kapitel; „Hier lesen" → „Lesen und bewerten" auf `#bewerten`. Details in `docs/LESEN-UND-BEWERTEN.md` §5.0b.
+
 ---
 
 ## Bei Zweifeln

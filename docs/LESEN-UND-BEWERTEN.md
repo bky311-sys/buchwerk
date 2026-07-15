@@ -1,11 +1,55 @@
-# LESEN-UND-BEWERTEN.md — Entscheidungsvorlage
+# LESEN-UND-BEWERTEN.md — Recherche, Entscheidungen, Stand
 
-**Status: Vorschlag, nicht entschieden.** Grundlage: Recherche vom 15.07.2026 zu
-Rezenzo, Pubby, ARC-Distributoren, deutschem Markt, Rechtslage (UWG/DSA) und
-Verhaltensforschung zu Bewertungssystemen.
+Grundlage: Recherche vom 15.07.2026 zu Rezenzo, Pubby, ARC-Distributoren,
+deutschem Markt, Rechtslage (UWG/DSA) und Verhaltensforschung zu
+Bewertungssystemen.
 
-Ergänzt `BUCHSHOP.md` (= Ist-Zustand). Bei Widerspruch gilt bis zur Entscheidung
-BUCHSHOP.md.
+Ergänzt `BUCHSHOP.md` (= Modulbeschreibung). Bei Widerspruch gilt dieses Dokument.
+
+---
+
+## STAND 15.07.2026, Feierabend — hier weiterlesen
+
+**Live auf buchwerk.info** (main = `f05e24d`, alle Migrationen eingespielt):
+Reader, entkoppelte Punkte, Transparenzblock, Cover-Fix. Die Site steht hinter
+dem `SITE_LIVE`-Gate für alle ohne Bypass-Cookie.
+
+**Gebaut und im Browser gesehen:** Cover-Fix (Grid-Streckung) + Rückseite —
+verifiziert gegen die echte DB. Heartbeat-Mechanik — verifiziert an
+`reading_progress` (Zeile mit `scroll=1, aktiv=30s`).
+
+**Gebaut, aber NICHT im Betrieb gesehen** (Session als Testnutzer fehlte,
+Passwörter tippt Claude nicht): die `ReadingBar` (Lesezeit-Balken, Häkchen), die
+Kapitelleiste, die Erklärung, „Lesen und bewerten". **Erster Test morgen:** in
+einem Kapitel bleiben, langsam bis unten scrollen — nach ~2,5 min muss der Balken
+voll sein und „✓ Dieses Kapitel zählt als gelesen" erscheinen.
+
+**Nie getestet:** der gesamte Bewertungs-Flow dahinter — Abgabe, Punkte-Gutschrift,
+Autor-Moderation, Ablehnung mit Begründung (Art. 17). Dafür braucht es 8 von 10
+gelesenen Kapiteln ≈ 20 min aktives Lesen. Angebot steht: Fortschritt für den
+Testaccount per Service-Role in die DB schreiben (Testdaten, keine Code-Hintertür),
+dann direkt aufs Formular springen.
+
+**Testaufbau:** Zweiter Account (`bky311+test@gmail.com`), Abo via `/admin`
+„bezahlt"-Toggle (`grantManualSubscription`). Buch muss vom Autor **zum Lesen
+freigegeben** sein (`shop_readable`, Default aus) — sonst Reader 404 und keine
+Bewertung möglich.
+
+**Die offene Produktentscheidung** (§5.2 vs. §5.3): Testleser-Kreis
+(Feedback vor Veröffentlichung) **oder** Weiterbau der öffentlichen
+Shop-Bewertungen. Beide brauchten den Reader, der steht jetzt.
+
+**Die andere offene Sache** (§3.3): Der Autor kuratiert weiterhin die
+Sichtbarkeit der Bewertungen seines **eigenen** Buches. Das ist im
+Transparenzblock offengelegt („Der Autor des Buches entscheidet, ob eine
+Bewertung hier öffentlich erscheint") — und liest sich dort so unangenehm, wie es
+ist. Nächster logischer Schritt: automatisch veröffentlichen + Melde-Flow statt
+Freigabe.
+
+**Noch ungedeckelt** (§6a): Cover, Gliederung, Recherche, Listing. Nur Kapitel
+haben eine Missbrauchsbremse.
+
+---
 
 ---
 
@@ -324,6 +368,39 @@ entsprechend von „wir prüfen nicht" auf die reale Mechanik umgestellt.
 
 **Offen:** Kein Wiedereinstiegs-Merker („zuletzt gelesen"); Fortschritt zählt nur
 vorwärts, Wiederlesen bringt nichts. Beides bewusst, kann später kommen.
+
+### 5.0b Die Lehre aus dem ersten echten Durchlauf (15.07.2026 abends)
+
+**Die erste Version maß richtig und sagte nichts — und war damit kaputt.**
+Benjamin las mehrere Kapitel, unten stand „Gelesen: 0 von 10", er schloss auf
+einen Defekt. In der DB lag eine Zeile mit `scroll=1, aktiv=30s`: Er hatte sich
+durchgeklickt, ein Kapitel braucht ~160 s. Die Zahl war korrekt, die Anzeige
+wertlos. Genau das sagt die Fortschrittsbalken-Metaanalyse in §6 vorher —
+langsamer Früh-Fortschritt erzeugt mehr Abbrüche als gar keine Anzeige. Wir
+hatten die Studie zitiert und den Fehler trotzdem gebaut.
+
+**Die Geheimhaltung der Schwelle war ein Denkfehler.** Ursprünglich bewusst kein
+Countdown („Anleitung zum Aussitzen"). Falsch: Der Schutz liegt darin, dass man
+Interaktion alle 60 s **und** 90 % Scrolltiefe **pro Kapitel** simulieren muss —
+das kostet gleich viel, ob die Zahl öffentlich ist oder nicht. Geheimhaltung
+bestrafte nur die Ehrlichen. Die Schwelle steht jetzt sichtbar in der Leiste.
+
+**Umgesetzt:**
+- `ReadingBar` (ersetzt `ReadingTracker`): sticky **unten**, Lesezeit-Balken +
+  „bis zum Ende scrollen", danach „✓ Dieses Kapitel zählt als gelesen".
+  Platzierung ist nicht Geschmack — oben erhöht laut Metaanalyse den Drop-off.
+- **Frame:** Kapitel als Karte statt loser Text. Eine Webseite lädt zum
+  Vorbeiscrollen ein, eine Buchseite zum Lesen (Benjamins Beobachtung).
+- **Kapitelleiste:** Kapitel färben sich grün, sobald sie zählen. Das ist die
+  ehrliche Fassung von „Zeilen färben sich grün" — wir messen pro Kapitel, nie
+  pro Zeile; grüne Zeilen würden eine Genauigkeit behaupten, die wir nicht haben,
+  und beim ersten Zurückscrollen unglaubwürdig werden.
+- **Erklärung** beim ersten Kapitel (warum gemessen wird, ab wann bewertbar).
+- Detailseite: „Hier lesen" → **„Lesen und bewerten"**, führt auf `#bewerten`
+  statt direkt in ein Kapitel.
+
+**Merksatz fürs Produkt:** Eine Messung, die dem Nutzer nichts sagt, ist ein Bug —
+auch wenn jede Zahl stimmt.
 
 ---
 
