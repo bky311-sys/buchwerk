@@ -8,27 +8,33 @@ Ergänzt `BUCHSHOP.md` (= Modulbeschreibung). Bei Widerspruch gilt dieses Dokume
 
 ---
 
-## STAND 15.07.2026, Feierabend — hier weiterlesen
+## STAND 29.07.2026 — hier weiterlesen
 
-**Live auf buchwerk.info** (main = `f05e24d`, alle Migrationen eingespielt):
-Reader, entkoppelte Punkte, Transparenzblock, Cover-Fix. Die Site steht hinter
-dem `SITE_LIVE`-Gate für alle ohne Bypass-Cookie.
+**Reader-Mechanik im Betrieb verifiziert** (echter Durchlauf als Testnutzer,
+Kapitel 1 Hochzeitschecker, live auf buchwerk.info): Heartbeats kreditieren
+15 s/Beat, `chapterRead` kippt bei Scroll ≥ 0,9 + Zeit-Soll, ReadingBar zeigt
+„✓ Dieses Kapitel zählt als gelesen", DB-Zeile `scroll=1, aktiv=285s` bestätigt.
+Der Login lief ohne Passwort: Magic-Link per Service-Role serverseitig
+verifiziert, Session-Cookie in den Browser injiziert (Details im
+Claude-Memory „buchwerk-reader-testaufbau").
 
-**Gebaut und im Browser gesehen:** Cover-Fix (Grid-Streckung) + Rückseite —
-verifiziert gegen die echte DB. Heartbeat-Mechanik — verifiziert an
-`reading_progress` (Zeile mit `scroll=1, aktiv=30s`).
+**Dabei gefunden und gefixt** (siehe CLAUDE.md-Entscheidungslog 29.07.):
+die 1-Sekunden-Falle (Zeitschwelle jetzt aufs 15-s-Beat-Raster abgerundet,
+`chapterMinSeconds`) und die verwirrende Minutenrundung der ReadingBar
+(Ist rundet ab, Soll rundet auf, ab Zeit-Soll „Lesezeit ✓"). Bestätigt ohne
+Fix-Bedarf: Hidden-Tab-Schutz — unsichtbare Tabs senden keine Beats und können
+nicht mal Scrolltiefe melden.
 
-**Gebaut, aber NICHT im Betrieb gesehen** (Session als Testnutzer fehlte,
-Passwörter tippt Claude nicht): die `ReadingBar` (Lesezeit-Balken, Häkchen), die
-Kapitelleiste, die Erklärung, „Lesen und bewerten". **Erster Test morgen:** in
-einem Kapitel bleiben, langsam bis unten scrollen — nach ~2,5 min muss der Balken
-voll sein und „✓ Dieses Kapitel zählt als gelesen" erscheinen.
+**Nebenbefund:** Die Session vom 15.07. hatte bei „Gold in NRW" bereits
+Kapitel 1–3 als gelesen hinterlassen (Kap 4 scheiterte an der 1-Sekunden-Falle —
+der Anlass für den Fix).
 
-**Nie getestet:** der gesamte Bewertungs-Flow dahinter — Abgabe, Punkte-Gutschrift,
-Autor-Moderation, Ablehnung mit Begründung (Art. 17). Dafür braucht es 8 von 10
-gelesenen Kapiteln ≈ 20 min aktives Lesen. Angebot steht: Fortschritt für den
-Testaccount per Service-Role in die DB schreiben (Testdaten, keine Code-Hintertür),
-dann direkt aufs Formular springen.
+**Bewertungs-Flow in Arbeit:** Lesefortschritt für den Testaccount ist per
+Service-Role geseedet (Hochzeitschecker Kap 2–8, Testdaten, keine
+Code-Hintertür) → 8 von 10, das Bewertungsformular schaltet nachweislich frei.
+Abgabe + Punkte-Gutschrift + Autor-Moderation + Ablehnung mit Begründung
+(Art. 17) stehen noch aus — scheiterten bisher nur daran, dass der eingebettete
+Test-Browser ohne sichtbares Panel nicht rendert (Klicks unmöglich).
 
 **Testaufbau:** Zweiter Account (`bky311+test@gmail.com`), Abo via `/admin`
 „bezahlt"-Toggle (`grantManualSubscription`). Buch muss vom Autor **zum Lesen

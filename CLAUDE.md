@@ -357,6 +357,13 @@ Dazu ein zweiter Denkfehler: Der Countdown fehlte bewusst („Anleitung zum Auss
 
 **Umgesetzt:** `ReadingBar` sticky **unten** (oben erhöht laut Metaanalyse den Drop-off) mit sichtbarer Lesezeit; Kapitel als Karte („Frame") statt loser Text; Kapitelleiste, deren Einträge grün werden, sobald sie zählen; Erklärung beim ersten Kapitel; „Hier lesen" → „Lesen und bewerten" auf `#bewerten`. Details in `docs/LESEN-UND-BEWERTEN.md` §5.0b.
 
+### 2026-07-29: Reader-Mechanik im Betrieb verifiziert — zwei Korrekturen, ein bestätigter Schutz
+**Grund:** Erster echter End-to-End-Durchlauf auf buchwerk.info (Testaccount, Kapitel 1 Hochzeitschecker): Heartbeats kreditieren korrekt 15 s/Beat, `chapterRead` kippt serverseitig bei Scroll ≥ 0,9 + Zeit-Soll, die Leiste zeigt „✓ Dieses Kapitel zählt als gelesen". Dabei drei Befunde:
+
+1. **1-Sekunden-Falle (gefixt):** Der Server kreditiert nur ganze 15-s-Beats, die Schwelle war aber krumm (`ceil(Wörter/400·60)`, z. B. 151 s) — ehrliche Leser hingen bei 150 s dauerhaft „1 s zu kurz" und mussten einen ganzen Extra-Beat absitzen (real passiert: Gold in NRW Kap 4, Session 15.07.). `chapterMinSeconds` rundet jetzt aufs Beat-Raster ab (min. 1 Beat).
+2. **Minutenrundung (gefixt):** Die Leiste zeigte bei 90 s „Lesezeit 2 Min. von 2 Min." (kaufmännische Rundung) und zählte übers Soll hinaus weiter („5 Min. von 2 Min."), solange Scroll fehlte. Jetzt: Ist-Zeit rundet ab, Soll rundet auf (nie „X von X" vor der Schwelle), und ab erreichtem Zeit-Soll steht dort eingefroren „Lesezeit ✓ · bis zum Ende scrollen".
+3. **Hintergrund-Tab-Schutz bestätigt (kein Fix nötig):** Ein nicht sichtbarer/nie gerenderter Tab schickt keine Heartbeats (Visibility-Gate) — und kann nicht einmal Scrolltiefe melden, weil ohne Rendering keine Scroll-Events feuern und `innerHeight` 0 ist. Der Anti-Cheat aus §5.0 hält also auch gegen automatisierte Hidden-Tab-Angriffe; ein Angreifer bräuchte einen sichtbar gerenderten Browser plus Ereignis-Simulation.
+
 ---
 
 ## Bei Zweifeln

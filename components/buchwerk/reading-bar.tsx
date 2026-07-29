@@ -35,9 +35,17 @@ type Props = {
   counted: boolean;
 };
 
-function minutes(seconds: number): string {
-  if (seconds <= 60) return "unter 1 Min.";
-  return `${Math.round(seconds / 60)} Min.`;
+// Elapsed time rounds DOWN, the requirement rounds UP — so the text can never
+// show "2 Min. von 2 Min." while the threshold is not actually met yet (90 s
+// used to display as "2 Min." and made honest readers think the bar hung).
+function minutesDown(seconds: number): string {
+  if (seconds < 60) return "unter 1 Min.";
+  return `${Math.floor(seconds / 60)} Min.`;
+}
+
+function minutesUp(seconds: number): string {
+  if (seconds <= 60) return "1 Min.";
+  return `${Math.ceil(seconds / 60)} Min.`;
 }
 
 export function ReadingBar(props: Props) {
@@ -142,7 +150,9 @@ export function ReadingBar(props: Props) {
               </div>
             </div>
             <p className="shrink-0 text-xs text-muted-foreground">
-              Lesezeit {minutes(seconds)} von {minutes(props.secondsNeeded)}
+              {seconds >= props.secondsNeeded
+                ? "Lesezeit ✓"
+                : `Lesezeit ${minutesDown(seconds)} von ${minutesUp(props.secondsNeeded)}`}
               {reachedEnd ? " · bis zum Ende ✓" : " · bis zum Ende scrollen"}
             </p>
           </>

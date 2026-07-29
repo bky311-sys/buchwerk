@@ -96,11 +96,18 @@ export async function getChapterProgress(
   };
 }
 
-// Minimum active seconds for a chapter of this length.
+// Minimum active seconds for a chapter of this length. Rounded DOWN to the
+// heartbeat grid: the server credits time only in whole beats of
+// HEARTBEAT_SECONDS, so a threshold between two beats (151 s) is unreachable at
+// 150 s and silently costs every honest reader one extra beat.
 export function chapterMinSeconds(text: string | null): number {
   const words = countWords(text ?? "");
   if (words === 0) return 0;
-  return Math.ceil((words / SKIM_CAP_WPM) * 60);
+  const raw = Math.ceil((words / SKIM_CAP_WPM) * 60);
+  return Math.max(
+    HEARTBEAT_SECONDS,
+    Math.floor(raw / HEARTBEAT_SECONDS) * HEARTBEAT_SECONDS,
+  );
 }
 
 /**
