@@ -29,12 +29,15 @@ nicht mal Scrolltiefe melden.
 Kapitel 1–3 als gelesen hinterlassen (Kap 4 scheiterte an der 1-Sekunden-Falle —
 der Anlass für den Fix).
 
-**Bewertungs-Flow in Arbeit:** Lesefortschritt für den Testaccount ist per
-Service-Role geseedet (Hochzeitschecker Kap 2–8, Testdaten, keine
-Code-Hintertür) → 8 von 10, das Bewertungsformular schaltet nachweislich frei.
-Abgabe + Punkte-Gutschrift + Autor-Moderation + Ablehnung mit Begründung
-(Art. 17) stehen noch aus — scheiterten bisher nur daran, dass der eingebettete
-Test-Browser ohne sichtbares Panel nicht rendert (Klicks unmöglich).
+**Bewertungs-Flow: Abgabe verifiziert (30.07.).** Lesefortschritt für den
+Testaccount per Service-Role geseedet (Hochzeitschecker Kap 2–8, Testdaten,
+keine Code-Hintertür) → 8 von 10. Danach im echten Chrome als Testnutzer:
+Formular schaltet frei, 4 Sterne + Text abgeschickt → „Wartet auf Freigabe",
+`shop_reviews` (status=pending, rewarded=true) + `point_ledger` (+20,
+review_submitted) korrekt. Transparenzblock („So entstehen diese Bewertungen")
+rendert vollständig. **Noch offen:** Autor-Moderation im UI — Freigeben und
+Ablehnen mit Begründung (Art. 17) auf `/projekte/[id]/veroeffentlichen`; die
+Test-Bewertung wartet dort als pending.
 
 **Testaufbau:** Zweiter Account (`bky311+test@gmail.com`), Abo via `/admin`
 „bezahlt"-Toggle (`grantManualSubscription`). Buch muss vom Autor **zum Lesen
