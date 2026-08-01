@@ -7,8 +7,6 @@ export const metadata: Metadata = {
 };
 
 const sectionTitleClass = "font-display text-lg font-semibold text-foreground";
-const linkClass =
-  "underline underline-offset-4 hover:text-foreground break-words";
 
 export default function ImpressumPage() {
   return (
@@ -23,7 +21,7 @@ export default function ImpressumPage() {
 
         <div className="mt-10 space-y-8 text-base leading-relaxed text-muted-foreground">
           <section className="space-y-2">
-            <h2 className={sectionTitleClass}>Angaben gemäß § 5 TMG</h2>
+            <h2 className={sectionTitleClass}>Angaben gemäß § 5 DDG</h2>
             <p>
               Benjamin Koch
               <br />
@@ -56,23 +54,6 @@ export default function ImpressumPage() {
           </section>
 
           <section className="space-y-2">
-            <h2 className={sectionTitleClass}>EU-Streitschlichtung</h2>
-            <p>
-              Die Europäische Kommission stellt eine Plattform zur
-              Online-Streitbeilegung (OS) bereit:{" "}
-              <a
-                href="https://ec.europa.eu/consumers/odr/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={linkClass}
-              >
-                https://ec.europa.eu/consumers/odr/
-              </a>
-            </p>
-            <p>Unsere E-Mail-Adresse finden Sie oben im Impressum.</p>
-          </section>
-
-          <section className="space-y-2">
             <h2 className={sectionTitleClass}>
               Verbraucherstreitbeilegung / Universalschlichtungsstelle
             </h2>
@@ -86,12 +67,12 @@ export default function ImpressumPage() {
           <section className="space-y-2">
             <h2 className={sectionTitleClass}>Haftung für Inhalte</h2>
             <p>
-              Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene
+              Als Diensteanbieter sind wir gemäß § 7 Abs. 1 DDG für eigene
               Inhalte auf diesen Seiten nach den allgemeinen Gesetzen
               verantwortlich.
             </p>
             <p>
-              Nach §§ 8 bis 10 TMG sind wir als Diensteanbieter jedoch nicht
+              Nach §§ 8 bis 10 DDG sind wir als Diensteanbieter jedoch nicht
               verpflichtet, übermittelte oder gespeicherte fremde Informationen
               zu überwachen.
             </p>

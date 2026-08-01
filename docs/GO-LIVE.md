@@ -59,7 +59,7 @@ bei Timeout-Beschwerden `maxDuration` hochsetzen), ungedeckelte KI-Endpunkte
   mit Events `checkout.session.completed`, `customer.subscription.updated`,
   `customer.subscription.deleted`; Price-IDs = 19,99 € (Buch) / 29,99 €/Mon. (Abo).
 - [x] **(B) Resend-Domain** ✅ 31.07. verifiziert `buchwerk.info` verifizieren (sonst bouncen DOI-/Kaufbestätigungsmails).
-- [ ] **(B) Gate öffnen**: `SITE_LIVE=true` in Production (Redeploy).
+- [x] **(B) Gate öffnen** ✅ 01.08.: `SITE_LIVE=true` in Production gesetzt, Redeploy mit Rechtstext-Fixes (TMG→DDG, tote EU-ODR-Verweise entfernt).
 
 ## 🟡 Wichtig
 

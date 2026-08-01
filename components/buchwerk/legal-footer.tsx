@@ -8,7 +8,7 @@ const LINKS = [
   { href: "/widerruf-erklaeren", label: "Vertrag widerrufen" },
 ];
 
-// Legal links required to be reachable from every page (§5 TMG). Shared by the
+// Legal links required to be reachable from every page (§ 5 DDG). Shared by the
 // app and auth layouts so logged-in and sign-in pages stay compliant.
 export function LegalFooter() {
   return (

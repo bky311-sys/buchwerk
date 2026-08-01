@@ -157,10 +157,9 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    title: "§ 19 Online-Streitbeilegung und Verbraucherschlichtung",
+    title: "§ 19 Verbraucherschlichtung",
     paragraphs: [
-      `(1) Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr.`,
-      `(2) Der Anbieter ist zur Teilnahme an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle weder verpflichtet noch grundsätzlich bereit, bemüht sich aber, Meinungsverschiedenheiten einvernehmlich beizulegen.`,
+      `(1) Der Anbieter ist zur Teilnahme an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle weder verpflichtet noch grundsätzlich bereit, bemüht sich aber, Meinungsverschiedenheiten einvernehmlich beizulegen.`,
     ],
   },
   {
