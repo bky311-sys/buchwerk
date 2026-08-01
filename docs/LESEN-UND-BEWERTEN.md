@@ -8,7 +8,21 @@ Ergänzt `BUCHSHOP.md` (= Modulbeschreibung). Bei Widerspruch gilt dieses Dokume
 
 ---
 
-## STAND 29.07.2026 — hier weiterlesen
+## STAND 01.08.2026 — Bewertungs-Flow KOMPLETT verifiziert
+
+**Alles getestet, alles bestanden** (01.08., als Autor im UI, gegen Prod-DB
+verifiziert): Ablehnen mit Begründung → `status=rejected` + `rejection_reason`
+gespeichert, **Punkte des Lesers blieben unangetastet** (Entkopplung hält).
+Freigeben → `status=approved` + `approved_at`, Bewertung erscheint öffentlich
+auf der Shop-Seite. Damit ist der gesamte Zyklus durch: Lesen → Messen →
+Abgabe → Punkte → Moderation (beide Pfade) → Sichtbarkeit.
+
+**Testdaten sind geräumt** (Review, Punkte-Eintrag, gesamter Lesefortschritt
+des Testaccounts). Testaccount + Manual-Abo bleiben für künftige Tests.
+
+---
+
+## STAND 29.07.2026 — hier weiterlesen (überholt, siehe oben)
 
 **Reader-Mechanik im Betrieb verifiziert** (echter Durchlauf als Testnutzer,
 Kapitel 1 Hochzeitschecker, live auf buchwerk.info): Heartbeats kreditieren
