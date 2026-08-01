@@ -369,6 +369,13 @@ Dazu ein zweiter Denkfehler: Der Countdown fehlte bewusst („Anleitung zum Auss
 
 **Umgesetzt:** Beide Grants am 01.08. manuell in Prod nachgezogen (verifiziert: Update als Besitzer schreibt), plus `20260801120000_regrant_imprint_cover_title.sql` als dokumentierte Nachzieh-Migration. **Regel:** Härtung erneut einspielen ⇒ danach immer die Regrant-Migration hinterher. Symptom zum Merken: RLS-Fehler 42501 „permission denied for table projects" bei einem Feld, das im Code längst existiert.
 
+### 2026-08-01: Nischen-Vorschläge („Keine Idee?") — vorberechneter Pool statt Live-Recherche
+**Grund:** Wer ohne Buchidee kommt, war am Themenfeld verloren. Entscheidung (mit Benjamin, 4 Fragen): eingeloggt im Neues-Buch-Formular, Pool per Cron, kurze Interessen-Abfrage, Karten mit Begründung.
+
+**Architektur-Kern:** KEINE Live-KI-Recherche pro Nutzer — das wäre der nächste ungedeckelte, teure Endpunkt (vgl. §6a-Kostenrisiken). Stattdessen recherchiert ein wöchentlicher Cron (`/api/cron/nischen`, Mo 04:00, Web-Search max 4, ~24 Nischen) in die Tabelle `niche_pool`; die UI (`NicheFinder` im Neues-Buch-Formular) filtert client-seitig nach festen Interessens-Tags (`NICHE_INTERESTS` — Prompt und UI nutzen dieselbe Liste) und Buchtyp, sortiert nach Nachfrage/Konkurrenz-Score. „Dieses Buch starten" befüllt das Formular über `?thema=…&zielgruppe=…` (das `key`-Prop am Formular erzwingt die Übernahme). Ohne Pool-Daten bleibt das Feature unsichtbar.
+
+**Dabei gefixt:** `CRON_SECRET` fehlte in Production — auch der bestehende Mail-Poll-Cron lief seit jeher gegen 401. Jetzt gesetzt (Kopie in `~/.buchwerk_cron_secret` für manuelle Läufe via `?secret=`). Merke außerdem: Structured-Output-Schemas brauchen `additionalProperties: false` auf JEDEM Objekt, sonst 400.
+
 ---
 
 ## Bei Zweifeln

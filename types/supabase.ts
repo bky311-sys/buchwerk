@@ -632,6 +632,48 @@ export interface Database {
         };
         Relationships: [];
       };
+      niche_pool: {
+        Row: {
+          id: string;
+          title: string;
+          audience: string;
+          pitch: string;
+          demand: string;
+          competition: string;
+          interests: string[];
+          book_type: string;
+          topic_prompt: string;
+          batch: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          audience: string;
+          pitch: string;
+          demand?: string;
+          competition?: string;
+          interests?: string[];
+          book_type?: string;
+          topic_prompt: string;
+          batch: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          audience?: string;
+          pitch?: string;
+          demand?: string;
+          competition?: string;
+          interests?: string[];
+          book_type?: string;
+          topic_prompt?: string;
+          batch?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

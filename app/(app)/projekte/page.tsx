@@ -7,6 +7,8 @@ import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { DeleteProjectButton } from "@/components/buchwerk/delete-project-button";
 import { Button } from "@/components/ui/button";
 import { getProjectCardInfos } from "@/lib/books/workflow";
+import { getLatestNiches, NICHE_INTERESTS } from "@/lib/books/niche-pool";
+import { NicheFinder } from "@/components/buchwerk/niche-finder";
 
 export const metadata: Metadata = {
   title: "Meine Projekte — Buchwerk",
@@ -32,21 +34,24 @@ function statusIntent(status: string): "done" | "draft" | "neutral" {
 export default async function ProjektePage({
   searchParams,
 }: {
-  searchParams: Promise<{ thema?: string }>;
+  searchParams: Promise<{ thema?: string; zielgruppe?: string }>;
 }) {
-  const { thema } = await searchParams;
+  const { thema, zielgruppe } = await searchParams;
   const defaultTopic =
     typeof thema === "string" ? thema.trim().slice(0, 300) : undefined;
+  const defaultAudience =
+    typeof zielgruppe === "string" ? zielgruppe.trim().slice(0, 200) : undefined;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [{ data: projects }, subscriber] = await Promise.all([
+  const [{ data: projects }, subscriber, niches] = await Promise.all([
     supabase
       .from("projects")
       .select("id, title, topic, status, created_at, published_at")
       .order("created_at", { ascending: false }),
     user ? isSubscriber(supabase, user.id) : Promise.resolve(false),
+    getLatestNiches(),
   ]);
 
   const list = projects ?? [];
@@ -103,7 +108,15 @@ export default async function ProjektePage({
           ? "Schreiben, Cover und KDP-Listing sind mit deinem Abo abgedeckt."
           : "Erst zum Schreiben, Cover und KDP-Listing zahlst du."}
       </p>
-      <NewProjectForm defaultTopic={defaultTopic} />
+      <NewProjectForm
+        key={`${defaultTopic ?? ""}·${defaultAudience ?? ""}`}
+        defaultTopic={defaultTopic}
+        defaultAudience={defaultAudience}
+      />
+      {/* "Keine Idee?"-Einstieg: Nischen aus dem wöchentlichen Pool. Ein Klick
+          befüllt das Formular oben (via ?thema=…&zielgruppe=…, das key-Prop
+          erzwingt die Übernahme der neuen Defaults). */}
+      <NicheFinder niches={niches} interests={NICHE_INTERESTS} />
     </section>
   );
 

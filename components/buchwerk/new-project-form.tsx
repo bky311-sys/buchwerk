@@ -12,7 +12,13 @@ import {
 
 const initialState: ProjectFormState = { error: null };
 
-export function NewProjectForm({ defaultTopic }: { defaultTopic?: string }) {
+export function NewProjectForm({
+  defaultTopic,
+  defaultAudience,
+}: {
+  defaultTopic?: string;
+  defaultAudience?: string;
+}) {
   const [state, formAction, isPending] = useActionState(
     createProjectAction,
     initialState,
@@ -40,6 +46,7 @@ export function NewProjectForm({ defaultTopic }: { defaultTopic?: string }) {
           id="audience"
           name="audience"
           disabled={isPending}
+          defaultValue={defaultAudience}
           placeholder="z. B. Erst-Hundebesitzer ab 50"
           className="h-11 px-4 text-base"
         />
