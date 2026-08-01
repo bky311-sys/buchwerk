@@ -364,6 +364,11 @@ Dazu ein zweiter Denkfehler: Der Countdown fehlte bewusst („Anleitung zum Auss
 2. **Minutenrundung (gefixt):** Die Leiste zeigte bei 90 s „Lesezeit 2 Min. von 2 Min." (kaufmännische Rundung) und zählte übers Soll hinaus weiter („5 Min. von 2 Min."), solange Scroll fehlte. Jetzt: Ist-Zeit rundet ab, Soll rundet auf (nie „X von X" vor der Schwelle), und ab erreichtem Zeit-Soll steht dort eingefroren „Lesezeit ✓ · bis zum Ende scrollen".
 3. **Hintergrund-Tab-Schutz bestätigt (kein Fix nötig):** Ein nicht sichtbarer/nie gerenderter Tab schickt keine Heartbeats (Visibility-Gate) — und kann nicht einmal Scrolltiefe melden, weil ohne Rendering keine Scroll-Events feuern und `innerHeight` 0 ist. Der Anti-Cheat aus §5.0 hält also auch gegen automatisierte Hidden-Tab-Angriffe; ein Angreifer bräuchte einen sichtbar gerenderten Browser plus Ereignis-Simulation.
 
+### 2026-08-01: Ein `revoke update` löscht ALLE Spalten-Grants — auch die aus späteren Migrationen 🔴
+**Grund:** „Impressum speichern" scheiterte in Prod mit 42501 bei grünem Build. Ursache: `20260712130000_security_hardening` macht `revoke update on projects` + Allowlist-Grant. In Prod wurde die Härtung außer der Reihe eingespielt und hat die Spalten-Grants aus `20260712140000` (imprint_*) und `20260714120000` (cover_title_style) mitgelöscht — Letzteres zum **zweiten** Mal (dafür gab es schon mal eine Nachzieh-Migration). Postgres-Eigenheit: REVOKE kennt keine Herkunft, es löscht alle Column-Grants der Tabelle.
+
+**Umgesetzt:** Beide Grants am 01.08. manuell in Prod nachgezogen (verifiziert: Update als Besitzer schreibt), plus `20260801120000_regrant_imprint_cover_title.sql` als dokumentierte Nachzieh-Migration. **Regel:** Härtung erneut einspielen ⇒ danach immer die Regrant-Migration hinterher. Symptom zum Merken: RLS-Fehler 42501 „permission denied for table projects" bei einem Feld, das im Code längst existiert.
+
 ---
 
 ## Bei Zweifeln
