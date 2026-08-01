@@ -14,7 +14,20 @@ export type WorkflowStep = {
 // Guided top-to-bottom workflow: Recherche → Manuskript → Cover → KDP → Live.
 // Shows where the author is and what the single next action is, so the project
 // page reads as a sequence instead of a flat pile of options.
-export function WorkflowStepper({ steps }: { steps: WorkflowStep[] }) {
+//
+// `activeLabel` markiert auf den Spoke-Seiten den Schritt, auf dem man gerade
+// STEHT (unterstrichen) — unabhängig davon, welcher Schritt als Nächstes dran
+// ist. `compact` lässt die „Nächster Schritt"-Zeile weg (für Seiten, die ihren
+// eigenen Weiter-CTA am Ende haben).
+export function WorkflowStepper({
+  steps,
+  activeLabel,
+  compact = false,
+}: {
+  steps: WorkflowStep[];
+  activeLabel?: string;
+  compact?: boolean;
+}) {
   const current = steps.find((s) => s.status === "current");
   const doneCount = steps.filter((s) => s.status === "done").length;
 
@@ -24,12 +37,15 @@ export function WorkflowStepper({ steps }: { steps: WorkflowStep[] }) {
         {steps.map((step, index) => {
           const isDone = step.status === "done";
           const isCurrent = step.status === "current";
+          const isActive = step.label === activeLabel;
           return (
             <li key={step.label} className="flex items-center gap-2">
               <Link
                 href={step.href}
                 className="group inline-flex items-center gap-2"
-                aria-current={isCurrent ? "step" : undefined}
+                aria-current={
+                  isActive ? "page" : isCurrent ? "step" : undefined
+                }
               >
                 <span
                   className={cn(
@@ -46,11 +62,10 @@ export function WorkflowStepper({ steps }: { steps: WorkflowStep[] }) {
                 <span
                   className={cn(
                     "text-sm font-medium group-hover:underline underline-offset-4",
-                    isCurrent
+                    isActive && "underline decoration-primary decoration-2",
+                    isCurrent || isDone || isActive
                       ? "text-foreground"
-                      : isDone
-                        ? "text-foreground"
-                        : "text-muted-foreground",
+                      : "text-muted-foreground",
                   )}
                 >
                   {step.label}
@@ -70,7 +85,7 @@ export function WorkflowStepper({ steps }: { steps: WorkflowStep[] }) {
         })}
       </ol>
 
-      {current ? (
+      {compact ? null : current ? (
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <p className="text-sm text-muted-foreground">
             <span className="font-semibold text-foreground">

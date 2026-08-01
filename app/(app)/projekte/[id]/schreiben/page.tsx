@@ -14,6 +14,8 @@ import { Spinner } from "@/components/buchwerk/spinner";
 import { MIN_TOTAL_WORDS } from "@/lib/books/generate";
 import { RESEARCH_TOTAL_STAGES } from "@/lib/books/research";
 import { computeChapterView } from "@/lib/books/project-view";
+import { getWorkflowSteps } from "@/lib/books/workflow";
+import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 
 export const metadata: Metadata = {
   title: "Schreiben — Buchwerk",
@@ -52,6 +54,7 @@ export default async function SchreibenPage({
     ]);
 
   const hasResearch = Boolean(researchRow?.research?.trim());
+  const workflowSteps = await getWorkflowSteps(supabase, id);
 
   // Server Component: the per-request wall clock is exactly what we want — the
   // poller re-renders this page every few seconds, so staleness is re-evaluated.
@@ -85,6 +88,11 @@ export default async function SchreibenPage({
         Schreiben
       </h1>
       <p className="mt-2 text-base text-muted-foreground">{title}</p>
+
+      {/* Orientierung: derselbe Stepper wie im Hub, „Schreiben" markiert. */}
+      <div className="mt-5">
+        <WorkflowStepper steps={workflowSteps} activeLabel="Schreiben" compact />
+      </div>
 
       {!unlocked ? (
         <div className="mt-8 rounded-2xl border border-border bg-card p-6">
@@ -175,6 +183,7 @@ export default async function SchreibenPage({
                   heading={chapter.heading}
                   badge={badge}
                   defaultOpen={defaultOpen}
+                  anchorId={`kap-${chapter.id}`}
                 >
                   {chapter.content ? (
                     <ChapterContent

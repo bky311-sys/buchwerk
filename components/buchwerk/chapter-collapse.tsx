@@ -1,28 +1,48 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 // Collapsible chapter card for the writing page: a clickable header (number +
 // status + heading) that toggles the body (content + generator). Finished
 // chapters start collapsed so the page stays short; chapters that still need
 // attention start open.
+//
+// `anchorId` macht die Karte per #hash ansteuerbar (Deep-Link „Kapitel lesen"
+// aus dem Hub): passt der Hash, klappt sie auf und scrollt in den Blick.
 export function ChapterCollapse({
   number,
   heading,
   badge,
   defaultOpen,
+  anchorId,
   children,
 }: {
   number: number;
   heading: string;
   badge: ReactNode;
   defaultOpen: boolean;
+  anchorId?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const ref = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!anchorId || window.location.hash !== `#${anchorId}`) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- einmalige Hash-Übernahme nach dem Mount (SSR kennt den Hash nicht)
+    setOpen(true);
+    // Nach dem Aufklappen scrollen, damit die Zielposition stimmt.
+    requestAnimationFrame(() => {
+      ref.current?.scrollIntoView({ block: "start" });
+    });
+  }, [anchorId]);
 
   return (
-    <article className="scroll-mt-6 overflow-hidden rounded-2xl border border-border bg-card">
+    <article
+      id={anchorId}
+      ref={ref}
+      className="scroll-mt-6 overflow-hidden rounded-2xl border border-border bg-card"
+    >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

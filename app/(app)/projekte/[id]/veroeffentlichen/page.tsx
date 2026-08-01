@@ -11,6 +11,8 @@ import { ShopPublish } from "@/components/buchwerk/shop-publish";
 import { ReviewModeration } from "@/components/buchwerk/review-moderation";
 import { getPendingReviewsForAuthor } from "@/lib/shop/reviews";
 import { getPointsBalance } from "@/lib/shop/points";
+import { buildWorkflowSteps } from "@/lib/books/workflow";
+import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 
 export const metadata: Metadata = {
   title: "Veröffentlichen — Buchwerk",
@@ -152,6 +154,15 @@ export default async function VeroeffentlichenPage({
     .eq("project_id", id)
     .maybeSingle();
 
+  const workflowSteps = buildWorkflowSteps({
+    projectId: project.id,
+    finished,
+    hasWrittenChapters,
+    hasCover: Boolean(selectedCover),
+    hasListing: Boolean(listingRow),
+    published: Boolean(shopRow?.published_at),
+  });
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       {backLink}
@@ -159,6 +170,14 @@ export default async function VeroeffentlichenPage({
         Veröffentlichen
       </h1>
       <p className="mt-2 text-base text-muted-foreground">{title}</p>
+
+      <div className="mt-5">
+        <WorkflowStepper
+          steps={workflowSteps}
+          activeLabel="Veröffentlichen"
+          compact
+        />
+      </div>
 
       {!finished ? (
         <div className="mt-8 rounded-2xl border border-border bg-card p-6">

@@ -49,6 +49,12 @@ export function ChapterProse({ content }: { content: string }) {
       flushList();
       continue;
     }
+    // Trennlinien (---, ***, ___) schluckt der Renderer: als Text geleakt lasen
+    // sie sich wie kaputte Formatierung; der Absatzabstand trennt ohnehin.
+    if (/^([-*_])\1{2,}$/.test(t)) {
+      flushList();
+      continue;
+    }
     if (t.startsWith("### ")) {
       flushList();
       blocks.push(

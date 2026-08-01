@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { KdpListing } from "@/components/buchwerk/kdp-listing";
 import { Button } from "@/components/ui/button";
+import { getWorkflowSteps } from "@/lib/books/workflow";
+import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 
 export const metadata: Metadata = {
   title: "KDP-Listing — Buchwerk",
@@ -27,13 +29,16 @@ export default async function KdpPage({
     .single();
   if (!project) notFound();
 
-  const { data: listing } = await supabase
-    .from("kdp_listings")
-    .select(
-      "title, subtitle, description, keywords, categories, price_eur, price_note, updated_at",
-    )
-    .eq("project_id", id)
-    .maybeSingle();
+  const [{ data: listing }, workflowSteps] = await Promise.all([
+    supabase
+      .from("kdp_listings")
+      .select(
+        "title, subtitle, description, keywords, categories, price_eur, price_note, updated_at",
+      )
+      .eq("project_id", id)
+      .maybeSingle(),
+    getWorkflowSteps(supabase, id),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -50,6 +55,10 @@ export default async function KdpPage({
       <p className="mt-3 text-base text-muted-foreground">
         {project.title ?? project.topic}
       </p>
+
+      <div className="mt-5">
+        <WorkflowStepper steps={workflowSteps} activeLabel="Listing" compact />
+      </div>
       <p className="mt-2 text-sm text-muted-foreground">
         Kopierfertige Texte für deinen KDP-Upload. Alles bearbeitbar, jedes Feld
         mit „Kopieren“.

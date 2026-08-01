@@ -154,6 +154,20 @@ export function CoverStudio({
     });
   }
 
+  // Beim allerersten Besuch (keine Motive, leeres Feld) den Vorschlag von
+  // selbst holen: ein leeres Feld mit der Aufforderung, einen englischen
+  // Bildprompt zu schreiben, war für die Zielgruppe die falsche erste Erfahrung
+  // (UX-Review). Ein Ref verhindert Doppel-Calls durch Re-Renders.
+  const autoSuggestedRef = useRef(false);
+  useEffect(() => {
+    if (autoSuggestedRef.current) return;
+    if (covers.length > 0 || prompt.trim()) return;
+    autoSuggestedRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- einmaliger Auto-Start nach dem Mount, per Ref gegen Wiederholung gesichert
+    suggest();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function refinePrompt() {
     if (!prompt.trim() || !feedbackValue.trim()) return;
     setError(null);
@@ -379,7 +393,7 @@ export function CoverStudio({
       <section className="space-y-4 rounded-2xl border border-border bg-card p-6 sm:p-7">
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <Label htmlFor="cover-prompt">Bildbeschreibung (Prompt)</Label>
+            <Label htmlFor="cover-prompt">Bildidee</Label>
             <Button
               type="button"
               variant="ghost"
@@ -387,7 +401,7 @@ export function CoverStudio({
               onClick={suggest}
               disabled={busy}
             >
-              Vorschlag von der KI
+              Neuen Vorschlag erstellen
             </Button>
           </div>
           <textarea
@@ -396,7 +410,7 @@ export function CoverStudio({
             onChange={(event) => setPrompt(event.target.value)}
             disabled={busy}
             rows={4}
-            placeholder="Englischer Bildprompt – oder lass dir oben einen Vorschlag erstellen."
+            placeholder="Buchwerk erstellt gerade einen Vorschlag aus deinem Buch… Du kannst die Bildidee danach frei anpassen (Englisch funktioniert am besten)."
             className={TEXTAREA_CLASS}
           />
           <p className="text-xs text-muted-foreground">
@@ -427,7 +441,7 @@ export function CoverStudio({
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Sag in Stichworten, was am Motiv anders soll — die KI überarbeitet den
+            Sag in Stichworten, was am Motiv anders soll — die KI überarbeitet die
             Prompt. Danach neu erzeugen.
           </p>
         </div>

@@ -6,6 +6,7 @@ import { NewProjectForm } from "@/components/buchwerk/new-project-form";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { DeleteProjectButton } from "@/components/buchwerk/delete-project-button";
 import { Button } from "@/components/ui/button";
+import { getProjectCardInfos } from "@/lib/books/workflow";
 
 export const metadata: Metadata = {
   title: "Meine Projekte — Buchwerk",
@@ -50,6 +51,10 @@ export default async function ProjektePage({
 
   const list = projects ?? [];
   const hasProjects = list.length > 0;
+  // Fortschritt + nächster Schritt pro Karte — der Wiedereinstieg mit einem
+  // Klick (UX-Review P1: Karten zeigten nur „In Arbeit", einzige sichtbare
+  // Aktion war Löschen).
+  const cardInfos = await getProjectCardInfos(supabase, list);
 
   // Subscribers write/produce within their monthly quota — no per-book payment.
   const produceCost = subscriber
@@ -106,39 +111,71 @@ export default async function ProjektePage({
     <section>
       <h2 className="font-display text-lg font-semibold">Bestehende Projekte</h2>
       <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-        {list.map((project) => (
-          <li key={project.id} className="relative">
-            <Link
-              href={`/projekte/${project.id}`}
-              className="flex h-full items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 pb-9 transition-colors hover:border-primary/40"
+        {list.map((project) => {
+          const info = cardInfos.get(project.id);
+          return (
+            <li
+              key={project.id}
+              className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40"
             >
-              <span className="min-w-0">
-                <span className="block truncate font-semibold text-foreground">
-                  {project.title ?? project.topic}
-                </span>
-                {project.title ? (
-                  <span className="mt-1 block truncate text-sm text-muted-foreground">
-                    {project.topic}
+              <Link href={`/projekte/${project.id}`} className="block">
+                <span className="flex items-start justify-between gap-4">
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold text-foreground">
+                      {project.title ?? project.topic}
+                    </span>
+                    {project.title ? (
+                      <span className="mt-1 block truncate text-sm text-muted-foreground">
+                        {project.topic}
+                      </span>
+                    ) : null}
                   </span>
-                ) : null}
-              </span>
-              {project.published_at ? (
-                <StatusBadge intent="done">✓ Veröffentlicht</StatusBadge>
-              ) : (
-                <StatusBadge intent={statusIntent(project.status)}>
-                  {STATUS_LABEL[project.status] ?? project.status}
-                </StatusBadge>
-              )}
-            </Link>
-            <div className="absolute bottom-3 right-4">
-              <DeleteProjectButton
-                projectId={project.id}
-                title={project.title ?? project.topic}
-                published={Boolean(project.published_at)}
-              />
-            </div>
-          </li>
-        ))}
+                  {project.published_at ? (
+                    <StatusBadge intent="done">✓ Veröffentlicht</StatusBadge>
+                  ) : (
+                    <StatusBadge intent={statusIntent(project.status)}>
+                      {STATUS_LABEL[project.status] ?? project.status}
+                    </StatusBadge>
+                  )}
+                </span>
+              </Link>
+
+              {info && info.total > 0 ? (
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="h-1.5 w-full max-w-[120px] overflow-hidden rounded-full bg-input">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{
+                        width: `${Math.round((info.done / info.total) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                    {info.done}/{info.total} Kapitel
+                    {info.current ? ` · ${info.current.label}` : ""}
+                  </span>
+                </div>
+              ) : null}
+
+              <div className="mt-4 flex flex-1 items-end justify-between gap-3">
+                {info?.current && !project.published_at ? (
+                  <Button asChild size="sm">
+                    <Link href={info.current.href}>{info.current.cta}</Link>
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`/projekte/${project.id}`}>Öffnen</Link>
+                  </Button>
+                )}
+                <DeleteProjectButton
+                  projectId={project.id}
+                  title={project.title ?? project.topic}
+                  published={Boolean(project.published_at)}
+                />
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

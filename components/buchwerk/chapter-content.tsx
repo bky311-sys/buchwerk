@@ -8,6 +8,7 @@ import {
   saveChapterContentAction,
   reviseChapterAction,
 } from "@/lib/books/chapter-edit-actions";
+import { ChapterProse } from "@/components/buchwerk/chapter-prose";
 
 const TEXTAREA_CLASS =
   "flex w-full rounded-xl border border-input bg-card px-4 py-3 text-base leading-relaxed outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50";
@@ -58,6 +59,11 @@ export function ChapterContent({
   if (mode === "edit") {
     return (
       <div className="mt-5 space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Die Zeichen sind Formatierung: <code>##</code> Zwischenüberschrift,{" "}
+          <code>**fett**</code>, <code>-</code> Aufzählung. In der Leseansicht
+          und im fertigen Buch werden sie sauber gesetzt.
+        </p>
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}
@@ -94,9 +100,10 @@ export function ChapterContent({
 
   return (
     <div className="mt-5">
-      <div className="whitespace-pre-wrap text-base leading-relaxed">
-        {content}
-      </div>
+      {/* Gerendert wie im Reader — rohes Markdown (##, ###) las sich für die
+          Zielgruppe wie kaputte Formatierung (UX-Review P1). Der Markdown-Text
+          selbst bleibt im Bearbeiten-Modus zugänglich. */}
+      <ChapterProse content={content} />
 
       {mode === "revise" ? (
         <div className="mt-4 space-y-2 rounded-lg border border-border bg-muted p-4">

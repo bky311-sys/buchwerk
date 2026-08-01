@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CoverStudio } from "@/components/buchwerk/cover-studio";
 import { Button } from "@/components/ui/button";
+import { getWorkflowSteps } from "@/lib/books/workflow";
+import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 
 export const metadata: Metadata = {
   title: "Cover — Buchwerk",
@@ -35,11 +37,14 @@ export default async function CoverPage({
 
   // Klappentext lives in the KDP listing; surface it here so it can be written
   // before the listing step (the back cover needs it).
-  const { data: listing } = await supabase
-    .from("kdp_listings")
-    .select("description")
-    .eq("project_id", id)
-    .maybeSingle();
+  const [{ data: listing }, workflowSteps] = await Promise.all([
+    supabase
+      .from("kdp_listings")
+      .select("description")
+      .eq("project_id", id)
+      .maybeSingle(),
+    getWorkflowSteps(supabase, id),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -56,10 +61,15 @@ export default async function CoverPage({
       <p className="mt-3 text-base text-muted-foreground">
         {project.title ?? project.topic}
       </p>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Generiere Cover-Motive mit Flux, wähle eins aus und lade ein
-        Cover-PDF mit Vorder- und Rückseite herunter. Titel und Autor kommen
-        beim PDF sauber als Text aufs Motiv.
+
+      <div className="mt-5">
+        <WorkflowStepper steps={workflowSteps} activeLabel="Cover" compact />
+      </div>
+
+      <p className="mt-5 text-sm text-muted-foreground">
+        Beschreib eine Bildidee, lass Motive erzeugen und wähle das beste aus.
+        Am Ende lädst du ein Cover-PDF mit Vorder- und Rückseite herunter —
+        Titel und Autor kommen dabei sauber als Text aufs Motiv.
       </p>
 
       <CoverStudio

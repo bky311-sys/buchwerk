@@ -2,6 +2,39 @@
 
 **Stand:** 2026-07-14 · Review des gesamten Nutzer-Flows (Landing → Anlegen → Hub → Schreiben → Cover → Listing → Veröffentlichen).
 
+---
+
+## UMSETZUNGSSTAND 2026-08-01 (zweiter Live-Durchlauf + Sammel-Umsetzung)
+
+Zweiter kompletter Durchlauf als Testnutzer am 01.08., zwei neue P1-Funde, danach
+alles in einem Schwung umgesetzt:
+
+**Neu gefunden und gefixt:**
+- **Rohes Markdown in der Autorenansicht** — ausgeklappte Kapitel auf /schreiben
+  zeigten `##`/`###` als Text. Jetzt rendert dort `ChapterProse` (wie im Reader);
+  der Markdown-Text bleibt im Bearbeiten-Modus, mit Hinweiszeile, was die Zeichen
+  bedeuten. `---` schluckt der Renderer jetzt überall (leakte im Reader als Text).
+- **Fertige Kapitel im Hub hatten nur „Neu schreiben"** als Aktion — Lesen ging
+  dort gar nicht. Jetzt: „Kapitel lesen & bearbeiten" als Primärbutton
+  (Deep-Link `/schreiben#kap-<id>`, Karte klappt auf und scrollt hin), Neu
+  schreiben als Outline-Button daneben (Bestätigungsdialog existierte schon).
+
+**Alte Punkte, jetzt umgesetzt:** #1 Projektkarten (Fortschrittsbalken, X/Y
+Kapitel, aktueller Schritt, „Weiter"-Button; Löschen nicht mehr einzige Aktion) ·
+#2 Stepper auf allen vier Spoke-Seiten (kompakt, „Du bist hier"-Markierung;
+Logik geteilt in `lib/books/workflow.ts`) · #3 KDP-Listing auf Trigger+Poll
+(API-Route `/api/projekte/[id]/listing`, Poll + 90-s-Notbremse — letzter
+blockierender Flow) · #6-Rest: die 15 Amazon-Schritte sind einklappbar und
+**abhakbar** (localStorage pro Projekt) · Hub-Doppel-CTA („Nächster
+Schritt"-Box + Stepper mit identischem Button) zu einer Karte zusammengelegt ·
+Cover: Auto-Vorschlag beim ersten Besuch statt leerem „Englischer
+Bildprompt"-Feld, Jargon raus („Bildidee", kein „Flux"/„Prompt" mehr im UI).
+
+**Bewusst NICHT umgesetzt:** #13 (Gliederung vor Registrierung) — öffnet einen
+unlimitierten KI-Endpunkt für anonyme Nutzer; braucht erst eine
+Missbrauchs-/Kosten-Entscheidung (Rate-Limit o. Ä.). Bleibt der stärkste
+Conversion-Hebel.
+
 Grundlage: der Ist-Zustand nach dem Hub-and-Spoke-Umbau. Der Kern-Flow trägt jetzt gut — dieses Review zielt darauf, ihn **verständlicher, schneller und klickbarer** zu machen. Sortiert nach Wirkung/Aufwand.
 
 ---

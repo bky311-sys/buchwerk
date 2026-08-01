@@ -11,6 +11,7 @@ import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 import { Spinner } from "@/components/buchwerk/spinner";
 import { STALE_GENERATION_MS, MIN_TOTAL_WORDS } from "@/lib/books/generate";
 import { computeChapterView } from "@/lib/books/project-view";
+import { buildWorkflowSteps } from "@/lib/books/workflow";
 import { RESEARCH_TOTAL_STAGES } from "@/lib/books/research";
 import { OUTLINE_RUNNING_STATUS } from "@/lib/books/outline-generate";
 import { EditableTitle } from "@/components/buchwerk/editable-title";
@@ -95,59 +96,15 @@ export default async function ProjektPage({
 
   // Guided workflow: Schreiben → Cover → Listing → Veröffentlichen. (Recherche
   // läuft automatisch in der Kapitel-Pipeline, ist kein eigener Nutzerschritt.)
-  // The first not-done required step becomes "current"; the optional final step
-  // (Veröffentlichen) can't be auto-detected as done.
-  const workflowRaw = [
-    {
-      label: "Schreiben",
-      href: `/projekte/${project.id}/schreiben`,
-      cta: hasWrittenChapters ? "Weiter schreiben" : "Kapitel schreiben",
-      done: finished,
-      optional: false,
-    },
-    {
-      label: "Cover",
-      href: `/projekte/${project.id}/cover`,
-      cta: "Cover erstellen",
-      done: Boolean(selectedCover),
-      optional: false,
-    },
-    {
-      label: "Listing",
-      href: `/projekte/${project.id}/kdp`,
-      cta: "Listing erstellen",
-      done: Boolean(listingRow),
-      optional: false,
-    },
-    {
-      label: "Veröffentlichen",
-      href: `/projekte/${project.id}/veroeffentlichen`,
-      cta: project.published_at ? "Ansehen" : "Zum Veröffentlichen",
-      // Manual milestone: the author marks the book as published on KDP.
-      done: Boolean(project.published_at),
-      optional: true,
-    },
-  ];
-  let currentTaken = false;
-  const workflowSteps = workflowRaw.map((step, index) => {
-    let status: "done" | "current" | "todo" | "optional";
-    if (step.done) {
-      status = "done";
-    } else if (
-      step.optional &&
-      workflowRaw.slice(index + 1).some((later) => later.done)
-    ) {
-      status = "optional";
-    } else if (!currentTaken) {
-      status = "current";
-      currentTaken = true;
-    } else {
-      status = "todo";
-    }
-    return { label: step.label, href: step.href, cta: step.cta, status };
+  // Die Schritt-Logik ist mit Spoke-Seiten und Projektkarten geteilt.
+  const workflowSteps = buildWorkflowSteps({
+    projectId: project.id,
+    finished,
+    hasWrittenChapters,
+    hasCover: Boolean(selectedCover),
+    hasListing: Boolean(listingRow),
+    published: Boolean(project.published_at),
   });
-  // The one prominent next action shown at the top of the cockpit.
-  const currentStep = workflowSteps.find((s) => s.status === "current") ?? null;
 
   // A book marked as published on Amazon is locked from editing. Changes go
   // through a new edition (a separate book that counts in the monthly budget).
@@ -234,22 +191,9 @@ export default async function ProjektPage({
           </div>
         </div>
       ) : (
-        <div className="mt-6 space-y-4">
-          {currentStep ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-5">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  Nächster Schritt
-                </p>
-                <p className="mt-0.5 font-display text-lg font-semibold tracking-tight">
-                  {currentStep.label}
-                </p>
-              </div>
-              <Button asChild size="lg">
-                <Link href={currentStep.href}>{currentStep.cta}</Link>
-              </Button>
-            </div>
-          ) : null}
+        /* Ein Kasten für die Orientierung: Stepper + „Nächster Schritt"-Zeile
+           mit CTA. Vorher stand derselbe Button doppelt direkt übereinander. */
+        <div className="mt-6">
           <WorkflowStepper steps={workflowSteps} />
         </div>
       )}
@@ -355,9 +299,21 @@ export default async function ProjektPage({
                 />
                 {/* Per-chapter writing right here in the outline — write (or
                     retry) a single chapter without leaving the cockpit. The
-                    batch "alle auf einmal" flow lives on the Schreiben page. */}
+                    batch "alle auf einmal" flow lives on the Schreiben page.
+                    Bei fertigen Kapiteln ist LESEN die Primäraktion — das
+                    destruktive Neu-Schreiben steht als Outline-Button daneben
+                    (mit Bestätigungsdialog im Generator). */}
                 {unlocked ? (
-                  <div className="mt-4 border-t border-border pt-4">
+                  <div className="mt-4 flex flex-wrap items-start gap-2 border-t border-border pt-4">
+                    {chapter.content ? (
+                      <Button asChild size="lg">
+                        <Link
+                          href={`/projekte/${project.id}/schreiben#kap-${chapter.id}`}
+                        >
+                          Kapitel lesen & bearbeiten
+                        </Link>
+                      </Button>
+                    ) : null}
                     <ChapterGenerator
                       chapterId={chapter.id}
                       projectId={project.id}

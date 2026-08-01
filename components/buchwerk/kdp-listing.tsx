@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/buchwerk/spinner";
-import {
-  generateListingAction,
-  updateListingAction,
-} from "@/lib/books/listing-actions";
+import { updateListingAction } from "@/lib/books/listing-actions";
 
 type Listing = {
   title: string | null;
@@ -77,6 +80,8 @@ export function KdpListing({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [busyAction, setBusyAction] = useState<"generate" | "save" | null>(null);
+  const generating = busyAction === "generate";
+  const busy = isPending || generating;
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -108,15 +113,69 @@ export function KdpListing({
     setPrice(listing?.price_eur != null ? String(listing.price_eur) : "");
   }
 
+  // Trigger+Poll statt blockierender Action (letzter langer Flow, UX-Review):
+  // Der fetch stößt die API-Route an, parallel refresht ein Intervall die Seite.
+  // Reißt die Verbindung ab, schreibt der Server trotzdem fertig — der Poll
+  // holt das Ergebnis, und der Effekt unten beendet den Spinner, sobald eine
+  // neue Listing-Version (updated_at) angekommen ist.
+  const pollRef = useRef<number | null>(null);
+  const runIdRef = useRef(0);
+
+  function stopPoll() {
+    if (pollRef.current !== null) {
+      window.clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }
+
+  useEffect(() => stopPoll, []);
+
+  useEffect(() => {
+    if (busyAction === "generate" && listing?.updated_at) {
+      stopPoll();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- beendet den Spinner genau einmal, wenn die neue Listing-Version ankommt
+      setBusyAction(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listing?.updated_at]);
+
   function generate() {
     setError(null);
     setBusyAction("generate");
-    startTransition(async () => {
-      const result = await generateListingAction(projectId);
-      if (result.ok) router.refresh();
-      else setError(result.error ?? "Etwas ist schiefgelaufen.");
-      setBusyAction(null);
-    });
+    stopPoll();
+    const runId = ++runIdRef.current;
+    pollRef.current = window.setInterval(() => router.refresh(), 4000);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/projekte/${projectId}/listing`, {
+          method: "POST",
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          if (runId === runIdRef.current) {
+            setError(data?.error ?? "Etwas ist schiefgelaufen.");
+            stopPoll();
+            setBusyAction(null);
+          }
+          return;
+        }
+        router.refresh();
+      } catch {
+        // Verbindung weg — Poll läuft weiter, der Server schreibt fertig.
+      }
+    })();
+    // Notbremse: nach 90 s ohne Ergebnis nicht ewig „Wird erstellt…" zeigen.
+    window.setTimeout(() => {
+      if (runId === runIdRef.current && pollRef.current !== null) {
+        stopPoll();
+        setBusyAction(null);
+        setError(
+          "Das dauert ungewöhnlich lange. Lade die Seite neu — vielleicht ist das Listing schon da. Sonst versuch es noch einmal.",
+        );
+      }
+    }, 90_000);
   }
 
   function save() {
@@ -164,8 +223,8 @@ export function KdpListing({
           kopierfertig für KDP.
         </p>
         <div className="mt-4">
-          <Button type="button" size="lg" disabled={isPending} onClick={generate}>
-            {isPending ? (
+          <Button type="button" size="lg" disabled={busy} onClick={generate}>
+            {generating ? (
               <span className="inline-flex items-center gap-2">
                 <Spinner className="size-4" />
                 Wird erstellt… (~20 Sek.)
@@ -190,7 +249,7 @@ export function KdpListing({
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          disabled={isPending}
+          disabled={busy}
           className="h-10"
         />
       </Field>
@@ -199,7 +258,7 @@ export function KdpListing({
         <Input
           value={subtitle}
           onChange={(e) => setSubtitle(e.target.value)}
-          disabled={isPending}
+          disabled={busy}
           className="h-10"
         />
       </Field>
@@ -208,7 +267,7 @@ export function KdpListing({
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          disabled={isPending}
+          disabled={busy}
           rows={8}
           className={TEXTAREA_CLASS}
         />
@@ -218,7 +277,7 @@ export function KdpListing({
         <textarea
           value={keywords}
           onChange={(e) => setKeywords(e.target.value)}
-          disabled={isPending}
+          disabled={busy}
           rows={7}
           className={TEXTAREA_CLASS}
         />
@@ -228,7 +287,7 @@ export function KdpListing({
         <textarea
           value={categories}
           onChange={(e) => setCategories(e.target.value)}
-          disabled={isPending}
+          disabled={busy}
           rows={3}
           className={TEXTAREA_CLASS}
         />
@@ -246,7 +305,7 @@ export function KdpListing({
           id="price"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          disabled={isPending}
+          disabled={busy}
           inputMode="decimal"
           className="h-10 max-w-32"
         />
@@ -267,7 +326,7 @@ export function KdpListing({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-        <Button type="button" size="lg" disabled={isPending} onClick={save}>
+        <Button type="button" size="lg" disabled={busy} onClick={save}>
           {busyAction === "save" ? "Speichern…" : "Änderungen speichern"}
         </Button>
         {busyAction === "generate" ? (
@@ -280,7 +339,7 @@ export function KdpListing({
             type="button"
             variant="ghost"
             size="lg"
-            disabled={isPending}
+            disabled={busy}
             onClick={regenerate}
           >
             Neu generieren
