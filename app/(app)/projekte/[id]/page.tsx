@@ -52,7 +52,7 @@ export default async function ProjektPage({
     .maybeSingle();
   const { data: listingRow } = await supabase
     .from("kdp_listings")
-    .select("project_id")
+    .select("title")
     .eq("project_id", id)
     .maybeSingle();
 
@@ -102,7 +102,7 @@ export default async function ProjektPage({
     finished,
     hasWrittenChapters,
     hasCover: Boolean(selectedCover),
-    hasListing: Boolean(listingRow),
+    hasListing: Boolean(listingRow?.title?.trim()),
     published: Boolean(project.published_at),
   });
 

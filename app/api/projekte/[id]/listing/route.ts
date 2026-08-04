@@ -8,11 +8,18 @@ import { generateListing } from "@/lib/books/listing-generate";
 export const maxDuration = 300;
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const body = (await request.json().catch(() => null)) as {
+    preserveDescription?: boolean;
+  } | null;
   const supabase = await createClient();
-  const result = await generateListing(supabase, id);
+  const result = await generateListing(
+    supabase,
+    id,
+    body?.preserveDescription !== false,
+  );
   return NextResponse.json(result, { status: result.ok ? 200 : 400 });
 }

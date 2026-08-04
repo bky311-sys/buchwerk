@@ -139,7 +139,7 @@ export function KdpListing({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listing?.updated_at]);
 
-  function generate() {
+  function generate(preserveDescription = true) {
     setError(null);
     setBusyAction("generate");
     stopPoll();
@@ -149,6 +149,8 @@ export function KdpListing({
       try {
         const res = await fetch(`/api/projekte/${projectId}/listing`, {
           method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ preserveDescription }),
         });
         if (!res.ok) {
           const data = (await res.json().catch(() => null)) as {
@@ -207,23 +209,47 @@ export function KdpListing({
   function regenerate() {
     if (
       window.confirm(
-        "Das ersetzt das aktuelle Listing durch einen neuen KI-Vorschlag. Fortfahren?",
+        "Das ersetzt das aktuelle Listing durch einen neuen KI-Vorschlag — auch den Klappentext. Fortfahren?",
       )
     ) {
-      generate();
+      generate(false);
     }
   }
 
-  if (!listing) {
+  // „Vorhanden" heißt: der Titel ist da. Der Cover-Schritt legt die Zeile
+  // nämlich schon mit NUR dem Klappentext an — die Seite zeigte dann ein
+  // leeres Formular statt zu generieren (Benjamins Fund, 04.08.).
+  const hasGenerated = Boolean(listing?.title?.trim());
+
+  // Erster Besuch ohne generiertes Listing → von selbst loslegen. Niemand
+  // will hier erst einen Knopf drücken; ein vorhandener Klappentext bleibt
+  // dank preserveDescription erhalten.
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStartedRef.current || hasGenerated) return;
+    autoStartedRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- einmaliger Auto-Start nach dem Mount, per Ref gegen Wiederholung gesichert
+    generate(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!hasGenerated) {
     return (
       <div className="mt-8 rounded-2xl border border-border bg-card p-6 sm:p-7">
         <p className="text-sm text-muted-foreground">
-          Noch kein Listing. Buchwerk erstellt aus deinem Buch Titel, Untertitel,
-          Klappentext, 7 Keywords, Kategorien und eine Preisempfehlung —
-          kopierfertig für KDP.
+          Buchwerk erstellt aus deinem Buch Titel, Untertitel, Klappentext, 7
+          Keywords, Kategorien und eine Preisempfehlung — kopierfertig für KDP.
+          {listing?.description
+            ? " Dein Klappentext aus dem Cover-Schritt bleibt dabei erhalten."
+            : ""}
         </p>
         <div className="mt-4">
-          <Button type="button" size="lg" disabled={busy} onClick={generate}>
+          <Button
+            type="button"
+            size="lg"
+            disabled={busy}
+            onClick={() => generate(true)}
+          >
             {generating ? (
               <span className="inline-flex items-center gap-2">
                 <Spinner className="size-4" />
@@ -309,7 +335,7 @@ export function KdpListing({
           inputMode="decimal"
           className="h-10 max-w-32"
         />
-        {listing.price_note ? (
+        {listing?.price_note ? (
           <p className="text-sm text-muted-foreground">{listing.price_note}</p>
         ) : null}
       </div>

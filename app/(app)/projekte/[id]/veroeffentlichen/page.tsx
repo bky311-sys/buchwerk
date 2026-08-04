@@ -150,7 +150,7 @@ export default async function VeroeffentlichenPage({
     .maybeSingle();
   const { data: listingRow } = await supabase
     .from("kdp_listings")
-    .select("project_id")
+    .select("title")
     .eq("project_id", id)
     .maybeSingle();
 
@@ -159,7 +159,7 @@ export default async function VeroeffentlichenPage({
     finished,
     hasWrittenChapters,
     hasCover: Boolean(selectedCover),
-    hasListing: Boolean(listingRow),
+    hasListing: Boolean(listingRow?.title?.trim()),
     published: Boolean(shopRow?.published_at),
   });
 
@@ -241,7 +241,7 @@ export default async function VeroeffentlichenPage({
           projectId={project.id}
           finished={finished}
           imprintComplete={imprintComplete}
-          hasListing={Boolean(listingRow)}
+          hasListing={Boolean(listingRow?.title?.trim())}
           hasCover={Boolean(selectedCover)}
         />
       </div>

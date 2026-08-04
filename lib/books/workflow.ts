@@ -89,9 +89,11 @@ export async function getWorkflowSteps(
         .eq("project_id", projectId)
         .eq("is_selected", true)
         .maybeSingle(),
+      // title statt Existenz: der Cover-Schritt legt die Zeile schon mit nur
+      // dem Klappentext an — als "Listing fertig" zählt erst der Titel.
       supabase
         .from("kdp_listings")
-        .select("project_id")
+        .select("title")
         .eq("project_id", projectId)
         .maybeSingle(),
       supabase
@@ -108,7 +110,7 @@ export async function getWorkflowSteps(
     finished: rows.length > 0 && writtenCount === rows.length,
     hasWrittenChapters: writtenCount > 0,
     hasCover: Boolean(cover),
-    hasListing: Boolean(listing),
+    hasListing: Boolean(listing?.title?.trim()),
     published: Boolean(proj?.published_at),
   });
 }
@@ -142,12 +144,16 @@ export async function getProjectCardInfos(
         .eq("is_selected", true),
       supabase
         .from("kdp_listings")
-        .select("project_id")
+        .select("project_id, title")
         .in("project_id", ids),
     ]);
 
   const coverSet = new Set((covers ?? []).map((c) => c.project_id));
-  const listingSet = new Set((listings ?? []).map((l) => l.project_id));
+  const listingSet = new Set(
+    (listings ?? [])
+      .filter((l) => Boolean(l.title?.trim()))
+      .map((l) => l.project_id),
+  );
 
   for (const project of projects) {
     const rows = (chapters ?? []).filter((c) => c.project_id === project.id);

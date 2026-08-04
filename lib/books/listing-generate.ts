@@ -22,6 +22,11 @@ export type ListingGenerateResult = { ok: boolean; error?: string };
 export async function generateListing(
   supabase: SupabaseClient,
   projectId: string,
+  // Erst-Generierung bewahrt einen schon vorhandenen Klappentext: der stammt
+  // aus dem Cover-Schritt und steht ggf. bereits auf der gedruckten Rückseite —
+  // stillschweigend ersetzen würde Buchrücken und Listing auseinanderziehen.
+  // Explizites „Neu generieren" (preserveDescription=false) überschreibt alles.
+  preserveDescription = true,
 ): Promise<ListingGenerateResult> {
   const { data: project } = await supabase
     .from("projects")
@@ -29,6 +34,16 @@ export async function generateListing(
     .eq("id", projectId)
     .single();
   if (!project) return { ok: false, error: "Projekt nicht gefunden." };
+
+  const { data: existing } = await supabase
+    .from("kdp_listings")
+    .select("description")
+    .eq("project_id", projectId)
+    .maybeSingle();
+  const keptDescription =
+    preserveDescription && existing?.description?.trim()
+      ? existing.description
+      : null;
 
   const gate = await gateProduction(supabase, projectId);
   if (!gate.ok) return { ok: false, error: gate.error };
@@ -63,7 +78,7 @@ export async function generateListing(
         project_id: projectId,
         title: listing.titel,
         subtitle: listing.untertitel,
-        description: listing.beschreibung,
+        description: keptDescription ?? listing.beschreibung,
         keywords: listing.keywords.slice(0, 7),
         categories: listing.kategorien.slice(0, 3),
         price_eur: listing.preis_empfehlung,

@@ -66,7 +66,7 @@ export default async function KdpPage({
 
       <KdpListing projectId={id} listing={listing ?? null} />
 
-      {listing ? (
+      {listing?.title ? (
         <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border pt-6">
           <p className="text-sm font-medium text-success">✓ KDP-Listing steht.</p>
           <Button asChild size="lg">
