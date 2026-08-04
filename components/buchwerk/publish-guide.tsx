@@ -1,24 +1,65 @@
 import Link from "next/link";
-import { PublishChecklist } from "@/components/buchwerk/publish-checklist";
+import {
+  PublishChecklist,
+  type ChecklistData,
+} from "@/components/buchwerk/publish-checklist";
 
 // The last mile: the app produces the building blocks, but the author uploads
 // them to Amazon KDP themselves (Buchwerk is a tool, not a publisher). The guide
 // mirrors Amazon's actual KDP setup — its three tabs (Details, Inhalt, Preise) —
-// so every buchwerk asset maps 1:1 to a KDP field.
+// so every buchwerk asset maps 1:1 to a KDP field. Die Checkliste zeigt jeden
+// Wert direkt mit Kopieren-Button (kein Hin- und Herspringen beim Upload).
+export type PublishGuideListing = {
+  title: string | null;
+  subtitle: string | null;
+  description: string | null;
+  keywords: string[] | null;
+  categories: string[] | null;
+  price_eur: number | null;
+};
+
 export function PublishGuide({
   projectId,
   finished,
   imprintComplete,
   hasListing,
   hasCover,
+  listing,
+  author,
+  coverImageUrl,
 }: {
   projectId: string;
   finished: boolean;
   imprintComplete: boolean;
   hasListing: boolean;
   hasCover: boolean;
+  listing: PublishGuideListing | null;
+  author: string;
+  coverImageUrl: string | null;
 }) {
   const manuscriptReady = finished && imprintComplete;
+
+  // Supabase-Storage-URLs erzwingen mit ?download=… einen Datei-Download
+  // (Content-Disposition: attachment) statt das Bild nur im Tab zu öffnen.
+  const coverDownloadUrl = coverImageUrl
+    ? `${coverImageUrl}${coverImageUrl.includes("?") ? "&" : "?"}download=cover.jpg`
+    : null;
+
+  const checklistData: ChecklistData = {
+    title: listing?.title ?? "",
+    subtitle: listing?.subtitle ?? "",
+    author,
+    description: listing?.description ?? "",
+    keywords: listing?.keywords ?? [],
+    categories: listing?.categories ?? [],
+    priceEur: listing?.price_eur ?? null,
+    epubHref: `/projekte/${projectId}/manuskript/epub`,
+    pdfHref: `/projekte/${projectId}/manuskript/pdf`,
+    coverDownloadUrl,
+    manuscriptReady,
+    kdpHref: `/projekte/${projectId}/kdp`,
+    coverHref: `/projekte/${projectId}/cover`,
+  };
 
   const assets: {
     label: string;
@@ -95,8 +136,9 @@ export function PublishGuide({
         ) : null}
       </div>
 
-      {/* Die 15 Schritte: einklappbar + abhakbar (Client, localStorage). */}
-      <PublishChecklist projectId={projectId} />
+      {/* Die 15 Schritte: einklappbar + abhakbar, mit den echten Werten zum
+          Direkt-Kopieren (Client, localStorage). */}
+      <PublishChecklist projectId={projectId} data={checklistData} />
 
       <p className="mt-5 text-xs text-muted-foreground">
         Tipp: Der Medienbruch bleibt, weil Amazon KDP keine Upload-Schnittstelle

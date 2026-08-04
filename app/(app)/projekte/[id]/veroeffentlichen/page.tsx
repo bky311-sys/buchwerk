@@ -144,13 +144,14 @@ export default async function VeroeffentlichenPage({
   // publish checklist (best-effort so a lagging migration can't break the page).
   const { data: selectedCover } = await supabase
     .from("covers")
-    .select("id")
+    .select("id, image_url")
     .eq("project_id", id)
     .eq("is_selected", true)
     .maybeSingle();
+  // Volle Listing-Daten: die Checkliste zeigt jeden Wert direkt zum Kopieren.
   const { data: listingRow } = await supabase
     .from("kdp_listings")
-    .select("title")
+    .select("title, subtitle, description, keywords, categories, price_eur")
     .eq("project_id", id)
     .maybeSingle();
 
@@ -243,6 +244,9 @@ export default async function VeroeffentlichenPage({
           imprintComplete={imprintComplete}
           hasListing={Boolean(listingRow?.title?.trim())}
           hasCover={Boolean(selectedCover)}
+          listing={listingRow ?? null}
+          author={imprintRow?.author ?? ""}
+          coverImageUrl={selectedCover?.image_url ?? null}
         />
       </div>
 
