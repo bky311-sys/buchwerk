@@ -57,6 +57,27 @@ function wrap(
   const lines: string[] = [];
   let line = "";
   for (const word of text.split(/\s+/).filter(Boolean)) {
+    // Ein Wort, das allein schon breiter als die Zeile ist (typisch: URLs im
+    // Quellenverzeichnis), MUSS auf Zeichenebene gebrochen werden — sonst ragt
+    // es über den Satzspiegel hinaus und KDP lehnt die Datei ab ("Text
+    // außerhalb der Ränder", real passiert am 04.08.).
+    if (font.widthOfTextAtSize(word, size) > maxWidth) {
+      if (line) {
+        lines.push(line);
+        line = "";
+      }
+      let chunk = "";
+      for (const ch of word) {
+        if (font.widthOfTextAtSize(chunk + ch, size) > maxWidth && chunk) {
+          lines.push(chunk);
+          chunk = ch;
+        } else {
+          chunk += ch;
+        }
+      }
+      line = chunk;
+      continue;
+    }
     const candidate = line ? `${line} ${word}` : word;
     if (font.widthOfTextAtSize(candidate, size) > maxWidth && line) {
       lines.push(line);
