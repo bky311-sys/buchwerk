@@ -4,7 +4,7 @@ import { generateChapterContent } from "@/lib/books/generate";
 // Chapter generation is the longest single call in the app. It runs here (not in
 // a Server Action) so the client can fire it and then poll the DB for the
 // result, instead of hanging on one long request that may be dropped.
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(
   _request: Request,

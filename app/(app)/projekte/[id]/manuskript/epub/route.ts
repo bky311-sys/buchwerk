@@ -6,7 +6,7 @@ import { coerceSources } from "@/lib/books/sources";
 import { manuscriptDisposition } from "@/lib/books/filename";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function GET(
   _request: Request,

@@ -16,7 +16,7 @@ import { coerceSources } from "@/lib/books/sources";
 import { buildManuscriptPdf, TRIM_W, TRIM_H } from "@/lib/books/manuscript-pdf";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 // KDP full-wrap paperback cover geometry (points; 72 pt = 1 inch).
 const BLEED = 9; // 0.125"

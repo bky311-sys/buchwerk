@@ -4,7 +4,7 @@ import { regenerateOutline } from "@/lib/books/outline-generate";
 // Outline regeneration runs here, not in a Server Action, so the client can fire
 // it and poll the project status for the result instead of blocking on one long
 // request.
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(
   _request: Request,

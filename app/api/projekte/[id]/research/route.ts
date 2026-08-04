@@ -5,7 +5,7 @@ import {
 } from "@/lib/books/research";
 
 // One research stage per request so each stays under the function time limit.
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(
   request: Request,

@@ -5,7 +5,7 @@ import { generateListing } from "@/lib/books/listing-generate";
 // Listing generation runs here, not in a Server Action, so the client can fire
 // it and poll the page for the result instead of blocking on one long request
 // (same pattern as chapters and the outline).
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(
   _request: Request,

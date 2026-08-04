@@ -5,7 +5,7 @@ import type { CoverModel } from "@/lib/ai/replicate";
 // Cover generation (Replicate) runs here, not in a Server Action, so the client
 // can fire it and poll the cover list for the result instead of blocking on one
 // long request.
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(
   request: Request,

@@ -24,8 +24,10 @@ export type GenerateResult = { ok: boolean; error?: string };
 // A chapter "schreiben" status older than this is treated as failed: the
 // serverless function was almost certainly killed (Vercel duration limit) before
 // it could write the result. The UI then offers a retry instead of spinning
-// forever. Keep this comfortably above a realistic generation time.
-export const STALE_GENERATION_MS = 150_000;
+// forever. MUSS über maxDuration der Generate-Route liegen (300 s) — sonst
+// meldet die UI einen noch laufenden Lauf als „fehlgeschlagen" und lädt zum
+// parallelen Zweitversuch ein.
+export const STALE_GENERATION_MS = 330_000;
 
 // The book as a whole must reach at least 7000 words. We aim higher so the total
 // clears the minimum with margin even if a chapter lands a little short.
