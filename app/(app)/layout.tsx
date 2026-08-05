@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/buchwerk/wordmark";
 import { LegalFooter } from "@/components/buchwerk/legal-footer";
+import { PointsBadge } from "@/components/buchwerk/points-badge";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin/access";
 import { signOutAction } from "@/lib/auth/actions";
@@ -31,6 +32,7 @@ export default async function AppLayout({
             <Wordmark />
           </Link>
           <nav className="flex items-center gap-1 sm:gap-2">
+            <PointsBadge />
             <Button asChild variant="ghost" size="lg">
               <Link href="/projekte">Meine Projekte</Link>
             </Button>

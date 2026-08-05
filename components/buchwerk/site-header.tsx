@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/buchwerk/wordmark";
+import { PointsBadge } from "@/components/buchwerk/points-badge";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin/access";
 import { signOutAction } from "@/lib/auth/actions";
@@ -42,6 +43,7 @@ export async function SiteHeader() {
 
           {loggedIn ? (
             <>
+              <PointsBadge />
               {showAdmin ? (
                 <Button asChild variant="ghost" size="lg">
                   <Link href="/admin">Admin</Link>
