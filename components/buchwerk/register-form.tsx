@@ -134,6 +134,24 @@ export function RegisterForm({ weiter }: Props) {
           {isPending ? "Konto wird erstellt…" : "Konto erstellen"}
         </Button>
 
+        <p className="text-center text-xs text-muted-foreground">
+          Mit dem Klick auf „Konto erstellen" akzeptierst du unsere{" "}
+          <Link
+            href="/agb"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            AGB
+          </Link>
+          . Wie wir mit deinen Daten umgehen, steht in der{" "}
+          <Link
+            href="/datenschutz"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            Datenschutzerklärung
+          </Link>
+          .
+        </p>
+
         <p className="text-center text-sm text-muted-foreground">
           Schon registriert?{" "}
           <Link
