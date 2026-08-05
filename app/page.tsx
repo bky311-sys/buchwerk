@@ -302,8 +302,9 @@ function BuchshopTeaser() {
   );
 }
 
-function FaqSection() {
-  const faqs = [
+// Modulebene statt Komponentenscope: dieselben Fragen speisen die sichtbare
+// FAQ-Sektion UND das FAQPage-Schema (Chance auf Rich Results in Google).
+const FAQS = [
     {
       q: "Darf ich ein KI-Buch bei Amazon KDP veröffentlichen?",
       a: "Ja. Amazon KDP erlaubt KI-gestützte Bücher, verlangt bei der Veröffentlichung aber, dass du KI-generierte Inhalte angibst. Du bleibst der verantwortliche Autor — Buchwerk hilft beim Erstellen, du entscheidest und veröffentlichst.",
@@ -324,16 +325,31 @@ function FaqSection() {
       q: "Was kostet mich das wirklich?",
       a: "Thema und Gliederung sind kostenlos. Die Produktion eines Buchs kostet einmalig 19,99 € — kein Abo-Zwang. Wer viel schreibt, nimmt das Abo für 29,99 €/Monat (bis zu 10 Bücher).",
     },
-  ];
+];
+
+function FaqSection() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((faq) => ({
+      "@type": "Question",
+      name: faq.q,
+      acceptedAnswer: { "@type": "Answer", text: faq.a },
+    })),
+  };
 
   return (
     <section className="border-b border-border bg-card">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
         <h2 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           Was Autorinnen und Autoren fragen.
         </h2>
         <dl className="mt-12 grid gap-x-10 gap-y-8 md:grid-cols-2">
-          {faqs.map((faq) => (
+          {FAQS.map((faq) => (
             <div key={faq.q}>
               <dt className="text-lg font-semibold text-foreground">{faq.q}</dt>
               <dd className="mt-2 text-base leading-relaxed text-muted-foreground">

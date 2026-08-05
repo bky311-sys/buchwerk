@@ -75,8 +75,37 @@ export default async function BuchDetailPage({
   const isOwnBook = Boolean(ownRow?.data);
   const loginHref = `/anmelden?weiter=${encodeURIComponent(`/buchshop/${slug}`)}`;
 
+  // Book-Schema für Suchmaschinen — Autor, Cover, Klappentext und (sobald
+  // vorhanden) die aggregierte Bewertung. Amazon-Link bewusst ohne
+  // Affiliate-Tag als workExample-URL, das Tag gehört nur in den Klick-Link.
+  const bookJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Book",
+    name: book.title,
+    ...(book.subtitle ? { alternativeHeadline: book.subtitle } : {}),
+    ...(book.author ? { author: { "@type": "Person", name: book.author } } : {}),
+    ...(book.description ? { description: book.description } : {}),
+    ...(book.coverUrl ? { image: book.coverUrl } : {}),
+    inLanguage: "de",
+    url: `https://buchwerk.info/buchshop/${slug}`,
+    ...(summary.count > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Number(summary.average.toFixed(1)),
+            reviewCount: summary.count,
+            bestRating: 5,
+          },
+        }
+      : {}),
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(bookJsonLd) }}
+      />
       <SiteHeader />
       <main className="flex-1">
         <div className="mx-auto max-w-4xl px-6 py-16">
