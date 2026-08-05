@@ -92,7 +92,13 @@ export default async function ProjektPage({
     project.status === OUTLINE_RUNNING_STATUS &&
     outlineAgeMs < STALE_GENERATION_MS;
 
-  const pollerActive = anyGenerating || outlineGenerating;
+  // Direkt nach dem Stripe-Checkout kann der Webhook noch ein paar Sekunden
+  // brauchen. In dieser Lücke zeigen wir "Zahlung wird verarbeitet" statt der
+  // Paywall — sonst sieht der Kunde unmittelbar nach dem Bezahlen wieder einen
+  // Kauf-Button.
+  const paymentPending = freigeschaltet === "1" && !unlocked;
+
+  const pollerActive = anyGenerating || outlineGenerating || paymentPending;
 
   // Guided workflow: Schreiben → Cover → Listing → Veröffentlichen. (Recherche
   // läuft automatisch in der Kapitel-Pipeline, ist kein eigener Nutzerschritt.)
@@ -172,7 +178,19 @@ export default async function ProjektPage({
       {/* Auto-refreshes the page while a chapter or the outline is generating. */}
       <GenerationPoller active={pollerActive} />
 
-      {!unlocked ? (
+      {paymentPending ? (
+        <div className="mt-6 rounded-2xl border border-border bg-card p-6">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Spinner className="size-4" />
+            Zahlung wird verarbeitet…
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Das dauert meist nur wenige Sekunden — die Seite aktualisiert sich
+            automatisch. Dauert es länger als eine Minute, lade die Seite neu
+            oder melde dich über das Impressum bei uns; dein Geld ist nicht weg.
+          </p>
+        </div>
+      ) : !unlocked ? (
         <div className="mt-6 rounded-2xl border border-border bg-card p-6">
           <p className="text-sm font-semibold">
             Dieses Buch ist noch nicht freigeschaltet.
@@ -243,7 +261,7 @@ export default async function ProjektPage({
               ? "Schreib jedes Kapitel einzeln über den Button darunter — oder alle nacheinander (dauert länger). Reihenfolge, Überschriften und Kurzbeschreibungen kannst du jederzeit anpassen."
               : "Passe Reihenfolge, Überschriften und Kurzbeschreibungen an — kostenlos. Geschrieben wird im Schritt „Schreiben“."}
         </p>
-        {!unlocked && !published ? (
+        {!unlocked && !published && !paymentPending ? (
           <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
             Kapitel generieren kannst du, sobald du das Buch freigeschaltet
             hast —{" "}
