@@ -244,7 +244,7 @@ function PricingSection() {
             </p>
             <div className="mt-6">
               <Button asChild size="lg" className="w-full">
-                <Link href="/registrieren">Kostenlos starten</Link>
+                <Link href="/registrieren">Mit diesem Buch starten</Link>
               </Button>
             </div>
           </div>

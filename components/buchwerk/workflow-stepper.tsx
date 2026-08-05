@@ -29,7 +29,6 @@ export function WorkflowStepper({
   compact?: boolean;
 }) {
   const current = steps.find((s) => s.status === "current");
-  const doneCount = steps.filter((s) => s.status === "done").length;
 
   return (
     <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
@@ -94,7 +93,7 @@ export function WorkflowStepper({
             {current.label}
             <span className="text-muted-foreground">
               {" "}
-              · {doneCount}/{steps.length} erledigt
+              · Schritt {steps.indexOf(current) + 1} von {steps.length}
             </span>
           </p>
           <Button asChild size="lg">
