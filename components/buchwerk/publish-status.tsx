@@ -6,11 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
-import {
-  markPublishedAction,
-  unmarkPublishedAction,
-  updateAmazonUrlAction,
-} from "@/lib/books/publish-actions";
+import { AmazonLinkEditor } from "@/components/buchwerk/amazon-link-editor";
+import { markPublishedAction, unmarkPublishedAction } from "@/lib/books/publish-actions";
 
 // The "published on Amazon KDP" milestone. There's no KDP API, so the author
 // sets it themselves — this completes the workflow and flips the status to
@@ -60,44 +57,8 @@ export function PublishStatus({
             zählt jetzt als erledigt.
           </p>
 
-          <div className="max-w-md space-y-1.5">
-            <Label htmlFor="amazon-published-url">Amazon-Link (optional)</Label>
-            <div className="flex flex-wrap gap-2">
-              <Input
-                id="amazon-published-url"
-                type="url"
-                inputMode="url"
-                value={amazon}
-                onChange={(e) => setAmazon(e.target.value)}
-                disabled={isPending}
-                placeholder="https://www.amazon.de/dp/…"
-                className="min-w-0 flex-1"
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={isPending || amazon.trim() === (amazonUrl ?? "").trim()}
-                onClick={() => run(() => updateAmazonUrlAction(projectId, amazon))}
-              >
-                {isPending ? "…" : "Speichern"}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Kannst du jederzeit nachtragen — der Link erscheint dann auch als
-              „Bei Amazon kaufen“ im Buchwerk-Shop.
-            </p>
-          </div>
+          <AmazonLinkEditor projectId={projectId} amazonUrl={amazonUrl} />
 
-          {amazon.trim() ? (
-            <a
-              href={amazon.trim()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block text-sm font-semibold text-primary underline underline-offset-4"
-            >
-              Zum Buch bei Amazon →
-            </a>
-          ) : null}
           <div>
             <Button
               type="button"

@@ -18,6 +18,7 @@ import { EditableTitle } from "@/components/buchwerk/editable-title";
 import { OutlineActions } from "@/components/buchwerk/outline-actions";
 import { NewEditionButton } from "@/components/buchwerk/new-edition-button";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
+import { AmazonLinkEditor } from "@/components/buchwerk/amazon-link-editor";
 
 export const metadata: Metadata = {
   title: "Projekt — Buchwerk",
@@ -38,7 +39,9 @@ export default async function ProjektPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, topic, audience, status, updated_at, published_at")
+    .select(
+      "id, title, topic, audience, status, updated_at, published_at, amazon_url",
+    )
     .eq("id", id)
     .single();
   if (!project) notFound();
@@ -231,6 +234,12 @@ export default async function ProjektPage({
             eigenständiges neues Buch mit kopiertem Inhalt als Startpunkt. Es
             zählt als eigenes Buch (Freischaltung bzw. Monatsbudget).
           </p>
+          <div className="mt-4">
+            <AmazonLinkEditor
+              projectId={project.id}
+              amazonUrl={project.amazon_url}
+            />
+          </div>
           <div className="mt-4">
             <NewEditionButton projectId={project.id} />
           </div>
