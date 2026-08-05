@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getPublishedBooks } from "@/lib/shop/queries";
+import { ARTIKEL } from "@/lib/ratgeber/articles";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://buchwerk.info";
 
@@ -15,12 +16,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const routes = [
     "",
     "/buchshop",
+    "/ratgeber",
     "/impressum",
     "/datenschutz",
     "/agb",
     "/widerruf",
     "/widerruf-erklaeren",
   ];
+
+  const artikelEntries: MetadataRoute.Sitemap = ARTIKEL.map((artikel) => ({
+    url: `${SITE_URL}/ratgeber/${artikel.slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
 
   let bookEntries: MetadataRoute.Sitemap = [];
   try {
@@ -40,6 +48,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: path === "" ? 1 : 0.6,
     })),
+    ...artikelEntries,
     ...bookEntries,
   ];
 }

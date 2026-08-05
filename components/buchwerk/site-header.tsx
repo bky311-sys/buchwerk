@@ -29,6 +29,14 @@ export async function SiteHeader() {
             size="lg"
             className="hidden sm:inline-flex"
           >
+            <Link href="/ratgeber">Ratgeber</Link>
+          </Button>
+          <Button
+            asChild
+            variant="ghost"
+            size="lg"
+            className="hidden sm:inline-flex"
+          >
             <Link href="/buchshop">Buchshop</Link>
           </Button>
 

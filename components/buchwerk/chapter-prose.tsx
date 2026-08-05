@@ -26,10 +26,18 @@ function inline(text: string): ReactNode {
   );
 }
 
-export function ChapterProse({ content }: { content: string }) {
+export function ChapterProse({
+  content,
+  // Kapitel beginnen mit ihrer eigenen ## Überschrift, die die Seite selbst
+  // rendert — Ratgeber-Artikel nicht (dort ist jedes ## eine echte Zwischenüberschrift).
+  skipFirstHeading = true,
+}: {
+  content: string;
+  skipFirstHeading?: boolean;
+}) {
   const blocks: ReactNode[] = [];
   let list: string[] = [];
-  let firstHeadingSkipped = false;
+  let firstHeadingSkipped = !skipFirstHeading;
 
   const flushList = () => {
     if (!list.length) return;
