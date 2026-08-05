@@ -1,6 +1,5 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { countWords } from "@/lib/books/generate";
 
 // How reading is measured, and what it is worth.
 //
@@ -13,18 +12,28 @@ import { countWords } from "@/lib/books/generate";
 // against what is possible for this platform. Rezenzo mails a PDF and can only
 // ask; we own chapters.content, so a self-declared checkbox would be hard to call
 // adequate. See docs/LESEN-UND-BEWERTEN.md §5.1.
+//
+// Produktentscheidung mit Benjamin (05.08.): Wer letztlich verantwortlich für
+// ehrliches Bewerten ist, ist der Leser — nicht unsere Stoppuhr. Die Messung
+// bleibt deshalb ein niedriger, flacher Boden (KEIN Lesegeschwindigkeits-
+// Scaling nach Wortzahl mehr), der Klick "Kapitel als gelesen markieren" ist
+// die eigentliche Freigabe. Der Server prüft die Schwelle trotzdem selbst nach,
+// bevor er den Klick akzeptiert (reading_progress.confirmed_at) — sonst wäre es
+// exakt die reine Selbstauskunft, die Anhang Nr. 23b uns zu vermeiden aufgibt.
 
 // One heartbeat every 15 s from the client. The server never trusts a client
 // timestamp — it credits at most this much per beat, so replaying beats faster
 // buys nothing.
 export const HEARTBEAT_SECONDS = 15;
 
-// Fastest speed we still call reading. German prose sits around 200–250 wpm;
-// 400 is a hurried skim. Anything above that is scrolling, not reading.
-const SKIM_CAP_WPM = 400;
+// Bewusst NIEDRIG und flach (nicht mehr nach Wortzahl skaliert): zwei
+// Heartbeats, unabhängig von der Kapitellänge. Das ist kein Versuch mehr,
+// Lesegeschwindigkeit durchzusetzen — nur ein leichter technischer Boden unter
+// dem eigentlichen Bestätigungsklick des Lesers.
+const MIN_ACTIVE_SECONDS = HEARTBEAT_SECONDS * 2;
 
 // A chapter counts as read when the reader reached the end AND spent at least
-// the skim-cap time on it. Both are needed: scrolling to the bottom in 3 seconds
+// the minimum time on it. Both are needed: scrolling to the bottom in 3 seconds
 // is not reading, and sitting on page 1 for an hour is not either.
 const CHAPTER_SCROLL_REQUIRED = 0.9;
 
@@ -44,8 +53,10 @@ export type BookReadingState = {
   readChapterIds: string[];
 };
 
-// Does this single chapter count as read? Same rule as in getBookReadingState.
-export function chapterCounts(
+// Technische Mindestschwelle: Scrolltiefe + der niedrige, flache Zeit-Boden.
+// Ist DAS erreicht, wird der Bestätigen-Button klickbar — das Kapitel zählt
+// aber erst, wenn der Leser ihn tatsächlich anklickt (siehe chapterConfirmed).
+export function chapterEligible(
   content: string | null,
   maxScroll: number,
   secondsActive: number,
@@ -56,11 +67,28 @@ export function chapterCounts(
   );
 }
 
+// Zählt dieses Kapitel für die Bewertungsfreigabe? Das ist die eigentliche
+// Freigabe-Aussage: technische Schwelle erreicht UND der Leser hat aktiv
+// bestätigt.
+export function chapterConfirmed(
+  content: string | null,
+  maxScroll: number,
+  secondsActive: number,
+  confirmedAt: string | null,
+): boolean {
+  return (
+    confirmedAt != null && chapterEligible(content, maxScroll, secondsActive)
+  );
+}
+
 export type ChapterProgress = {
   secondsActive: number;
   secondsNeeded: number;
   reachedEnd: boolean;
-  counted: boolean;
+  // Technische Schwelle erreicht — der Bestätigen-Button darf angezeigt werden.
+  eligible: boolean;
+  // Der Leser hat tatsächlich geklickt — DAS zählt für die Bewertungsfreigabe.
+  confirmed: boolean;
 };
 
 /**
@@ -81,7 +109,7 @@ export async function getChapterProgress(
   const admin = createAdminClient();
   const { data } = await admin
     .from("reading_progress")
-    .select("max_scroll, seconds_active")
+    .select("max_scroll, seconds_active, confirmed_at")
     .eq("chapter_id", chapterId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -92,22 +120,22 @@ export async function getChapterProgress(
     secondsActive,
     secondsNeeded: chapterMinSeconds(content),
     reachedEnd: maxScroll >= CHAPTER_SCROLL_REQUIRED,
-    counted: chapterCounts(content, maxScroll, secondsActive),
+    eligible: chapterEligible(content, maxScroll, secondsActive),
+    confirmed: chapterConfirmed(
+      content,
+      maxScroll,
+      secondsActive,
+      data?.confirmed_at ?? null,
+    ),
   };
 }
 
-// Minimum active seconds for a chapter of this length. Rounded DOWN to the
-// heartbeat grid: the server credits time only in whole beats of
-// HEARTBEAT_SECONDS, so a threshold between two beats (151 s) is unreachable at
-// 150 s and silently costs every honest reader one extra beat.
+// Minimum active seconds — niedrig und flach, unabhängig von der Kapitellänge
+// (siehe MIN_ACTIVE_SECONDS oben). `content` bleibt Parameter für die einzige
+// Ausnahme: ein (noch) leeres Kapitel verlangt nichts.
 export function chapterMinSeconds(text: string | null): number {
-  const words = countWords(text ?? "");
-  if (words === 0) return 0;
-  const raw = Math.ceil((words / SKIM_CAP_WPM) * 60);
-  return Math.max(
-    HEARTBEAT_SECONDS,
-    Math.floor(raw / HEARTBEAT_SECONDS) * HEARTBEAT_SECONDS,
-  );
+  if (!text || !text.trim()) return 0;
+  return MIN_ACTIVE_SECONDS;
 }
 
 /**
@@ -125,7 +153,7 @@ export async function getBookReadingState(
     admin.from("chapters").select("id, content").eq("project_id", bookId),
     admin
       .from("reading_progress")
-      .select("chapter_id, max_scroll, seconds_active")
+      .select("chapter_id, max_scroll, seconds_active, confirmed_at")
       .eq("book_id", bookId)
       .eq("user_id", userId),
   ]);
@@ -138,7 +166,9 @@ export async function getBookReadingState(
   const readChapterIds = all
     .filter((c) => {
       const p = byChapter.get(c.id);
-      return p ? chapterCounts(c.content, p.max_scroll, p.seconds_active) : false;
+      return p
+        ? chapterConfirmed(c.content, p.max_scroll, p.seconds_active, p.confirmed_at)
+        : false;
     })
     .map((c) => c.id);
 

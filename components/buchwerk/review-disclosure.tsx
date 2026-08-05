@@ -38,10 +38,11 @@ export function ReviewDisclosure() {
             Bewerten kann nur, wer das Buch hier gelesen hat.
           </strong>{" "}
           Gelesen wird im Buchwerk-Reader; wir messen dabei je Kapitel, wie weit
-          gelesen wurde und wie lange aktiv — und geben das Bewerten erst frei,
-          wenn der größte Teil des Buches so gelesen wurde. Das ist eine
-          Messung, kein Beweis: Wer sie umgehen will, kann das mit Aufwand. Sie
-          macht Schummeln unattraktiver als Lesen, mehr behaupten wir nicht.
+          gelesen wurde und wie lange aktiv. Zählen tut ein Kapitel aber erst,
+          wenn der Leser es selbst per Klick bestätigt — die Messung ist nur
+          die Voraussetzung dafür, nicht die Entscheidung. Das ist keine
+          Beweisführung: Wer sie umgehen will, kann das mit Aufwand. Sie macht
+          Schummeln unattraktiver als Lesen, mehr behaupten wir nicht.
         </li>
         <li>
           Für eine Bewertung gibt es {POINTS_PER_REVIEW} Punkte — immer gleich

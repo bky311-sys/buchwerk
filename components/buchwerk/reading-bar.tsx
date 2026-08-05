@@ -1,23 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 
-// The reader's status bar: sends the heartbeat AND shows what it earned.
+// The reader's status bar: sends the heartbeat, then hands the actual "das
+// zählt als gelesen"-Entscheidung an den Leser selbst.
 //
-// It replaced a silent tracker. That version measured correctly and said
-// nothing, so the first real reader read several chapters, saw a book counter
-// still at 0 and concluded it was broken. Measuring without telling is a bug.
+// Produktentscheidung mit Benjamin (05.08.): Ehrliches Bewerten ist die
+// Verantwortung des Lesers, nicht unserer Stoppuhr. Die Messung (Scrolltiefe +
+// ein niedriger, flacher Zeit-Boden) bleibt als leichter technischer Unterbau
+// bestehen — Anhang Nr. 23b UWG verlangt "angemessene" Verifikation, eine reine
+// Selbstauskunft ohne jede Prüfung wäre das nicht. Aber sobald die Schwelle
+// erreicht ist, zählt das Kapitel erst, wenn der Leser aktiv auf "Kapitel als
+// gelesen markieren" klickt — nicht automatisch im Hintergrund.
 //
-// Why the numbers are public now: hiding the threshold protected nothing. To
-// fake this you must simulate interaction every 60 s and 90 % scroll depth, for
-// every chapter — that costs the same whether the threshold is secret or not.
-// Secrecy only punished honest readers, who had no way to know the page was
-// working.
+// Warum die Zahlen weiterhin sichtbar sind: hiding the threshold protected
+// nothing. Secrecy only punished honest readers, who had no way to know the
+// page was working.
 //
 // Placement is deliberate: BOTTOM, not top. A meta-analysis over 32 experiments
 // found progress indicators backfire when early progress disappoints — top
-// placement raised drop-off, bottom placement improved completion. A book
-// chapter is exactly the "slow early progress" case.
+// placement raised drop-off, bottom placement improved completion.
 //
 // A beat is only sent when the tab is visible AND the reader interacted within
 // IDLE_MS. Wall-clock time would make an open background tab a valid read (the
@@ -32,21 +35,9 @@ type Props = {
   secondsActive: number;
   secondsNeeded: number;
   reachedEnd: boolean;
-  counted: boolean;
+  eligible: boolean;
+  confirmed: boolean;
 };
-
-// Elapsed time rounds DOWN, the requirement rounds UP — so the text can never
-// show "2 Min. von 2 Min." while the threshold is not actually met yet (90 s
-// used to display as "2 Min." and made honest readers think the bar hung).
-function minutesDown(seconds: number): string {
-  if (seconds < 60) return "unter 1 Min.";
-  return `${Math.floor(seconds / 60)} Min.`;
-}
-
-function minutesUp(seconds: number): string {
-  if (seconds <= 60) return "1 Min.";
-  return `${Math.ceil(seconds / 60)} Min.`;
-}
 
 export function ReadingBar(props: Props) {
   const lastInteraction = useRef(0);
@@ -54,7 +45,10 @@ export function ReadingBar(props: Props) {
 
   const [seconds, setSeconds] = useState(props.secondsActive);
   const [reachedEnd, setReachedEnd] = useState(props.reachedEnd);
-  const [counted, setCounted] = useState(props.counted);
+  const [eligible, setEligible] = useState(props.eligible);
+  const [confirmed, setConfirmed] = useState(props.confirmed);
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     lastInteraction.current = Date.now();
@@ -102,7 +96,7 @@ export function ReadingBar(props: Props) {
         .then(
           (
             data: {
-              chapterRead?: boolean;
+              eligible?: boolean;
               secondsActive?: number;
             } | null,
           ) => {
@@ -110,7 +104,7 @@ export function ReadingBar(props: Props) {
             if (typeof data.secondsActive === "number") {
               setSeconds(data.secondsActive);
             }
-            if (data.chapterRead) setCounted(true);
+            if (data.eligible) setEligible(true);
           },
         )
         .catch(() => {
@@ -128,6 +122,28 @@ export function ReadingBar(props: Props) {
     };
   }, [props.chapterId]);
 
+  function confirm() {
+    setConfirming(true);
+    setError(null);
+    fetch("/api/lesen/confirm", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chapterId: props.chapterId }),
+    })
+      .then(async (r) => {
+        if (!r.ok) {
+          const data = (await r.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          setError(data?.error ?? "Konnte nicht bestätigt werden.");
+          return;
+        }
+        setConfirmed(true);
+      })
+      .catch(() => setError("Konnte nicht bestätigt werden — versuch's noch mal."))
+      .finally(() => setConfirming(false));
+  }
+
   const pct = props.secondsNeeded
     ? Math.min(100, Math.round((seconds / props.secondsNeeded) * 100))
     : 100;
@@ -135,10 +151,29 @@ export function ReadingBar(props: Props) {
   return (
     <div className="sticky bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur">
       <div className="mx-auto flex max-w-3xl items-center gap-4 px-6 py-3">
-        {counted ? (
+        {confirmed ? (
           <p className="text-sm font-medium text-primary">
             ✓ Dieses Kapitel zählt als gelesen
           </p>
+        ) : eligible ? (
+          <div className="flex flex-1 flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              Fertig gelesen?
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={confirming}
+                onClick={confirm}
+              >
+                {confirming ? "…" : "Kapitel als gelesen markieren"}
+              </Button>
+              {error ? (
+                <span className="text-xs text-destructive">{error}</span>
+              ) : null}
+            </div>
+          </div>
         ) : (
           <>
             <div className="min-w-0 flex-1">
@@ -150,10 +185,7 @@ export function ReadingBar(props: Props) {
               </div>
             </div>
             <p className="shrink-0 text-xs text-muted-foreground">
-              {seconds >= props.secondsNeeded
-                ? "Lesezeit ✓"
-                : `Lesezeit ${minutesDown(seconds)} von ${minutesUp(props.secondsNeeded)}`}
-              {reachedEnd ? " · bis zum Ende ✓" : " · bis zum Ende scrollen"}
+              {reachedEnd ? "Bis zum Ende ✓" : "Bis zum Ende scrollen"}
             </p>
           </>
         )}

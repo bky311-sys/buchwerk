@@ -132,11 +132,10 @@ export default async function ReaderPage({ params }: Props) {
             and concluded the page was broken. */}
         {state && index === 0 && !state.hasReadEnough ? (
           <p className="mt-5 rounded-xl border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
-            Damit deine Bewertung etwas wert ist, zählt hier nur echtes Lesen: Ein
-            Kapitel gilt als gelesen, wenn du es bis zum Ende und in
-            Lesegeschwindigkeit gelesen hast. Unten siehst du, wo du stehst. Ab{" "}
-            {state.chaptersRequired} von {state.chaptersTotal} Kapiteln kannst du
-            das Buch bewerten.
+            Ein Kapitel zählt, wenn du es bestätigst — das geht, sobald du bis
+            zum Ende gescrollt und kurz aktiv dabei warst. Ab{" "}
+            {state.chaptersRequired} von {state.chaptersTotal} bestätigten
+            Kapiteln kannst du das Buch bewerten.
           </p>
         ) : null}
 
@@ -202,7 +201,8 @@ export default async function ReaderPage({ params }: Props) {
           secondsActive={progress.secondsActive}
           secondsNeeded={progress.secondsNeeded}
           reachedEnd={progress.reachedEnd}
-          counted={progress.counted}
+          eligible={progress.eligible}
+          confirmed={progress.confirmed}
         />
       ) : null}
     </>

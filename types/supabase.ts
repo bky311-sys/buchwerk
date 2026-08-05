@@ -520,6 +520,7 @@ export interface Database {
           user_id: string;
           max_scroll: number;
           seconds_active: number;
+          confirmed_at: string | null;
           first_opened_at: string;
           updated_at: string;
         };
@@ -530,6 +531,7 @@ export interface Database {
           user_id: string;
           max_scroll?: number;
           seconds_active?: number;
+          confirmed_at?: string | null;
           first_opened_at?: string;
           updated_at?: string;
         };
@@ -540,6 +542,7 @@ export interface Database {
           user_id?: string;
           max_scroll?: number;
           seconds_active?: number;
+          confirmed_at?: string | null;
           first_opened_at?: string;
           updated_at?: string;
         };

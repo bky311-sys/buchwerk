@@ -376,6 +376,17 @@ Dazu ein zweiter Denkfehler: Der Countdown fehlte bewusst („Anleitung zum Auss
 
 **Dabei gefixt:** `CRON_SECRET` fehlte in Production — auch der bestehende Mail-Poll-Cron lief seit jeher gegen 401. Jetzt gesetzt (Kopie in `~/.buchwerk_cron_secret` für manuelle Läufe via `?secret=`). Merke außerdem: Structured-Output-Schemas brauchen `additionalProperties: false` auf JEDEM Objekt, sonst 400.
 
+### 2026-08-05: "Nutzer bestätigt = Freigabe" — Kapitel-Lesen entkoppelt Messung von Freigabe
+**Grund:** Benjamins Einwand: Ist es wirklich unsere Verantwortung, ob jemand in der "richtigen" Geschwindigkeit liest? Der Leser ist selbst für ehrliches Bewerten verantwortlich — wir sollten uns nicht zu viel Verantwortung aufhalsen. Gegenargument war der rechtliche Rahmen (Anhang Nr. 23b UWG verlangt "angemessene" Verifikation, eine reine Selbstauskunft wäre bei uns — die wir den Text besitzen und messen KÖNNTEN — schwer zu rechtfertigen). Einigung: Mittelweg.
+
+**Umgesetzt:**
+- `chapterMinSeconds` skaliert nicht mehr nach Wortzahl (**kein Lesegeschwindigkeits-Cap mehr**) — flacher, niedriger Boden: `HEARTBEAT_SECONDS * 2` = 30 s, unabhängig von der Kapitellänge. Scrolltiefe (90 %) bleibt unverändert.
+- Das Erreichen dieser (niedrigen) Schwelle schaltet nur noch einen **Button** frei ("Kapitel als gelesen markieren", `ReadingBar`) — bis dahin hieß `chapterCounts` sofort "zählt als gelesen". Jetzt zwei getrennte Zustände: `chapterEligible` (Button erscheint) vs. `chapterConfirmed` (Leser hat geklickt, zählt für die Bewertungsfreigabe). Neue Spalte `reading_progress.confirmed_at` (Migration `20260805130000`).
+- Neuer Endpunkt `POST /api/lesen/confirm`: prüft die Schwelle server-seitig UNABHÄNGIG nach, bevor er den Klick akzeptiert — sonst wäre es die reine, ungeprüfte Selbstauskunft, die Anhang Nr. 23b vermeiden helfen soll. Idempotent (zweiter Klick/Reload ist kein Fehler).
+- `getBookReadingState`/`getChapterProgress` zählen jetzt nach `confirmed_at`, nicht mehr nach der reinen Messung. `ReviewDisclosure`-Text angepasst: die Messung ist "nur die Voraussetzung, nicht die Entscheidung".
+
+**Bewusst NICHT verändert:** Scrolltiefe (90 %), der `BOOK_CHAPTER_SHARE_REQUIRED` (80 % der Kapitel), das Punktesystem. Der Klick ist der neue Kern — die Messung bleibt ein leichter Unterbau, kein Zwang.
+
 ---
 
 ## Bei Zweifeln

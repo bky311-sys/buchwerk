@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriber } from "@/lib/billing/access";
-import { HEARTBEAT_SECONDS, chapterCounts } from "@/lib/shop/reading";
+import { HEARTBEAT_SECONDS, chapterEligible } from "@/lib/shop/reading";
 
 // Records reading progress for one chapter. The client calls this every
 // HEARTBEAT_SECONDS while the tab is visible and recently interacted with.
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   if (book.user_id === user.id) {
     // Authors may read their own book, but it earns no progress — there is
     // nothing to review and nothing to prove.
-    return NextResponse.json({ ok: true, secondsActive: 0, chapterRead: false });
+    return NextResponse.json({ ok: true, secondsActive: 0, eligible: false });
   }
   if (!(await isSubscriber(supabase, user.id))) {
     return NextResponse.json({ error: "Kein Zugriff." }, { status: 402 });
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       secondsActive: HEARTBEAT_SECONDS,
-      chapterRead: chapterCounts(chapter.content, scroll, HEARTBEAT_SECONDS),
+      eligible: chapterEligible(chapter.content, scroll, HEARTBEAT_SECONDS),
     });
   }
 
@@ -108,13 +108,15 @@ export async function POST(request: Request) {
     })
     .eq("id", existing.id);
 
-  // Report back whether this chapter now counts, so the reader can say so
+  // Report back whether the button may now be shown, so the reader sees it
   // immediately. Without live feedback the book-level counter sits at 0 for
   // minutes and honest readers conclude the tracking is broken — which is what
-  // happened on the very first real read-through.
+  // happened on the very first real read-through. Confirming is a separate,
+  // explicit step (POST /api/lesen/confirm) — the heartbeat never marks a
+  // chapter as read on its own.
   return NextResponse.json({
     ok: true,
     secondsActive,
-    chapterRead: chapterCounts(chapter.content, maxScroll, secondsActive),
+    eligible: chapterEligible(chapter.content, maxScroll, secondsActive),
   });
 }

@@ -8,6 +8,26 @@ Ergänzt `BUCHSHOP.md` (= Modulbeschreibung). Bei Widerspruch gilt dieses Dokume
 
 ---
 
+## STAND 05.08.2026 — Verantwortungsverschiebung: Nutzer bestätigt = Freigabe
+
+**Produktentscheidung (mit Benjamin):** Die Geschwindigkeitsmessung galt vielen
+als übergriffig — "ist das unsere Verantwortung, ob jemand in der richtigen
+Geschwindigkeit liest?" Antwort: teils. Rechtlich (Anhang Nr. 23b UWG) brauchen
+wir weiter eine "angemessene" Verifikation, aber die eigentliche "das zählt
+als gelesen"-Aussage soll der Leser selbst treffen, nicht unsere Stoppuhr im
+Hintergrund.
+
+**Umgesetzt:** `chapterMinSeconds` skaliert nicht mehr nach Wortzahl — flacher
+Boden von 30 s (2 Heartbeats), egal wie lang das Kapitel ist. Ist die Schwelle
+(Scroll 90 % + 30 s) erreicht, erscheint ein Button „Kapitel als gelesen
+markieren" statt dass die Leiste sich still selbst umschaltet. Erst der Klick
+(`POST /api/lesen/confirm`, serverseitig gegen die Schwelle nachgeprüft,
+schreibt `reading_progress.confirmed_at`) zählt für die Bewertungsfreigabe.
+Scrolltiefe, `BOOK_CHAPTER_SHARE_REQUIRED` (80 %) und das Punktesystem sind
+unverändert. Details im CLAUDE.md-Entscheidungslog 05.08.
+
+---
+
 ## STAND 01.08.2026 — Bewertungs-Flow KOMPLETT verifiziert
 
 **Alles getestet, alles bestanden** (01.08., als Autor im UI, gegen Prod-DB
