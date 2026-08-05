@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   // Google hatte die Seite u. a. unter www. indexiert; zusammen mit dem
   // www-Redirect macht das die Nicht-www-URLs zur eindeutigen Referenz.
   alternates: { canonical: "./" },
+  // Search-Console-Verifizierung des GSC-Dienstkontos (gsc-claude@buchwerk-prod).
+  verification: { google: "-WFb2Lb4fa7-9pdmYTaFG00d-UtXtnep-grBs8tut0U" },
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
