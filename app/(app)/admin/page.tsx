@@ -43,7 +43,10 @@ export default async function AdminPage() {
       .select("id, email, plan, created_at")
       .order("created_at", { ascending: false }),
     supabase.from("projects").select("user_id"),
-    supabase.from("purchases").select("id", { count: "exact", head: true }),
+    supabase
+      .from("purchases")
+      .select("id", { count: "exact", head: true })
+      .is("refunded_at", null),
     supabase
       .from("subscriptions")
       .select("user_id", { count: "exact", head: true })

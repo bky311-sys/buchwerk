@@ -372,6 +372,7 @@ export interface Database {
           stripe_checkout_session_id: string | null;
           amount_cents: number | null;
           created_at: string;
+          refunded_at: string | null;
         };
         Insert: {
           id?: string;
@@ -380,6 +381,7 @@ export interface Database {
           stripe_checkout_session_id?: string | null;
           amount_cents?: number | null;
           created_at?: string;
+          refunded_at?: string | null;
         };
         Update: {
           id?: string;
@@ -388,6 +390,7 @@ export interface Database {
           stripe_checkout_session_id?: string | null;
           amount_cents?: number | null;
           created_at?: string;
+          refunded_at?: string | null;
         };
         Relationships: [
           {

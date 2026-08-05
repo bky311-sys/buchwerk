@@ -135,6 +135,43 @@ export async function POST(request: Request) {
       break;
     }
 
+    case "charge.refunded": {
+      const charge = event.data.object as unknown as {
+        refunded: boolean;
+        payment_intent?: string | null;
+      };
+      // Nur vollständige Erstattungen nehmen die Freischaltung zurück —
+      // Teil-Erstattungen (Kulanz) lassen das Buch freigeschaltet.
+      if (!charge.refunded || !charge.payment_intent) break;
+
+      // Die Charge kennt die Checkout-Session nicht direkt; wir finden sie
+      // über den Payment Intent. Abo-Rechnungen haben keine Session mit
+      // kind=book und fallen hier automatisch durch.
+      const { data: sessions } = await stripe.checkout.sessions.list({
+        payment_intent: charge.payment_intent,
+        limit: 1,
+      });
+      const sessionId = sessions[0]?.id;
+      if (!sessionId) break;
+
+      const { data: purchase } = await admin
+        .from("purchases")
+        .update({ refunded_at: new Date().toISOString() })
+        .eq("stripe_checkout_session_id", sessionId)
+        .is("refunded_at", null)
+        .select("project_id")
+        .maybeSingle();
+
+      if (purchase?.project_id) {
+        await admin
+          .from("book_unlocks")
+          .delete()
+          .eq("project_id", purchase.project_id)
+          .eq("source", "purchase");
+      }
+      break;
+    }
+
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       const sub = event.data.object as unknown as StripeSubLike;
