@@ -47,6 +47,35 @@ function chapterWordTarget(chapterCount: number): number {
   return Math.ceil(TARGET_TOTAL_WORDS / count);
 }
 
+// What the already-written chapters cover, as heading + their ### subheadings.
+// This goes into the chapter prompt so the model stops re-explaining the same
+// ground in every chapter — the most common flaw of AI-written books. Chapters
+// were previously written fully independently (only the outline as context).
+// Subheadings are extracted with a regex, so this costs no extra model call.
+export function summarizeWrittenChapters(
+  chapters: Array<{
+    position: number;
+    heading: string;
+    content?: string | null;
+  }>,
+  excludePosition: number,
+): string {
+  const lines: string[] = [];
+  for (const c of chapters) {
+    if (c.position === excludePosition || !c.content?.trim()) continue;
+    const subheads = [...c.content.matchAll(/^###\s+(.+)$/gm)]
+      .map((m) => m[1].trim())
+      .slice(0, 12);
+    lines.push(
+      `Kapitel ${c.position} „${c.heading}“` +
+        (subheads.length ? ` behandelt bereits: ${subheads.join("; ")}` : ""),
+    );
+  }
+  return lines.length
+    ? lines.join("\n")
+    : "(Noch keine anderen Kapitel geschrieben.)";
+}
+
 /**
  * Writes one chapter's content with Claude.
  *
@@ -139,15 +168,21 @@ export async function generateChapterContent(
     .update({ status: "schreiben" })
     .eq("id", chapter.id);
 
+  // content is included so the prompt can list what sibling chapters already
+  // cover (anti-repetition context) — server-side only, never sent to the UI.
   const { data: allChapters } = await supabase
     .from("chapters")
-    .select("position, heading, summary")
+    .select("position, heading, summary, content")
     .eq("project_id", chapter.project_id)
     .order("position");
 
   const gliederung = (allChapters ?? [])
     .map((c) => `${c.position}. ${c.heading} — ${c.summary ?? ""}`)
     .join("\n");
+  const bisherigeKapitel = summarizeWrittenChapters(
+    allChapters ?? [],
+    chapter.position,
+  );
 
   // A chapter write must ALWAYS finish inside the function limit and never abort.
   // Web research (~2–3 min) therefore runs as its own decoupled request, not
@@ -164,6 +199,7 @@ export async function generateChapterContent(
     zielgruppe: project.audience ?? DEFAULT_AUDIENCE,
     recherche,
     wortziel: String(wortziel),
+    bisherige_kapitel: bisherigeKapitel,
   };
 
   try {

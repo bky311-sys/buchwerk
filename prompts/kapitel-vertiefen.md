@@ -7,6 +7,9 @@ Zielgruppe: {{zielgruppe}}
 Recherche-Dossier (belegte Fakten, Zahlen und Quellen — nutze es aktiv):
 {{recherche}}
 
+Bereits geschriebene Kapitel und was sie behandeln (beim Erweitern NICHT wiederholen, stattdessen kurz verweisen):
+{{bisherige_kapitel}}
+
 Bisheriges Kapitel:
 {{aktueller_text}}
 

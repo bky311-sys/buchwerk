@@ -15,6 +15,13 @@ const TEXTAREA_CLASS =
 
 type Mode = "view" | "edit" | "revise";
 
+// Ein-Klick-Korrektorat: feste, eng gefasste Anweisung für den bestehenden
+// Lektorat-Flow. Die Zielgruppe (Anfänger) weiß sonst nicht, WAS sie dem
+// Lektor auftragen soll — das hier ist der häufigste Auftrag, fertig
+// formuliert und bewusst ohne inhaltliche Eingriffe.
+const PROOFREAD_INSTRUCTION =
+  "Korrigiere ausschließlich Rechtschreibung, Grammatik und Zeichensetzung nach aktueller deutscher Rechtschreibung. Ändere keine Inhalte, keine Beispiele, keine Struktur und keine Formulierungen, die bereits korrekt sind — nur echte Fehler.";
+
 export function ChapterContent({
   chapterId,
   content,
@@ -42,10 +49,13 @@ export function ChapterContent({
     });
   }
 
-  function revise() {
+  function revise(instructionOverride?: string) {
     setError(null);
     startTransition(async () => {
-      const result = await reviseChapterAction(chapterId, instruction);
+      const result = await reviseChapterAction(
+        chapterId,
+        instructionOverride ?? instruction,
+      );
       if (result.ok) {
         setInstruction("");
         setMode("view");
@@ -119,7 +129,7 @@ export function ChapterContent({
             <Button
               type="button"
               size="sm"
-              onClick={revise}
+              onClick={() => revise()}
               disabled={isPending || !instruction.trim()}
             >
               {isPending ? "Wird überarbeitet… (~30 Sek.)" : "Überarbeiten"}
@@ -169,6 +179,21 @@ export function ChapterContent({
           >
             Mit KI überarbeiten
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isPending}
+            onClick={() => revise(PROOFREAD_INSTRUCTION)}
+            title="Korrigiert nur Rechtschreibung, Grammatik und Zeichensetzung — keine inhaltlichen Änderungen."
+          >
+            {isPending ? "Korrektorat läuft… (~30 Sek.)" : "Korrektorat"}
+          </Button>
+          {error ? (
+            <p role="alert" className="w-full text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
         </div>
       )}
     </div>
