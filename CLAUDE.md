@@ -387,6 +387,24 @@ Dazu ein zweiter Denkfehler: Der Countdown fehlte bewusst („Anleitung zum Auss
 
 **Bewusst NICHT verändert:** Scrolltiefe (90 %), der `BOOK_CHAPTER_SHARE_REQUIRED` (80 % der Kapitel), das Punktesystem. Der Klick ist der neue Kern — die Messung bleibt ein leichter Unterbau, kein Zwang.
 
+### 2026-08-11: QS-/Daten-Ausbau — Qualitätsbericht, Marktdaten statt Bauchgefühl, Feedback-Loops
+**Grund:** Workflow-Review aus Kundensicht: Die QS bestand faktisch nur aus der Wortzahl-Prüfung, Nischen-`demand`/`competition` waren reine LLM-Schätzung, und Amazon-Daten wurden nirgends ausgewertet (Amazon kam nur als Affiliate-Link vor). Migration `20260811120000_qs_marktdaten_metriken.sql`. Sechs Bausteine:
+
+1. **QS-Bericht vor Export** (`lib/books/quality-report.ts`, `prompts/qs-bericht.md`, `POST /api/projekte/[id]/qs`, Panel auf der Veröffentlichen-Seite): ein strenger Lektorats-Pass übers ganze Manuskript (Wiederholungen zwischen Kapiteln, Widersprüche, Fakten vs. Dossier, KI-Floskeln, Stil, Struktur, Rechtschreibung) mit Score + Befundliste, plus **deterministischer Link-Check aller Kapitel-Quellen** (HEAD/GET, LLMs erfinden URLs trotz Verbot). Setzt die seit KONZEPT §8.3 offene Gegenmaßnahme „Qualitäts-Check vor Export" um. Fire+Poll über `projects.quality_status`; Schreibzugriffe nur über Admin-Client → bewusst keine neuen Spalten-Grants (42501-Lehre).
+2. **Anti-Wiederholung beim Kapitelschreiben** (`summarizeWrittenChapters` in `generate.ts`): Kapitel wurden völlig isoliert geschrieben — häufigster Mangel KI-Bücher. Der Prompt bekommt jetzt Überschrift + ###-Unterthemen aller fertigen Geschwister-Kapitel (Regex, kein Extra-Call) plus explizite Nicht-wiederholen-Regel; gilt auch für den Vertiefen-Pass.
+3. **Ein-Klick-Korrektorat** (`chapter-content.tsx`): feste, eng gefasste Korrektur-Anweisung für den bestehenden Lektorat-Flow — die Zielgruppe weiß sonst nicht, was sie beauftragen soll. Dabei Bugfix: `onClick={revise}` hätte nach der Signatur-Erweiterung das Klick-Event als Anweisung übergeben.
+4. **Nischen-Validierung gegen echte Amazon-Zahlen** (`validateNiches`, `prompts/nischen-validierung.md`): der LLM schlägt vor, Marktdaten entscheiden. Der Cron `/api/cron/nischen` läuft jetzt **täglich** (Mo: 24er-Kandidaten-Batch mit 8 statt 4 Websuchen; Di–So: je 4 Kandidaten per Web-Search validieren — Marktführer-Bewertungen, Titel-Alter, Preisspanne). `verdict: "schwach"` → `check_status: "verworfen"`, erreicht die UI nie. Karten zeigen echte Zahlen + „Amazon-geprüft"; Marktdaten in **eigener** Best-effort-Abfrage (Sammel-SELECT-Regel). Klick-Zähler `niche_pool.starts` („Dieses Buch starten") als Feedback-Signal.
+5. **Marktcheck pro Projekt** (`lib/books/market-check.ts`, `prompts/marktcheck.md`, `POST /api/projekte/[id]/marktcheck`, Panel auf der KDP-Seite): echte Wettbewerber (Titel/Jahr/Preis/Bewertungen) per Web-Search + **Amazon-Autocomplete-Suchvorschläge** (completion.amazon.de, unauthentifiziert, best-effort). Das KDP-Listing bekommt `{{marktdaten}}` + `{{wortzahl}}`: Keywords bevorzugt aus echten Suchvorschlägen, Preisempfehlung an Wettbewerberpreisen und Umfang verankert statt geschätzt.
+6. **Amazon-Metriken-Cron** (`lib/books/amazon-metrics.ts`, im täglichen Cron): für veröffentlichte Bücher mit `amazon_url` täglich BSR/Bewertungen/Preis in `book_metrics` (Ground Truth, welche Nischen verkaufen; Admin zeigt Trend). Direkter HTML-Fetch, **best-effort**: Amazon-Blocks (503/Captcha) werden als `ok=false` protokolliert, nie eskaliert; kein Retry/Hammering. Wird das dauerhaft blockiert, ist die PA-API (Associates-Konto existiert) der saubere Upgrade-Pfad.
+
+Dazu **Kosten-Deckel geschlossen** (offener Punkt aus 2026-07-15): `lib/books/run-limits.ts` mit stillen Lauf-Limits über neue `projects.*_runs`-Spalten für Gliederung (8), Recherche-Starts (5), Listing (10), Cover (40 — Flux kostet echtes Geld), QS (8), Marktcheck (5). Zählung vor dem Modell-Call, best-effort ohne Migration, Admin-Client (keine Grants).
+
+**Cron-Architektur:** Vercel Hobby erlaubt nur 2 Cron-Jobs à 1×/Tag → `/api/cron/nischen` ist jetzt der tägliche Sammel-Dispatcher (Nischen-Generierung/-Validierung + Amazon-Metriken), `vercel.json` auf `0 4 * * *`. Manuell: `?generate=1` erzwingt einen frischen Batch.
+
+**Admin neu:** Amazon-Metriken mit Trend, Regenerier-Hotspots (`generation_count` ≥ 3 = Prompt-Verbesserungs-Signal), Nischen-Klicks.
+
+**Go-live:** (1) Migration `20260811120000` einspielen (aller Code ist ohne sie best-effort lauffähig, die Features bleiben dann unsichtbar/ungezählt). (2) Erster Batch mit Validierung: `/api/cron/nischen?secret=…&generate=1` manuell aufrufen. (3) Amazon-Blockrate nach ein paar Tagen im Admin prüfen.
+
 ---
 
 ## Bei Zweifeln

@@ -250,7 +250,7 @@ export default async function AdminPage() {
             Nischen-Vorschläge: Klicks
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            „Dieses Buch starten"-Klicks pro Nische — welche Vorschläge ziehen.
+            „Dieses Buch starten“-Klicks pro Nische — welche Vorschläge ziehen.
           </p>
           <ul className="mt-4 divide-y divide-border border-t border-border">
             {(nicheStarts ?? []).map((n, i) => (
