@@ -53,6 +53,9 @@ export function NicheFinder({
     "alle",
   );
   const [shown, setShown] = useState(SHOWN_STEP);
+  // Lange Cron-Begründungen (~500 Zeichen) machten die Karten unscanbar —
+  // deshalb 3-Zeilen-Clamp mit Aufklappen pro Karte (Review-Fund 11.08.).
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const matches = useMemo(() => {
     const filtered = niches.filter((n) => {
@@ -183,9 +186,40 @@ export function NicheFinder({
                 <p className="mt-1 text-xs text-muted-foreground">
                   {niche.audience}
                 </p>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-foreground">
-                  {niche.market?.begruendung || niche.pitch}
-                </p>
+                <div className="mt-2 flex-1">
+                  {(() => {
+                    const text = niche.market?.begruendung || niche.pitch;
+                    const isOpen = expanded.has(niche.id);
+                    const clampable = text.length > 180;
+                    return (
+                      <>
+                        <p
+                          className={`text-sm leading-relaxed text-foreground ${
+                            clampable && !isOpen ? "line-clamp-3" : ""
+                          }`}
+                        >
+                          {text}
+                        </p>
+                        {clampable ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpanded((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(niche.id)) next.delete(niche.id);
+                                else next.add(niche.id);
+                                return next;
+                              })
+                            }
+                            className="mt-1 text-xs font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+                          >
+                            {isOpen ? "Weniger anzeigen" : "Mehr anzeigen"}
+                          </button>
+                        ) : null}
+                      </>
+                    );
+                  })()}
+                </div>
                 {niche.market ? (
                   <p className="mt-2 text-xs text-muted-foreground">
                     {[

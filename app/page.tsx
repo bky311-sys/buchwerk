@@ -323,7 +323,7 @@ const FAQS = [
     },
     {
       q: "Was kostet mich das wirklich?",
-      a: "Thema und Gliederung sind kostenlos. Die Produktion eines Buchs kostet einmalig 19,99 € — kein Abo-Zwang. Wer viel schreibt, nimmt das Abo für 29,99 €/Monat (bis zu 10 Bücher).",
+      a: "Thema und Gliederung sind kostenlos. Die Produktion eines Buchs kostet einmalig 19,99 € — kein Abo-Zwang. Wer viel schreibt, nimmt das Abo für 29,99 €/Monat — bis zu 10 Bücher pro Monat (faire Nutzung).",
     },
 ];
 

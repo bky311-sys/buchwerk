@@ -29,7 +29,7 @@ export default async function KdpPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, topic")
+    .select("id, title, topic, published_at")
     .eq("id", id)
     .single();
   if (!project) notFound();
@@ -93,6 +93,8 @@ export default async function KdpPage({
           snapshot={marketSnapshot}
           isRunning={marketRunning}
           hasFailed={marketFailed}
+          hasListing={Boolean(listing?.title)}
+          published={Boolean(project.published_at)}
         />
       ) : null}
 

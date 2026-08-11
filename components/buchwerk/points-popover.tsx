@@ -46,8 +46,18 @@ export function PointsPopover({
         className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/70"
       >
         <span aria-hidden>★</span>
-        <span className="tabular-nums">{points}</span>
-        <span className="hidden sm:inline">Punkte</span>
+        {points === 0 ? (
+          // Bei 0 wirkt „★ 0 Punkte" wie ein leerer Kontostand — als Einladung
+          // formuliert klickt man eher (Review-Fund 11.08.).
+          <span>
+            Punkte<span className="hidden sm:inline"> sammeln</span>
+          </span>
+        ) : (
+          <>
+            <span className="tabular-nums">{points}</span>
+            <span className="hidden sm:inline">Punkte</span>
+          </>
+        )}
       </button>
 
       {open ? (
@@ -56,7 +66,9 @@ export function PointsPopover({
           className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-border bg-card p-4 shadow-lg"
         >
           <p className="font-display text-sm font-semibold text-foreground">
-            Du hast {points} {points === 1 ? "Punkt" : "Punkte"}
+            {points === 0
+              ? "So sammelst du Punkte"
+              : `Du hast ${points} ${points === 1 ? "Punkt" : "Punkte"}`}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             Du bekommst {pointsPerReview} Punkte für jede Bewertung eines

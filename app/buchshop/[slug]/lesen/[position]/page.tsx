@@ -127,10 +127,10 @@ export default async function ReaderPage({ params }: Props) {
           </nav>
         ) : null}
 
-        {/* Explained once, on the first chapter. The rule was invisible before,
-            which is why an honest reader read four chapters, saw a counter at 0
-            and concluded the page was broken. */}
-        {state && index === 0 && !state.hasReadEnough ? (
+        {/* Shown on EVERY chapter page until the first chapter is confirmed —
+            readers often enter mid-book via the chapter strip and never saw the
+            index===0 version, then wondered why their counter stayed at 0. */}
+        {state && readIds.size === 0 && !state.hasReadEnough ? (
           <p className="mt-5 rounded-xl border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
             Ein Kapitel zählt, wenn du es bestätigst — das geht, sobald du bis
             zum Ende gescrollt und kurz aktiv dabei warst. Ab{" "}

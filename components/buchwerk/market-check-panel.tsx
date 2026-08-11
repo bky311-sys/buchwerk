@@ -16,11 +16,15 @@ export function MarketCheckPanel({
   snapshot,
   isRunning,
   hasFailed,
+  hasListing = false,
+  published = false,
 }: {
   projectId: string;
   snapshot: MarketSnapshot | null;
   isRunning: boolean;
   hasFailed: boolean;
+  hasListing?: boolean;
+  published?: boolean;
 }) {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +66,12 @@ export function MarketCheckPanel({
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
         Echte Amazon-Konkurrenz zu deinem Thema — Titel, Preise, Bewertungen und
-        was Käufer wirklich suchen. Das Listing nutzt diese Daten für Keywords
-        und Preisempfehlung: erst Marktcheck, dann Listing generieren.
+        was Käufer wirklich suchen.{" "}
+        {published
+          ? "Dein Buch ist bereits veröffentlicht — nutze den Marktcheck, um Preis und Konkurrenz im Blick zu behalten."
+          : hasListing
+            ? "Dein Listing steht schon. Ein frischer Marktcheck lohnt sich, wenn du Keywords oder Preis noch einmal prüfen und das Listing neu generieren willst."
+            : "Das Listing nutzt diese Daten für Keywords und Preisempfehlung: erst Marktcheck, dann Listing generieren."}
       </p>
 
       <GenerationPoller active={running} />

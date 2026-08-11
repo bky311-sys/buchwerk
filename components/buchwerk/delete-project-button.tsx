@@ -24,11 +24,22 @@ export function DeleteProjectButton({
     // A published book still lives on Amazon, but deleting it here destroys the
     // manuscript source — so no more corrections or new editions are possible.
     // Warn much more explicitly in that case.
-    const message = published
-      ? `ACHTUNG: „${title}“ ist bei Amazon veröffentlicht.\n\nWenn du es hier löschst, verlierst du unwiderruflich das Manuskript, die Kapitel und das Cover — die Grundlage für Korrekturen und Neuauflagen. Das Buch bei Amazon bleibt bestehen, lässt sich aber aus Buchwerk nicht mehr überarbeiten.\n\nWirklich endgültig löschen?`
-      : `„${title}“ wirklich löschen? Das Buch mit allen Kapiteln, Cover und Texten wird endgültig entfernt.`;
-    const ok = window.confirm(message);
-    if (!ok) return;
+    if (published) {
+      // A hasty OK on a confirm is too cheap for this — require typing LÖSCHEN.
+      const typed = window.prompt(
+        `ACHTUNG: „${title}“ ist bei Amazon veröffentlicht.\n\nWenn du es hier löschst, verlierst du unwiderruflich das Manuskript, die Kapitel und das Cover — die Grundlage für Korrekturen und Neuauflagen. Das Buch bei Amazon bleibt bestehen, lässt sich aber aus Buchwerk nicht mehr überarbeiten.\n\nTippe LÖSCHEN, um endgültig zu löschen:`,
+      );
+      if (typed === null) return;
+      if (typed.trim().toUpperCase() !== "LÖSCHEN") {
+        setError("Nicht gelöscht — Bestätigung stimmte nicht.");
+        return;
+      }
+    } else {
+      const ok = window.confirm(
+        `„${title}“ wirklich löschen? Das Buch mit allen Kapiteln, Cover und Texten wird endgültig entfernt.`,
+      );
+      if (!ok) return;
+    }
     setError(null);
     startTransition(async () => {
       const result = await deleteProjectAction(projectId);
