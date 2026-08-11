@@ -43,15 +43,15 @@ export function PointsPopover({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="dialog"
+        aria-label={points === 0 ? "Punkte sammeln" : undefined}
         className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/70"
       >
         <span aria-hidden>★</span>
         {points === 0 ? (
           // Bei 0 wirkt „★ 0 Punkte" wie ein leerer Kontostand — als Einladung
-          // formuliert klickt man eher (Review-Fund 11.08.).
-          <span>
-            Punkte<span className="hidden sm:inline"> sammeln</span>
-          </span>
+          // formuliert klickt man eher (Review-Fund 11.08.). Mobil nur der
+          // Stern: „Punkte sammeln" (+50px) sprengte die 375px-Headerzeile.
+          <span className="hidden sm:inline">Punkte sammeln</span>
         ) : (
           <>
             <span className="tabular-nums">{points}</span>
