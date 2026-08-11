@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateCoverImage, type CoverModel } from "@/lib/ai/replicate";
 import { gateProduction } from "@/lib/billing/access";
+import { consumeRunSlot } from "@/lib/books/run-limits";
 
 export type CoverResult = { ok: boolean; error?: string };
 
@@ -38,6 +39,11 @@ export async function generateCover(
 
   const gate = await gateProduction(supabase, projectId);
   if (!gate.ok) return { ok: false, error: gate.error };
+
+  // Stille Missbrauchsbremse — Flux kostet echtes Geld pro Bild; das Limit ist
+  // großzügig genug für ehrliche Motiv-Iteration (siehe lib/books/run-limits.ts).
+  const slot = await consumeRunSlot(projectId, "cover_runs");
+  if (!slot.allowed) return { ok: false, error: slot.error };
 
   try {
     const imageUrl = await generateCoverImage(trimmed, model);

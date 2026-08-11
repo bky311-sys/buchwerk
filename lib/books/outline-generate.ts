@@ -8,6 +8,7 @@ import {
   OUTLINE_JSON_SCHEMA,
   type Outline,
 } from "@/lib/books/schema";
+import { consumeRunSlot } from "@/lib/books/run-limits";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -64,6 +65,11 @@ export async function regenerateOutline(
         "Dieses Buch ist veröffentlicht und gesperrt. Für Änderungen erstelle eine Neuauflage.",
     };
   }
+
+  // Stille Missbrauchsbremse (siehe lib/books/run-limits.ts) — die
+  // Neu-Gliederung war bisher der einzige komplett ungedeckelte Claude-Call.
+  const slot = await consumeRunSlot(projectId, "outline_runs");
+  if (!slot.allowed) return { ok: false, error: slot.error };
 
   const previousStatus = project.status;
 

@@ -6,18 +6,13 @@ import { claudeJson } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
 import { coerceSources, type BookSource } from "@/lib/books/sources";
+import { consumeRunSlot } from "@/lib/books/run-limits";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
 // A quality run stuck in "läuft" longer than this is treated as failed (the
 // serverless function was killed). Must exceed the route's maxDuration (300 s).
 export const QUALITY_STALE_MS = 330_000;
-
-// Abuse brake like CHAPTER_GENERATION_LIMIT: the report reads the whole
-// manuscript (~15k input tokens), so an unbounded button would be the next
-// uncapped endpoint. Deliberately silent — honest users rerun it 2–3 times
-// after fixes, nobody legitimate reaches this.
-const QUALITY_RUN_LIMIT = 8;
 
 export type QualityFinding = {
   kapitel: number | null;
@@ -180,25 +175,10 @@ export async function runQualityReport(
 
   const admin = createAdminClient();
 
-  // Run counter (best-effort: missing migration must not block the feature).
-  const { data: runsRow } = await admin
-    .from("projects")
-    .select("quality_runs")
-    .eq("id", projectId)
-    .maybeSingle();
-  if (runsRow && runsRow.quality_runs >= QUALITY_RUN_LIMIT) {
-    return {
-      ok: false,
-      error:
-        "Für dieses Buch ist das Limit an Qualitätsberichten erreicht. Wenn du hier nicht weiterkommst, schreib uns an welcome@buchwerk.info.",
-    };
-  }
-  if (runsRow) {
-    await admin
-      .from("projects")
-      .update({ quality_runs: runsRow.quality_runs + 1 })
-      .eq("id", projectId);
-  }
+  // Stille Missbrauchsbremse — der QS-Lauf liest das ganze Manuskript und ist
+  // damit der teuerste Einzel-Call (siehe lib/books/run-limits.ts).
+  const slot = await consumeRunSlot(projectId, "quality_runs");
+  if (!slot.allowed) return { ok: false, error: slot.error };
 
   await admin
     .from("projects")

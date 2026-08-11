@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
+import { consumeRunSlot } from "@/lib/books/run-limits";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -59,6 +60,11 @@ export async function generateResearchStage(
   if (!gate.ok) return { ok: false, error: gate.error };
 
   if (stageIndex === 0) {
+    // Stille Missbrauchsbremse — gezählt wird der Recherche-START, nicht jede
+    // Etappe (ein Lauf = drei Web-Search-Etappen).
+    const slot = await consumeRunSlot(projectId, "research_runs");
+    if (!slot.allowed) return { ok: false, error: slot.error };
+
     await supabase
       .from("projects")
       .update({

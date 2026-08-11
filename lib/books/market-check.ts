@@ -5,14 +5,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { claudeJson } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
+import { consumeRunSlot } from "@/lib/books/run-limits";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
 // A market check stuck in "läuft" longer than this is treated as failed.
 export const MARKET_STALE_MS = 330_000;
-
-// Abuse brake (silent, like the other run counters).
-const MARKET_RUN_LIMIT = 5;
 
 export type MarketCompetitor = {
   titel: string;
@@ -145,26 +143,9 @@ export async function runMarketCheck(
 
   const admin = createAdminClient();
 
-  // Run counter (best-effort: a lagging migration must not block the feature).
-  // Counted BEFORE the model call — a killed run costs tokens all the same.
-  const { data: runsRow } = await admin
-    .from("projects")
-    .select("market_runs")
-    .eq("id", projectId)
-    .maybeSingle();
-  if (runsRow && runsRow.market_runs >= MARKET_RUN_LIMIT) {
-    return {
-      ok: false,
-      error:
-        "Für dieses Buch ist das Limit an Marktchecks erreicht. Wenn du hier nicht weiterkommst, schreib uns an welcome@buchwerk.info.",
-    };
-  }
-  if (runsRow) {
-    await admin
-      .from("projects")
-      .update({ market_runs: runsRow.market_runs + 1 })
-      .eq("id", projectId);
-  }
+  // Stille Missbrauchsbremse (siehe lib/books/run-limits.ts).
+  const slot = await consumeRunSlot(projectId, "market_runs");
+  if (!slot.allowed) return { ok: false, error: slot.error };
 
   await admin
     .from("projects")

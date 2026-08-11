@@ -11,6 +11,7 @@ import {
   marketSnapshotToPrompt,
 } from "@/lib/books/market-check";
 import { countWords } from "@/lib/books/generate";
+import { consumeRunSlot } from "@/lib/books/run-limits";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -52,6 +53,10 @@ export async function generateListing(
 
   const gate = await gateProduction(supabase, projectId);
   if (!gate.ok) return { ok: false, error: gate.error };
+
+  // Stille Missbrauchsbremse (siehe lib/books/run-limits.ts).
+  const slot = await consumeRunSlot(projectId, "listing_runs");
+  if (!slot.allowed) return { ok: false, error: slot.error };
 
   // content wird mitgeladen, um dem Prompt den echten Buchumfang zu geben —
   // die Preisempfehlung war vorher eine reine Schätzung ohne Umfangs-Bezug.
