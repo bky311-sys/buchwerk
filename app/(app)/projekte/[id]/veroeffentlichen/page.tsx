@@ -13,6 +13,11 @@ import { getPendingReviewsForAuthor } from "@/lib/shop/reviews";
 import { getPointsBalance } from "@/lib/shop/points";
 import { buildWorkflowSteps } from "@/lib/books/workflow";
 import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
+import { QualityReportPanel } from "@/components/buchwerk/quality-report-panel";
+import {
+  coerceQualityReport,
+  QUALITY_STALE_MS,
+} from "@/lib/books/quality-report";
 
 export const metadata: Metadata = {
   title: "Veröffentlichen — Buchwerk",
@@ -109,6 +114,30 @@ export default async function VeroeffentlichenPage({
       imprint.city.trim(),
   );
 
+  // Qualitätsbericht (best-effort in eigener Abfrage — Regel aus dem
+  // Entscheidungslog 2026-07-15: „vielleicht fehlende" Spalten nie in einen
+  // Sammel-SELECT).
+  const { data: qualityRow } = await supabase
+    .from("projects")
+    .select("quality_report, quality_status, quality_updated_at")
+    .eq("id", id)
+    .maybeSingle();
+  const qualityReport = coerceQualityReport(qualityRow?.quality_report ?? null);
+  // Server Component: per-request wall clock is intended — the poller
+  // re-renders this page, so staleness is re-evaluated (pattern from the hub).
+  // eslint-disable-next-line react-hooks/purity
+  const qualityNow = Date.now();
+  const qualityAgeMs = qualityRow?.quality_updated_at
+    ? qualityNow - new Date(qualityRow.quality_updated_at).getTime()
+    : Number.POSITIVE_INFINITY;
+  const qualityRunning =
+    qualityRow?.quality_status === "läuft" && qualityAgeMs < QUALITY_STALE_MS;
+  const qualityFailed =
+    qualityRow?.quality_status === "fehler" ||
+    (qualityRow?.quality_status === "läuft" && !qualityRunning);
+  // Ohne Spalte (Migration fehlt) errored die Abfrage → Panel bleibt unsichtbar.
+  const qualityAvailable = qualityRow != null;
+
   // Buchshop + published milestone (best-effort: sections stay hidden if a
   // migration lags).
   const { data: shopRow } = await supabase
@@ -195,6 +224,18 @@ export default async function VeroeffentlichenPage({
               </Link>
             </Button>
           </div>
+        </div>
+      ) : null}
+
+      {/* Qualitätsbericht — der letzte Check vor dem Export. */}
+      {finished && qualityAvailable ? (
+        <div className="mt-8">
+          <QualityReportPanel
+            projectId={project.id}
+            report={qualityReport}
+            isRunning={qualityRunning}
+            hasFailed={qualityFailed}
+          />
         </div>
       ) : null}
 
