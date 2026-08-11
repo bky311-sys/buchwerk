@@ -59,6 +59,58 @@ export default async function AdminPage() {
 
   const wlConfirmed = wl.filter((w) => w.confirmed_at).length;
 
+  // --- QS-/Daten-Auswertungen (alle best-effort: fehlt eine Migration, liefert
+  // PostgREST einen Fehler, data bleibt null und die Sektion bleibt leer) ---
+
+  // Regenerier-Hotspots: Kapitel, die oft neu generiert wurden, zeigen, wo der
+  // Kapitel-Prompt versagt — das ist unser Prompt-Verbesserungs-Signal.
+  const { data: hotspots } = await supabase
+    .from("chapters")
+    .select("heading, generation_count, project_id")
+    .gte("generation_count", 3)
+    .order("generation_count", { ascending: false })
+    .limit(15);
+
+  // Amazon-Metriken: letzter + vorletzter Snapshot je veröffentlichtem Buch.
+  const { data: metricRows } = await supabase
+    .from("book_metrics")
+    .select("project_id, captured_at, bsr, ratings_count, price_eur, ok, note")
+    .order("captured_at", { ascending: false })
+    .limit(300);
+
+  // Nischen-Feedback: welche Vorschläge wurden wirklich angeklickt?
+  const { data: nicheStarts } = await supabase
+    .from("niche_pool")
+    .select("title, starts, check_status, batch")
+    .gt("starts", 0)
+    .order("starts", { ascending: false })
+    .limit(10);
+
+  // Projekt-Titel für Hotspots + Metriken nachladen.
+  const titleIds = [
+    ...new Set([
+      ...(hotspots ?? []).map((h) => h.project_id),
+      ...(metricRows ?? []).map((m) => m.project_id),
+    ]),
+  ];
+  const { data: titleRows } = titleIds.length
+    ? await supabase.from("projects").select("id, title, topic").in("id", titleIds)
+    : { data: [] };
+  const titles = new Map(
+    (titleRows ?? []).map((t) => [t.id, t.title ?? t.topic]),
+  );
+
+  // Je Buch die letzten zwei brauchbaren Snapshots (Trend).
+  const metricsByProject = new Map<
+    string,
+    Array<NonNullable<typeof metricRows>[number]>
+  >();
+  for (const row of metricRows ?? []) {
+    const list = metricsByProject.get(row.project_id) ?? [];
+    if (list.length < 2 && row.ok) list.push(row);
+    metricsByProject.set(row.project_id, list);
+  }
+
   const projectsByUser = new Map<string, number>();
   for (const p of prj) {
     projectsByUser.set(p.user_id, (projectsByUser.get(p.user_id) ?? 0) + 1);
@@ -107,6 +159,119 @@ export default async function AdminPage() {
           </ul>
         )}
       </section>
+
+      {metricsByProject.size > 0 ? (
+        <section>
+          <h2 className="font-display text-lg font-semibold">
+            Amazon-Metriken (veröffentlichte Bücher)
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Täglicher Snapshot aus dem Cron — Bestseller-Rang, Bewertungen,
+            Preis. Trend gegenüber dem vorherigen Snapshot in Klammern.
+          </p>
+          <ul className="mt-4 divide-y divide-border border-t border-border">
+            {[...metricsByProject.entries()].map(([projectId, snaps]) => {
+              const [latest, prev] = snaps;
+              if (!latest) return null;
+              const bsrDelta =
+                prev?.bsr != null && latest.bsr != null
+                  ? latest.bsr - prev.bsr
+                  : null;
+              const ratingsDelta =
+                prev?.ratings_count != null && latest.ratings_count != null
+                  ? latest.ratings_count - prev.ratings_count
+                  : null;
+              return (
+                <li key={projectId} className="py-3">
+                  <span className="block text-sm font-medium">
+                    {titles.get(projectId) ?? projectId}
+                  </span>
+                  <span className="block text-xs text-muted-foreground tabular-nums">
+                    {latest.bsr != null
+                      ? `BSR ${latest.bsr.toLocaleString("de-DE")}${
+                          bsrDelta != null
+                            ? ` (${bsrDelta <= 0 ? "▲" : "▼"} ${Math.abs(bsrDelta).toLocaleString("de-DE")})`
+                            : ""
+                        }`
+                      : "BSR —"}
+                    {" · "}
+                    {latest.ratings_count != null
+                      ? `${latest.ratings_count.toLocaleString("de-DE")} Bewertungen${
+                          ratingsDelta ? ` (+${ratingsDelta})` : ""
+                        }`
+                      : "Bewertungen —"}
+                    {" · "}
+                    {latest.price_eur != null
+                      ? `${Number(latest.price_eur).toFixed(2).replace(".", ",")} €`
+                      : "Preis —"}
+                    {" · "}
+                    {fmtDate(latest.captured_at)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {(hotspots ?? []).length > 0 ? (
+        <section>
+          <h2 className="font-display text-lg font-semibold">
+            Regenerier-Hotspots
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Kapitel mit ≥ 3 Generierungsläufen — hier liefert der Kapitel-Prompt
+            offenbar nicht, was Nutzer wollen (Prompt-Verbesserungs-Signal).
+          </p>
+          <ul className="mt-4 divide-y divide-border border-t border-border">
+            {(hotspots ?? []).map((h, i) => (
+              <li
+                key={i}
+                className="flex items-center justify-between gap-3 py-2.5"
+              >
+                <span className="min-w-0 truncate text-sm">
+                  {h.heading}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {titles.get(h.project_id) ?? ""}
+                  </span>
+                </span>
+                <span className="shrink-0 text-sm font-medium tabular-nums">
+                  {h.generation_count}×
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {(nicheStarts ?? []).length > 0 ? (
+        <section>
+          <h2 className="font-display text-lg font-semibold">
+            Nischen-Vorschläge: Klicks
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            „Dieses Buch starten"-Klicks pro Nische — welche Vorschläge ziehen.
+          </p>
+          <ul className="mt-4 divide-y divide-border border-t border-border">
+            {(nicheStarts ?? []).map((n, i) => (
+              <li
+                key={i}
+                className="flex items-center justify-between gap-3 py-2.5"
+              >
+                <span className="min-w-0 truncate text-sm">
+                  {n.title}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    Batch {n.batch} · {n.check_status}
+                  </span>
+                </span>
+                <span className="shrink-0 text-sm font-medium tabular-nums">
+                  {n.starts}×
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section>
         <h2 className="font-display text-lg font-semibold">
