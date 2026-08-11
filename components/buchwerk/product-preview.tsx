@@ -46,7 +46,7 @@ export function ProductPreview() {
               <span className="font-display text-xs font-bold text-muted-foreground">
                 {c.n}
               </span>
-              <span className="flex-1 truncate text-sm font-medium text-foreground">
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                 {c.title}
               </span>
               {c.state === "done" ? (

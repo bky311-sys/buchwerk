@@ -30,7 +30,7 @@ function HeroSection() {
   return (
     <section className="border-b border-border">
       <div className="mx-auto grid max-w-5xl gap-12 px-6 py-20 sm:py-28 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
             Der KI-Buchassistent für den deutschen Markt
           </p>
@@ -47,7 +47,7 @@ function HeroSection() {
             <HeroLeadForm />
           </div>
         </div>
-        <div className="lg:pl-4">
+        <div className="min-w-0 lg:pl-4">
           <ProductPreview />
         </div>
       </div>

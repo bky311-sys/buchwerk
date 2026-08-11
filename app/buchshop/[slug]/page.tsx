@@ -273,7 +273,7 @@ function ShopFooter() {
             Als Amazon-Partner verdienen wir an qualifizierten Käufen.
           </span>
         </p>
-        <nav className="flex gap-6">
+        <nav className="flex flex-wrap gap-x-6 gap-y-2">
           <Link
             href="/impressum"
             className="hover:text-foreground hover:underline underline-offset-4"

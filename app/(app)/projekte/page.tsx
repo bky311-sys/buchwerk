@@ -129,7 +129,7 @@ export default async function ProjektePage({
           return (
             <li
               key={project.id}
-              className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40"
+              className="flex h-full min-w-0 flex-col rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40"
             >
               <Link href={`/projekte/${project.id}`} className="block">
                 <span className="flex items-start justify-between gap-4">

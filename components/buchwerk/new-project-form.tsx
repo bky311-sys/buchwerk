@@ -62,7 +62,7 @@ export function NewProjectForm({
         type="submit"
         size="lg"
         disabled={isPending}
-        className="h-11 px-5 text-base"
+        className="h-auto min-h-11 whitespace-normal px-5 py-2.5 text-base"
       >
         {isPending ? (
           <span className="inline-flex items-center gap-2">
