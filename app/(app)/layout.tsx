@@ -46,7 +46,10 @@ export default async function AppLayout({
               size="sm"
               className="sm:h-11 sm:px-6 sm:text-[0.95rem]"
             >
-              <Link href="/projekte">Meine Projekte</Link>
+              <Link href="/projekte">
+                <span className="sm:hidden">Projekte</span>
+                <span className="hidden sm:inline">Meine Projekte</span>
+              </Link>
             </Button>
             <Button
               asChild

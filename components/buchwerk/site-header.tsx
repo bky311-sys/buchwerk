@@ -73,7 +73,10 @@ export async function SiteHeader() {
                 </Button>
               </form>
               <Button asChild size="sm" className="sm:h-11 sm:px-6">
-                <Link href="/projekte">Meine Projekte</Link>
+                <Link href="/projekte">
+                  <span className="sm:hidden">Projekte</span>
+                  <span className="hidden sm:inline">Meine Projekte</span>
+                </Link>
               </Button>
             </>
           ) : (
