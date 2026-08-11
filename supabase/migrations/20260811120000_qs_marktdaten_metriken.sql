@@ -35,6 +35,7 @@ alter table public.projects add column if not exists research_runs integer not n
 alter table public.projects add column if not exists listing_runs integer not null default 0;
 alter table public.projects add column if not exists cover_runs integer not null default 0;
 alter table public.projects add column if not exists quality_runs integer not null default 0;
+alter table public.projects add column if not exists market_runs integer not null default 0;
 
 -- 3: Nischen-Validierung + Klick-Zähler
 alter table public.niche_pool add column if not exists check_status text not null default 'offen';

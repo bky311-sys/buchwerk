@@ -134,6 +134,7 @@ export interface Database {
           listing_runs: number;
           cover_runs: number;
           quality_runs: number;
+          market_runs: number;
           created_at: string;
           updated_at: string;
         };
@@ -171,6 +172,7 @@ export interface Database {
           listing_runs?: number;
           cover_runs?: number;
           quality_runs?: number;
+          market_runs?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -208,6 +210,7 @@ export interface Database {
           listing_runs?: number;
           cover_runs?: number;
           quality_runs?: number;
+          market_runs?: number;
           created_at?: string;
           updated_at?: string;
         };

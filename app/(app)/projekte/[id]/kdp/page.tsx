@@ -6,6 +6,11 @@ import { KdpListing } from "@/components/buchwerk/kdp-listing";
 import { Button } from "@/components/ui/button";
 import { getWorkflowSteps } from "@/lib/books/workflow";
 import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
+import { MarketCheckPanel } from "@/components/buchwerk/market-check-panel";
+import {
+  coerceMarketSnapshot,
+  MARKET_STALE_MS,
+} from "@/lib/books/market-check";
 
 export const metadata: Metadata = {
   title: "KDP-Listing — Buchwerk",
@@ -40,6 +45,24 @@ export default async function KdpPage({
     getWorkflowSteps(supabase, id),
   ]);
 
+  // Marktcheck-Daten (best-effort in eigener Abfrage — Regel 2026-07-15).
+  const { data: marketRow } = await supabase
+    .from("projects")
+    .select("market_snapshot, market_status, market_updated_at")
+    .eq("id", id)
+    .maybeSingle();
+  const marketSnapshot = coerceMarketSnapshot(marketRow?.market_snapshot ?? null);
+  // eslint-disable-next-line react-hooks/purity
+  const marketNow = Date.now();
+  const marketAgeMs = marketRow?.market_updated_at
+    ? marketNow - new Date(marketRow.market_updated_at).getTime()
+    : Number.POSITIVE_INFINITY;
+  const marketRunning =
+    marketRow?.market_status === "läuft" && marketAgeMs < MARKET_STALE_MS;
+  const marketFailed =
+    marketRow?.market_status === "fehler" ||
+    (marketRow?.market_status === "läuft" && !marketRunning);
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <Link
@@ -63,6 +86,15 @@ export default async function KdpPage({
         Kopierfertige Texte für deinen KDP-Upload. Alles bearbeitbar, jedes Feld
         mit „Kopieren“.
       </p>
+
+      {marketRow != null ? (
+        <MarketCheckPanel
+          projectId={id}
+          snapshot={marketSnapshot}
+          isRunning={marketRunning}
+          hasFailed={marketFailed}
+        />
+      ) : null}
 
       <KdpListing projectId={id} listing={listing ?? null} />
 
