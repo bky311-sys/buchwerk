@@ -18,7 +18,7 @@ export function LegalFooter() {
           <Link
             key={link.href}
             href={link.href}
-            className="underline-offset-4 hover:text-foreground hover:underline"
+            className="inline-block py-1.5 underline-offset-4 hover:text-foreground hover:underline"
           >
             {link.label}
           </Link>

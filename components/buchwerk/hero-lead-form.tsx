@@ -33,7 +33,7 @@ export function HeroLeadForm() {
           placeholder="Dein Buchthema…"
           className="h-12 flex-1 rounded-full border border-input bg-card px-5 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
         />
-        <Button type="submit" size="lg" className="h-12 px-6 text-base">
+        <Button type="submit" size="lg" className="h-auto min-h-12 whitespace-normal px-6 py-3 text-base">
           Gliederung gratis erstellen
         </Button>
       </div>
