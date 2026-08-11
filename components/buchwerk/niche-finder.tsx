@@ -3,12 +3,19 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { trackNicheStartAction } from "@/lib/books/niche-actions";
+import type { NicheMarket } from "@/lib/books/niche-pool";
 
 // "Keine Idee?"-Einstieg im Neues-Buch-Formular: kurze Interessen-Abfrage
 // (Klick-Chips), dann passende Nischen-Karten aus dem wöchentlich per Cron
 // recherchierten Pool. "Dieses Buch starten" befüllt das Formular über die
 // URL-Parameter, die die Projekte-Seite ohnehin schon versteht — kein
 // KI-Call, keine Wartezeit, kein Kostenrisiko pro Klick.
+//
+// Nischen mit `market` sind vom täglichen Cron gegen echte Amazon-Zahlen
+// validiert (Marktführer-Bewertungen, Titel-Alter, Preisspanne) — die Karten
+// zeigen die Zahlen statt reiner LLM-Einschätzung. "schwach" validierte
+// Nischen erreichen die UI gar nicht erst.
 
 type Niche = {
   id: string;
@@ -20,6 +27,7 @@ type Niche = {
   interests: string[];
   book_type: string;
   topic_prompt: string;
+  market: NicheMarket | null;
 };
 
 const SHOWN_STEP = 4;
@@ -52,8 +60,11 @@ export function NicheFinder({
       if (picked.size === 0) return true;
       return n.interests.some((t) => picked.has(t));
     });
-    // Beste zuerst: hohe Nachfrage + niedrige Konkurrenz nach oben.
+    // Beste zuerst: validierte Nischen vor unvalidierten (echte Zahlen schlagen
+    // Einschätzung), darin "stark" vor "ok"; dann hohe Nachfrage + niedrige
+    // Konkurrenz.
     const score = (n: Niche) =>
+      (n.market ? (n.market.verdict === "stark" ? 8 : 4) : 0) +
       (n.demand === "hoch" ? 2 : n.demand === "mittel" ? 1 : 0) +
       (n.competition === "niedrig" ? 2 : n.competition === "mittel" ? 1 : 0);
     return [...filtered].sort((a, b) => score(b) - score(a));
@@ -68,6 +79,8 @@ export function NicheFinder({
   }
 
   function start(niche: Niche) {
+    // Feedback-Loop: Klick zählen (fire-and-forget, blockiert den Start nie).
+    void trackNicheStartAction(niche.id);
     const params = new URLSearchParams({
       thema: niche.topic_prompt,
       zielgruppe: niche.audience,
@@ -171,9 +184,35 @@ export function NicheFinder({
                   {niche.audience}
                 </p>
                 <p className="mt-2 flex-1 text-sm leading-relaxed text-foreground">
-                  {niche.pitch}
+                  {niche.market?.begruendung || niche.pitch}
                 </p>
+                {niche.market ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {[
+                      niche.market.marktfuehrer_bewertungen !== null
+                        ? `Marktführer ${niche.market.marktfuehrer_bewertungen.toLocaleString("de-DE")} Bew.`
+                        : null,
+                      niche.market.juengster_titel_jahr !== null
+                        ? `neuester Titel ${niche.market.juengster_titel_jahr}`
+                        : null,
+                      niche.market.preis_spanne,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "Kaum aktuelle deutsche Titel gefunden"}
+                  </p>
+                ) : null}
                 <p className="mt-3 text-xs font-medium">
+                  {niche.market ? (
+                    <>
+                      <span className="text-success">
+                        ✓ Amazon-geprüft
+                        {niche.market.verdict === "stark"
+                          ? " · starke Lücke"
+                          : ""}
+                      </span>
+                      <span className="text-muted-foreground"> · </span>
+                    </>
+                  ) : null}
                   <span className={ampel(niche.demand, "hoch")}>
                     Nachfrage {niche.demand}
                   </span>
