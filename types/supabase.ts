@@ -123,6 +123,17 @@ export interface Database {
           shop_slug: string | null;
           amazon_url: string | null;
           boosted_until: string | null;
+          quality_report: Json;
+          quality_status: string;
+          quality_updated_at: string | null;
+          market_snapshot: Json;
+          market_status: string;
+          market_updated_at: string | null;
+          outline_runs: number;
+          research_runs: number;
+          listing_runs: number;
+          cover_runs: number;
+          quality_runs: number;
           created_at: string;
           updated_at: string;
         };
@@ -149,6 +160,17 @@ export interface Database {
           shop_slug?: string | null;
           amazon_url?: string | null;
           boosted_until?: string | null;
+          quality_report?: Json;
+          quality_status?: string;
+          quality_updated_at?: string | null;
+          market_snapshot?: Json;
+          market_status?: string;
+          market_updated_at?: string | null;
+          outline_runs?: number;
+          research_runs?: number;
+          listing_runs?: number;
+          cover_runs?: number;
+          quality_runs?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -175,6 +197,17 @@ export interface Database {
           shop_slug?: string | null;
           amazon_url?: string | null;
           boosted_until?: string | null;
+          quality_report?: Json;
+          quality_status?: string;
+          quality_updated_at?: string | null;
+          market_snapshot?: Json;
+          market_status?: string;
+          market_updated_at?: string | null;
+          outline_runs?: number;
+          research_runs?: number;
+          listing_runs?: number;
+          cover_runs?: number;
+          quality_runs?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -650,6 +683,10 @@ export interface Database {
           book_type: string;
           topic_prompt: string;
           batch: string;
+          check_status: string;
+          checked_at: string | null;
+          market: Json;
+          starts: number;
           created_at: string;
         };
         Insert: {
@@ -663,6 +700,10 @@ export interface Database {
           book_type?: string;
           topic_prompt: string;
           batch: string;
+          check_status?: string;
+          checked_at?: string | null;
+          market?: Json;
+          starts?: number;
           created_at?: string;
         };
         Update: {
@@ -676,9 +717,57 @@ export interface Database {
           book_type?: string;
           topic_prompt?: string;
           batch?: string;
+          check_status?: string;
+          checked_at?: string | null;
+          market?: Json;
+          starts?: number;
           created_at?: string;
         };
         Relationships: [];
+      };
+      book_metrics: {
+        Row: {
+          id: string;
+          project_id: string;
+          captured_at: string;
+          bsr: number | null;
+          ratings_count: number | null;
+          rating: number | null;
+          price_eur: number | null;
+          ok: boolean;
+          note: string | null;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          captured_at?: string;
+          bsr?: number | null;
+          ratings_count?: number | null;
+          rating?: number | null;
+          price_eur?: number | null;
+          ok?: boolean;
+          note?: string | null;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          captured_at?: string;
+          bsr?: number | null;
+          ratings_count?: number | null;
+          rating?: number | null;
+          price_eur?: number | null;
+          ok?: boolean;
+          note?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "book_metrics_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: Record<string, never>;
