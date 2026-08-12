@@ -122,6 +122,77 @@ async function fetchProductPage(
   }
 }
 
+// Aufbereitete Sicht für das Autoren-Dashboard („Dein Buch bei Amazon").
+// book_metrics ist service-role-only (RLS ohne Policies) — der Aufrufer MUSS
+// die Projekt-Eigentümerschaft bereits über den normalen Client geprüft haben.
+export type BookMetricsSummary = {
+  latest: {
+    bsr: number | null;
+    ratingsCount: number | null;
+    rating: number | null;
+    priceEur: number | null;
+    capturedAt: string;
+  } | null;
+  /** BSR-Veränderung gegenüber der ältesten Messung im Fenster (negativ = besser). */
+  deltaBsr: number | null;
+  /** Neue Bewertungen im Fenster. */
+  newRatings: number | null;
+  /** OK-Messungen aufsteigend, für die Sparkline. */
+  history: { capturedAt: string; bsr: number }[];
+  /** Letzter Abrufversuch wurde von Amazon blockiert (Lücken sind normal). */
+  lastAttemptBlocked: boolean;
+};
+
+export async function getBookMetricsSummary(
+  projectId: string,
+  windowDays = 30,
+): Promise<BookMetricsSummary> {
+  const admin = createAdminClient();
+  const since = new Date(
+    Date.now() - windowDays * 24 * 60 * 60 * 1000,
+  ).toISOString();
+
+  const { data: rows } = await admin
+    .from("book_metrics")
+    .select("captured_at, bsr, ratings_count, rating, price_eur, ok")
+    .eq("project_id", projectId)
+    .gte("captured_at", since)
+    .order("captured_at", { ascending: true });
+
+  const all = rows ?? [];
+  const okRows = all.filter((r) => r.ok);
+  const latestRow = okRows[okRows.length - 1] ?? null;
+  const baseline = okRows[0] ?? null;
+
+  const history = okRows
+    .filter((r): r is typeof r & { bsr: number } => r.bsr !== null)
+    .map((r) => ({ capturedAt: r.captured_at, bsr: r.bsr }));
+
+  return {
+    latest: latestRow
+      ? {
+          bsr: latestRow.bsr,
+          ratingsCount: latestRow.ratings_count,
+          rating: latestRow.rating,
+          priceEur: latestRow.price_eur,
+          capturedAt: latestRow.captured_at,
+        }
+      : null,
+    deltaBsr:
+      latestRow?.bsr != null && baseline?.bsr != null && latestRow !== baseline
+        ? latestRow.bsr - baseline.bsr
+        : null,
+    newRatings:
+      latestRow?.ratings_count != null &&
+      baseline?.ratings_count != null &&
+      latestRow !== baseline
+        ? latestRow.ratings_count - baseline.ratings_count
+        : null,
+    history,
+    lastAttemptBlocked: all.length > 0 && !all[all.length - 1].ok,
+  };
+}
+
 /**
  * Collects one metrics snapshot per published book (max 20 per run). One row
  * per book per run, ok=false with a note when Amazon blocked or parsing found

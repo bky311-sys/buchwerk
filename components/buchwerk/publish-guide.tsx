@@ -27,6 +27,8 @@ export function PublishGuide({
   listing,
   author,
   coverImageUrl,
+  qualityScore = null,
+  qualityRecommendation = null,
 }: {
   projectId: string;
   finished: boolean;
@@ -36,6 +38,8 @@ export function PublishGuide({
   listing: PublishGuideListing | null;
   author: string;
   coverImageUrl: string | null;
+  qualityScore?: number | null;
+  qualityRecommendation?: "ok" | "mit_einschraenkungen" | "nicht_empfohlen" | null;
 }) {
   const manuscriptReady = finished && imprintComplete;
 
@@ -132,6 +136,31 @@ export function PublishGuide({
           <p className="mt-2 text-xs text-muted-foreground">
             Manuskript-Download erst, wenn alle Kapitel geschrieben und das
             Impressum ausgefüllt sind.
+          </p>
+        ) : null}
+
+        {/* QS-Ergebnis direkt an den Downloads (Review-Maßnahme 12.08.): wer
+            hier hochladen will, soll das Prüfergebnis sehen — oder den Check
+            nachholen, bevor eine schwache Fassung zu Amazon geht. */}
+        {qualityRecommendation === "nicht_empfohlen" ? (
+          <p className="mt-3 rounded-xl border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            ⚠ Der Qualitätscheck rät vom Export ab
+            {qualityScore !== null ? ` (Score ${qualityScore}/100)` : ""} —
+            sieh dir die Befunde oben an und überarbeite die Kapitel, bevor du
+            hochlädst.
+          </p>
+        ) : qualityRecommendation ? (
+          <p className="mt-3 text-sm font-medium text-success">
+            ✓ Qualitätscheck bestanden
+            {qualityScore !== null ? ` — Score ${qualityScore}/100` : ""}
+            {qualityRecommendation === "mit_einschraenkungen"
+              ? " (mit kleinen Anmerkungen, siehe Bericht oben)"
+              : ""}
+          </p>
+        ) : finished ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Tipp: Lass vor dem Upload den Qualitätscheck laufen (oben auf dieser
+            Seite) — er prüft Widersprüche, Wiederholungen und tote Quellen.
           </p>
         ) : null}
       </div>

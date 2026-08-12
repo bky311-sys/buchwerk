@@ -15,6 +15,7 @@ export type WorkflowFlags = {
   hasWrittenChapters: boolean;
   hasCover: boolean;
   hasListing: boolean;
+  hasQualityReport: boolean;
   published: boolean;
 };
 
@@ -40,6 +41,17 @@ export function buildWorkflowSteps(flags: WorkflowFlags): WorkflowStep[] {
       cta: "Listing erstellen",
       done: flags.hasListing,
       optional: false,
+    },
+    {
+      // Sichtbarer eigener Schritt (Review-Maßnahme 12.08.): der QS-Lauf
+      // existierte, war aber auf der Veröffentlichen-Seite versteckt — als
+      // Verkaufsargument („Qualitätscheck vor jedem Export") muss er im
+      // Ablauf auftauchen. Das Panel lebt weiterhin auf /veroeffentlichen.
+      label: "Qualitätscheck",
+      href: `/projekte/${flags.projectId}/veroeffentlichen`,
+      cta: flags.hasQualityReport ? "Bericht ansehen" : "Qualitätscheck starten",
+      done: flags.hasQualityReport,
+      optional: true,
     },
     {
       label: "Veröffentlichen",
@@ -77,31 +89,41 @@ export async function getWorkflowSteps(
   supabase: SupabaseClient,
   projectId: string,
 ): Promise<WorkflowStep[]> {
-  const [{ data: chapters }, { data: cover }, { data: listing }, { data: proj }] =
-    await Promise.all([
-      supabase
-        .from("chapters")
-        .select("content, status")
-        .eq("project_id", projectId),
-      supabase
-        .from("covers")
-        .select("id")
-        .eq("project_id", projectId)
-        .eq("is_selected", true)
-        .maybeSingle(),
-      // title statt Existenz: der Cover-Schritt legt die Zeile schon mit nur
-      // dem Klappentext an — als "Listing fertig" zählt erst der Titel.
-      supabase
-        .from("kdp_listings")
-        .select("title")
-        .eq("project_id", projectId)
-        .maybeSingle(),
-      supabase
-        .from("projects")
-        .select("published_at")
-        .eq("id", projectId)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: chapters },
+    { data: cover },
+    { data: listing },
+    { data: proj },
+    { data: quality },
+  ] = await Promise.all([
+    supabase
+      .from("chapters")
+      .select("content, status")
+      .eq("project_id", projectId),
+    supabase
+      .from("covers")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("is_selected", true)
+      .maybeSingle(),
+    // title statt Existenz: der Cover-Schritt legt die Zeile schon mit nur
+    // dem Klappentext an — als "Listing fertig" zählt erst der Titel.
+    supabase
+      .from("kdp_listings")
+      .select("title")
+      .eq("project_id", projectId)
+      .maybeSingle(),
+    supabase
+      .from("projects")
+      .select("published_at")
+      .eq("id", projectId)
+      .maybeSingle(),
+    supabase
+      .from("projects")
+      .select("quality_status")
+      .eq("id", projectId)
+      .maybeSingle(),
+  ]);
 
   const rows = chapters ?? [];
   const writtenCount = rows.filter((c) => Boolean(c.content)).length;
@@ -111,6 +133,7 @@ export async function getWorkflowSteps(
     hasWrittenChapters: writtenCount > 0,
     hasCover: Boolean(cover),
     hasListing: Boolean(listing?.title?.trim()),
+    hasQualityReport: quality?.quality_status === "fertig",
     published: Boolean(proj?.published_at),
   });
 }
@@ -131,7 +154,7 @@ export async function getProjectCardInfos(
   if (!projects.length) return infos;
   const ids = projects.map((p) => p.id);
 
-  const [{ data: chapters }, { data: covers }, { data: listings }] =
+  const [{ data: chapters }, { data: covers }, { data: listings }, { data: quality }] =
     await Promise.all([
       supabase
         .from("chapters")
@@ -146,8 +169,16 @@ export async function getProjectCardInfos(
         .from("kdp_listings")
         .select("project_id, title")
         .in("project_id", ids),
+      // Best-effort in eigener Abfrage (Regel 2026-07-15): fehlt die Spalte,
+      // gilt schlicht „kein Bericht" statt einer kaputten Projektliste.
+      supabase.from("projects").select("id, quality_status").in("id", ids),
     ]);
 
+  const qualitySet = new Set(
+    (quality ?? [])
+      .filter((q) => q.quality_status === "fertig")
+      .map((q) => q.id),
+  );
   const coverSet = new Set((covers ?? []).map((c) => c.project_id));
   const listingSet = new Set(
     (listings ?? [])
@@ -164,6 +195,7 @@ export async function getProjectCardInfos(
       hasWrittenChapters: writtenCount > 0,
       hasCover: coverSet.has(project.id),
       hasListing: listingSet.has(project.id),
+      hasQualityReport: qualitySet.has(project.id),
       published: Boolean(project.published_at),
     });
     infos.set(project.id, {

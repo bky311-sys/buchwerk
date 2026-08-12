@@ -12,6 +12,9 @@ export const newProjectSchema = z.object({
     .max(300, "Die Zielgruppe ist zu lang.")
     .optional()
     .or(z.literal("")),
+  // Buchformat: klassischer Ratgeber/Sachbuch-Fließtext oder Workbook mit
+  // Übungen, Checklisten und Notizfeldern. Steuert Prompts und Rendering.
+  bookType: z.enum(["ratgeber", "workbook"]).default("ratgeber"),
 });
 
 export type NewProjectInput = z.infer<typeof newProjectSchema>;

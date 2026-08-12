@@ -19,5 +19,7 @@ Aufgabe:
 - Behalte Stil, Struktur und die vorhandene Kapitelüberschrift ("## …") bei.
 - Erfinde keine Zahlen oder Quellen.
 - Gib das **vollständige** überarbeitete Kapitel in Markdown zurück, beginnend mit der Kapitelüberschrift. Keine Meta-Kommentare. Erstelle **kein** Quellenverzeichnis im Kapiteltext.
+- Behalte vorhandene Übungselemente (`[UEBUNG] …`, `- [ ] …`, `[NOTIZFELD n]`) samt ihrer exakten Syntax bei.
+{{buchtyp_anweisung}}
 
 Beende deine Antwort mit genau einer Zeile `===QUELLEN===` und darunter ausschließlich die Quellen aus dem Dossier, auf die sich das **erweiterte** Kapitel tatsächlich stützt — je Zeile im Format `- Titel — URL`. Nur wirklich verwendete Quellen, keine erfundenen, keine Dubletten. Ohne verwendete Quelle schreibe unter `===QUELLEN===` nur das Wort `keine`.

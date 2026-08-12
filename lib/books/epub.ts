@@ -38,12 +38,20 @@ function inline(s: string): string {
 // The leading "## <heading>" is dropped because we render the heading as <h1>.
 function chapterBody(content: string): string {
   const out: string[] = [];
-  let inList = false;
+  // "plain" = normale Aufzählung, "check" = Workbook-Checkliste (- [ ] …).
+  let listMode: "none" | "plain" | "check" = "none";
   let firstHeadingSkipped = false;
   const closeList = () => {
-    if (inList) {
+    if (listMode !== "none") {
       out.push("</ul>");
-      inList = false;
+      listMode = "none";
+    }
+  };
+  const openList = (mode: "plain" | "check") => {
+    if (listMode !== mode) {
+      closeList();
+      out.push(mode === "check" ? '<ul class="checkliste">' : "<ul>");
+      listMode = mode;
     }
   };
   for (const raw of content.split("\n")) {
@@ -62,11 +70,27 @@ function chapterBody(content: string): string {
       }
       closeList();
       out.push(`<h2>${inline(t.slice(3))}</h2>`);
-    } else if (/^[-*]\s+/.test(t)) {
-      if (!inList) {
-        out.push("<ul>");
-        inList = true;
+    } else if (/^\[UEBUNG\]\s*/i.test(t)) {
+      // Workbook-Syntax, siehe lib/books/book-type.ts.
+      closeList();
+      out.push(
+        `<p class="uebung"><strong>Übung: ${inline(t.replace(/^\[UEBUNG\]\s*/i, ""))}</strong></p>`,
+      );
+    } else if (/^\[NOTIZFELD(\s+\d+)?\]$/i.test(t)) {
+      closeList();
+      const match = t.match(/\d+/);
+      const count = Math.min(8, Math.max(3, match ? Number(match[0]) : 4));
+      for (let i = 0; i < count; i += 1) {
+        out.push('<p class="notizfeld"> </p>');
       }
+    } else if (/^[-*]\s+\[( |x|X)?\]\s+/.test(t)) {
+      openList("check");
+      const checked = /^[-*]\s+\[(x|X)\]/.test(t);
+      out.push(
+        `<li>${checked ? "☑" : "☐"} ${inline(t.replace(/^[-*]\s+\[( |x|X)?\]\s+/, ""))}</li>`,
+      );
+    } else if (/^[-*]\s+/.test(t)) {
+      openList("plain");
       out.push(`<li>${inline(t.replace(/^[-*]\s+/, ""))}</li>`);
     } else {
       closeList();
@@ -122,7 +146,11 @@ p{margin:0 0 .8em;text-align:justify;}
 .title-page h1{font-size:2em;}
 .imprint{font-size:.9em;color:#333;}
 .sources li{margin:0 0 .7em;word-wrap:break-word;overflow-wrap:break-word;}
-.sources a{color:#1c6b43;}`,
+.sources a{color:#1c6b43;}
+.uebung{margin:1.4em 0 .5em;padding-top:.4em;border-top:2px solid #1c6b43;font-size:1.05em;}
+ul.checkliste{list-style:none;margin:0 0 .8em;padding-left:.2em;}
+ul.checkliste li{margin:0 0 .4em;}
+.notizfeld{border-bottom:1px solid #999;height:1.6em;margin:0 0 .5em;}`,
   );
 
   // Content documents.

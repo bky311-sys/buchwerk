@@ -35,7 +35,9 @@ export default async function PreisePage() {
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
           Thema und Gliederung sind kostenlos — du siehst erst, was Buchwerk aus
-          deiner Idee macht, und zahlst dann. Bezahlung sicher über Stripe,
+          deiner Idee macht, und zahlst dann. Ein komplettes Buch kostet weniger
+          als ein Monat ChatGPT&nbsp;Plus — und am Ende hältst du ein
+          hochladbares Buchpaket in der Hand. Bezahlung sicher über Stripe,
           monatlich kündbar.
         </p>
 
@@ -51,8 +53,9 @@ export default async function PreisePage() {
               19,99 €
             </p>
             <p className="mt-2 flex-1 text-sm text-muted-foreground">
-              Einmalig. Schaltet Recherche, Kapitel-Schreiben, Cover, KDP-Listing
-              und den Manuskript-Download für dieses Buch dauerhaft frei.
+              Einmalig. Schaltet Recherche, Kapitel-Schreiben, Cover, KDP-Listing,
+              Qualitätscheck und den Manuskript-Download für dieses Buch
+              dauerhaft frei.
             </p>
             <div className="mt-6">
               <Button asChild size="lg" className="w-full">

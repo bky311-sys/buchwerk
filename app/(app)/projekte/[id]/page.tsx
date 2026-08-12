@@ -19,6 +19,8 @@ import { OutlineActions } from "@/components/buchwerk/outline-actions";
 import { NewEditionButton } from "@/components/buchwerk/new-edition-button";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { AmazonLinkEditor } from "@/components/buchwerk/amazon-link-editor";
+import { BookMetricsPanel } from "@/components/buchwerk/book-metrics-panel";
+import { getBookMetricsSummary } from "@/lib/books/amazon-metrics";
 
 export const metadata: Metadata = {
   title: "Projekt — Buchwerk",
@@ -59,7 +61,7 @@ export default async function ProjektPage({
     .eq("project_id", id)
     .maybeSingle();
 
-  const [{ data: chapters }, unlocked, { data: researchRow }] =
+  const [{ data: chapters }, unlocked, { data: researchRow }, { data: qualityRow }] =
     await Promise.all([
       supabase
         .from("chapters")
@@ -68,6 +70,11 @@ export default async function ProjektPage({
         .order("position"),
       canAccessProject(supabase, id),
       supabase.from("projects").select("research").eq("id", id).maybeSingle(),
+      supabase
+        .from("projects")
+        .select("quality_status")
+        .eq("id", id)
+        .maybeSingle(),
     ]);
   const hasResearch = Boolean(researchRow?.research?.trim());
 
@@ -112,12 +119,22 @@ export default async function ProjektPage({
     hasWrittenChapters,
     hasCover: Boolean(selectedCover),
     hasListing: Boolean(listingRow?.title?.trim()),
+    hasQualityReport: qualityRow?.quality_status === "fertig",
     published: Boolean(project.published_at),
   });
 
   // A book marked as published on Amazon is locked from editing. Changes go
   // through a new edition (a separate book that counts in the monthly budget).
   const published = Boolean(project.published_at);
+
+  // Erfolgs-Dashboard: nur für veröffentlichte Bücher mit Amazon-Link.
+  // getBookMetricsSummary nutzt den Admin-Client (book_metrics ist
+  // service-role-only) — die Eigentümer-Prüfung ist das RLS-gefilterte
+  // project-SELECT oben: ohne Zugriff gäbe es hier längst notFound().
+  const metricsSummary =
+    published && project.amazon_url
+      ? await getBookMetricsSummary(project.id)
+      : null;
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -240,6 +257,18 @@ export default async function ProjektPage({
               amazonUrl={project.amazon_url}
             />
           </div>
+          {!project.amazon_url ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Trag deinen Amazon-Link ein — dann beobachtet Buchwerk jede Nacht
+              Bestseller-Rang, Bewertungen und Preis deines Buchs und zeigt dir
+              hier den Verlauf.
+            </p>
+          ) : null}
+          {metricsSummary ? (
+            <div className="mt-4">
+              <BookMetricsPanel summary={metricsSummary} />
+            </div>
+          ) : null}
           <div className="mt-4">
             <NewEditionButton projectId={project.id} />
           </div>

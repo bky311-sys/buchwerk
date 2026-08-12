@@ -151,6 +151,73 @@ export async function buildManuscriptPdf(
     y -= gapAfter;
   }
 
+  // Workbook-Elemente (lib/books/book-type.ts definiert die Syntax):
+  // Schreiblinien für [NOTIZFELD n] — Leser tragen hier im gedruckten Buch ein.
+  function noteLines(count: number): void {
+    const lineGap = 22; // genug Platz für Handschrift
+    for (let i = 0; i < count; i += 1) {
+      if (y - lineGap < M_BOTTOM) newPage();
+      y -= lineGap;
+      page.drawLine({
+        start: { x: leftX, y },
+        end: { x: leftX + CONTENT_W, y },
+        thickness: 0.6,
+        color: rgb(0.62, 0.62, 0.62),
+      });
+    }
+    y -= 10;
+  }
+
+  // Checklisten-Zeile "- [ ] Text": gezeichnetes Kästchen (WinAnsi hat kein ☐),
+  // Text daneben mit hängendem Einzug.
+  function checklistItem(text: string, checked: boolean): void {
+    const size = 11;
+    const lineHeight = 16;
+    const boxSize = 8;
+    const indent = 16;
+    const lines = wrap(safe(stripInline(text)), body, size, CONTENT_W - indent);
+    lines.forEach((l, index) => {
+      if (y - lineHeight < M_BOTTOM) newPage();
+      y -= size;
+      if (index === 0) {
+        page.drawRectangle({
+          x: leftX,
+          y: y - 0.5,
+          width: boxSize,
+          height: boxSize,
+          borderColor: INK,
+          borderWidth: 0.8,
+        });
+        if (checked) {
+          page.drawText("x", {
+            x: leftX + 1.8,
+            y: y + 0.5,
+            size: 8,
+            font: bold,
+            color: INK,
+          });
+        }
+      }
+      page.drawText(l, { x: leftX + indent, y, size, font: body, color: INK });
+      y -= lineHeight - size;
+    });
+    y -= 4;
+  }
+
+  // "[UEBUNG] Titel": abgesetzte Übungs-Überschrift mit kurzer Linie darüber.
+  function exerciseHeading(text: string): void {
+    y -= 10;
+    if (y - 40 < M_BOTTOM) newPage();
+    page.drawLine({
+      start: { x: leftX, y },
+      end: { x: leftX + 64, y },
+      thickness: 1.4,
+      color: INK,
+    });
+    y -= 6;
+    paragraph(`Übung: ${text}`, bold, 13, 18, 6);
+  }
+
   // --- Title page ---
   y = TRIM_H * 0.62;
   paragraph(title, bold, 26, 32, 16);
@@ -181,6 +248,17 @@ export async function buildManuscriptPdf(
           continue;
         }
         paragraph(text.replace(/^##\s+/, ""), bold, 15, 20, 8);
+      } else if (/^\[UEBUNG\]\s*/i.test(text)) {
+        exerciseHeading(text.replace(/^\[UEBUNG\]\s*/i, ""));
+      } else if (/^\[NOTIZFELD(\s+\d+)?\]$/i.test(text)) {
+        const match = text.match(/\d+/);
+        // 3–8 Linien — Ausreißer aus dem Modell werden eingefangen.
+        noteLines(Math.min(8, Math.max(3, match ? Number(match[0]) : 4)));
+      } else if (/^[-*]\s+\[( |x|X)?\]\s+/.test(text)) {
+        checklistItem(
+          text.replace(/^[-*]\s+\[( |x|X)?\]\s+/, ""),
+          /^[-*]\s+\[(x|X)\]/.test(text),
+        );
       } else if (/^[-*]\s+/.test(text)) {
         paragraph(text.replace(/^[-*]\s+/, ""), body, 11, 16, 4, "•  ");
       } else {

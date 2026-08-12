@@ -9,6 +9,11 @@ import {
   type Outline,
 } from "@/lib/books/schema";
 import { consumeRunSlot } from "@/lib/books/run-limits";
+import {
+  coerceBookType,
+  outlineTypeInstructions,
+  type BookType,
+} from "@/lib/books/book-type";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -25,10 +30,12 @@ export type OutlineResult = { ok: boolean; error?: string };
 export async function generateOutline(
   topic: string,
   audience: string | null,
+  bookType: BookType = "ratgeber",
 ): Promise<Outline> {
   const prompt = await loadPrompt("gliederung", {
     thema: topic,
     zielgruppe: audience ?? DEFAULT_AUDIENCE,
+    buchtyp_anweisung: outlineTypeInstructions(bookType),
   });
   const raw = await claudeJson({
     messages: [{ role: "user", content: prompt }],
@@ -73,13 +80,25 @@ export async function regenerateOutline(
 
   const previousStatus = project.status;
 
+  // Buchtyp best-effort in eigener Abfrage (Regel 2026-07-15) — fehlt die
+  // Spalte, wird schlicht als Ratgeber neu gegliedert.
+  const { data: typeRow } = await supabase
+    .from("projects")
+    .select("book_type")
+    .eq("id", projectId)
+    .maybeSingle();
+
   await supabase
     .from("projects")
     .update({ status: OUTLINE_RUNNING_STATUS })
     .eq("id", projectId);
 
   try {
-    const outline = await generateOutline(project.topic, project.audience);
+    const outline = await generateOutline(
+      project.topic,
+      project.audience,
+      coerceBookType(typeRow?.book_type),
+    );
     await supabase.from("chapters").delete().eq("project_id", projectId);
     await supabase
       .from("projects")

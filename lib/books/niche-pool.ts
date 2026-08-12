@@ -62,7 +62,7 @@ const NICHE_JSON_SCHEMA = {
           demand: { enum: ["hoch", "mittel", "niedrig"] },
           competition: { enum: ["niedrig", "mittel", "hoch"] },
           interests: { type: "array", items: { type: "string" } },
-          book_type: { enum: ["ratgeber", "sachbuch"] },
+          book_type: { enum: ["ratgeber", "sachbuch", "workbook"] },
           topic_prompt: { type: "string" },
         },
         required: [
@@ -119,7 +119,9 @@ export async function generateNichePool(): Promise<NichePoolResult> {
           ? n.competition
           : "mittel",
         interests: (n.interests ?? []).filter((t) => valid.has(t)),
-        book_type: n.book_type === "sachbuch" ? "sachbuch" : "ratgeber",
+        book_type: ["sachbuch", "workbook"].includes(n.book_type)
+          ? n.book_type
+          : "ratgeber",
         topic_prompt: n.topic_prompt.trim(),
         batch,
       }));

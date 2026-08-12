@@ -4,6 +4,7 @@ import {
   validateNiches,
 } from "@/lib/books/niche-pool";
 import { collectBookMetrics } from "@/lib/books/amazon-metrics";
+import { sendWeeklyBookDigest } from "@/lib/books/weekly-digest";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -55,9 +56,17 @@ export async function GET(request: Request) {
     : await validateNiches(VALIDATIONS_PER_RUN);
   const metrics = await collectBookMetrics();
 
-  const ok = pool.ok && validation.ok;
+  // Montags zusätzlich die Wochen-Mail „Dein Buch diese Woche" (nach den
+  // frischen Metriken, damit der Montags-Snapshot schon drin ist). Manuell:
+  // ?digest=1. Mails sind schnelle HTTP-Posts — das Zeitbudget bleibt sicher.
+  const digestNow = isMonday || url.searchParams.get("digest") === "1";
+  const digest = digestNow
+    ? await sendWeeklyBookDigest()
+    : { ok: true, sent: 0, skipped: 0 };
+
+  const ok = pool.ok && validation.ok && digest.ok;
   return NextResponse.json(
-    { ok, pool, validation, metrics },
+    { ok, pool, validation, metrics, digest },
     { status: ok ? 200 : 500 },
   );
 }

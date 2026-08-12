@@ -14,6 +14,7 @@ export default function Home() {
         <ProblemSection />
         <SolutionSection />
         <HowItWorksSection />
+        <ChatGptComparisonSection />
         <PricingSection />
         <BuchshopTeaser />
         <FaqSection />
@@ -32,16 +33,17 @@ function HeroSection() {
       <div className="mx-auto grid max-w-5xl gap-12 px-6 py-20 sm:py-28 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            Der KI-Buchassistent für den deutschen Markt
+            Das Self-Publishing-Studio — Ratgeber, Sachbücher &amp; Workbooks
           </p>
           <h1 className="font-display mt-5 text-5xl font-extrabold leading-[0.98] tracking-tight text-foreground sm:text-6xl">
-            Schreib dein Buch mit KI — bis es bei Amazon steht.
+            Dein Buch. Recherchiert, druckfertig, live auf Amazon.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Du gibst das Thema vor. Buchwerk recherchiert im Web, schreibt Kapitel
-            für Kapitel ein vollständiges Manuskript, gestaltet das Cover und
-            liefert das fertige KDP-Listing. Alles auf Deutsch, in einem
-            Werkzeug — und du entscheidest an jeder Stelle mit.
+            Buchwerk prüft deine Nische mit echten Amazon-Zahlen, recherchiert im
+            Web, schreibt ein vollständiges Manuskript und liefert das komplette
+            KDP-Paket: druckfertiges PDF, Cover, Listing. Danach findet dein Buch
+            im Buchshop seine ersten Leser — und du siehst täglich, wie es sich
+            bei Amazon schlägt.
           </p>
           <div className="mt-8">
             <HeroLeadForm />
@@ -59,6 +61,7 @@ function TrustBar() {
   const items = [
     "Recherchiert mit echten Quellen",
     "Vollständiges Manuskript, kein Gerüst",
+    "Qualitäts- und Quellencheck vor dem Export",
     "Du behältst alle Rechte",
     "DSGVO — Server in Frankfurt",
   ];
@@ -215,6 +218,94 @@ function HowItWorksSection() {
   );
 }
 
+// Der Einwand, den jeder Besucher im Kopf hat („das mache ich doch mit
+// ChatGPT"), wird offensiv beantwortet statt umschifft. Bewusst fair im Ton —
+// wir gewinnen über das Drumherum, nicht über „ChatGPT ist schlecht".
+function ChatGptComparisonSection() {
+  const rows = [
+    {
+      feature: "Nischen-Check vor dem Schreiben",
+      buchwerk:
+        "Echte Amazon-Zahlen: Marktführer, Bewertungen, Preise — bevor du eine Zeile schreibst.",
+      chatgpt: "Schätzt den Markt aus dem Gedächtnis — oft daneben.",
+    },
+    {
+      feature: "Recherche & Quellen",
+      buchwerk:
+        "Web-Recherche vor jedem Kapitel, mit nachvollziehbarer Quellenliste.",
+      chatgpt: "Erfindet Zahlen und Studien, wenn es etwas nicht weiß.",
+    },
+    {
+      feature: "Druckfertiges Buch",
+      buchwerk:
+        "KDP-konformes Manuskript-PDF und EPUB — Ränder, Titelei, Impressum stimmen.",
+      chatgpt:
+        "Liefert Text. Formatieren, Ränder, Beschnitt: dein Problem — und der häufigste Grund, warum KDP Uploads ablehnt.",
+    },
+    {
+      feature: "Cover & Listing",
+      buchwerk:
+        "Cover-Entwürfe plus Klappentext, Kategorien und Keywords aus echten Amazon-Suchvorschlägen.",
+      chatgpt: "Kein Cover. Keywords sind geraten.",
+    },
+    {
+      feature: "Qualitätscheck",
+      buchwerk:
+        "Automatische Prüfung auf Widersprüche, Wiederholungen und tote Quellen — vor dem Export.",
+      chatgpt: "Korrekturlesen musst du selbst organisieren.",
+    },
+    {
+      feature: "Nach der Veröffentlichung",
+      buchwerk:
+        "Erste Leser und Bewertungen über den Buchshop, täglicher Blick auf deinen Amazon-Rang.",
+      chatgpt: "Nichts. Ab dem Upload bist du allein.",
+    },
+  ];
+
+  return (
+    <section className="border-b border-border">
+      <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
+        <h2 className="font-display max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          „Das mache ich doch einfach mit ChatGPT.“
+        </h2>
+        <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          Kannst du — den Text. Aber ein verkaufsfähiges Buch besteht zu 20 %
+          aus Text und zu 80 % aus allem drumherum. Genau dieses Drumherum ist
+          Buchwerk:
+        </p>
+
+        <ul className="mt-10 space-y-3">
+          {rows.map((row) => (
+            <li
+              key={row.feature}
+              className="grid gap-x-6 gap-y-2 rounded-2xl border border-border bg-card p-5 sm:grid-cols-[200px_1fr_1fr] sm:items-baseline"
+            >
+              <h3 className="text-sm font-semibold text-foreground">
+                {row.feature}
+              </h3>
+              <p className="text-sm leading-relaxed">
+                <span className="font-semibold text-success">✓ Buchwerk: </span>
+                <span className="text-muted-foreground">{row.buchwerk}</span>
+              </p>
+              <p className="text-sm leading-relaxed">
+                <span className="font-semibold text-clay-strong">
+                  ✗ ChatGPT:{" "}
+                </span>
+                <span className="text-muted-foreground">{row.chatgpt}</span>
+              </p>
+            </li>
+          ))}
+        </ul>
+
+        <p className="mt-8 max-w-2xl text-base font-medium text-foreground">
+          Und der Preis? Ein komplettes Buch bei Buchwerk kostet einmalig
+          19,99 € — weniger als ein einziger Monat ChatGPT&nbsp;Plus.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function PricingSection() {
   return (
     <section className="border-b border-border bg-card">
@@ -224,7 +315,9 @@ function PricingSection() {
         </h2>
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
           Thema und Gliederung sind kostenlos — du siehst erst, was Buchwerk aus
-          deiner Idee macht, und zahlst dann. Bezahlung sicher über Stripe.
+          deiner Idee macht, und zahlst dann. Ein komplettes Buch kostet weniger
+          als ein Monat ChatGPT&nbsp;Plus — und am Ende hältst du ein
+          hochladbares Buchpaket in der Hand. Bezahlung sicher über Stripe.
         </p>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
@@ -308,6 +401,10 @@ const FAQS = [
     {
       q: "Darf ich ein KI-Buch bei Amazon KDP veröffentlichen?",
       a: "Ja. Amazon KDP erlaubt KI-gestützte Bücher, verlangt bei der Veröffentlichung aber, dass du KI-generierte Inhalte angibst. Du bleibst der verantwortliche Autor — Buchwerk hilft beim Erstellen, du entscheidest und veröffentlichst.",
+    },
+    {
+      q: "Warum nicht einfach ChatGPT nehmen?",
+      a: "ChatGPT schreibt dir Text — aber kein Buch. Buchwerk prüft vorher die Nische mit echten Amazon-Zahlen, recherchiert mit Quellen, liefert ein KDP-konformes Druck-PDF, Cover und Listing mit Keywords aus echten Suchvorschlägen, prüft die Qualität vor dem Export und bringt deinem Buch im Buchshop die ersten Leser. Ein Buch kostet einmalig 19,99 € — weniger als ein Monat ChatGPT Plus.",
     },
     {
       q: "Wird das nicht einfach generischer KI-Text?",

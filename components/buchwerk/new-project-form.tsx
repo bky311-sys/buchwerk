@@ -12,20 +12,64 @@ import {
 
 const initialState: ProjectFormState = { error: null };
 
+// Buchformat-Auswahl: Ratgeber (Fließtext) oder Workbook (Lektionen mit
+// Übungen, Checklisten, Notizfeldern — Prompts + PDF/EPUB rendern das).
+const BOOK_TYPES = [
+  {
+    value: "ratgeber",
+    label: "Ratgeber / Sachbuch",
+    hint: "Klassischer Fließtext",
+  },
+  {
+    value: "workbook",
+    label: "Workbook",
+    hint: "Mit Übungen & Notizfeldern",
+  },
+] as const;
+
 export function NewProjectForm({
   defaultTopic,
   defaultAudience,
+  defaultBookType,
 }: {
   defaultTopic?: string;
   defaultAudience?: string;
+  defaultBookType?: string;
 }) {
   const [state, formAction, isPending] = useActionState(
     createProjectAction,
     initialState,
   );
+  const initialBookType = defaultBookType === "workbook" ? "workbook" : "ratgeber";
 
   return (
     <form action={formAction} className="space-y-4" noValidate>
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Buchformat</legend>
+        <div className="flex flex-wrap gap-2">
+          {BOOK_TYPES.map((type) => (
+            <label
+              key={type.value}
+              className="flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-card px-3 py-2 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+            >
+              <input
+                type="radio"
+                name="buchtyp"
+                value={type.value}
+                defaultChecked={initialBookType === type.value}
+                disabled={isPending}
+                className="size-4 accent-primary"
+              />
+              <span>
+                <span className="block font-medium">{type.label}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {type.hint}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <div className="space-y-2">
         <Label htmlFor="topic">Worum soll dein Buch gehen?</Label>
         <textarea

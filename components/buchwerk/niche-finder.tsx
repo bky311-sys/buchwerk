@@ -49,9 +49,9 @@ export function NicheFinder({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [bookType, setBookType] = useState<"alle" | "ratgeber" | "sachbuch">(
-    "alle",
-  );
+  const [bookType, setBookType] = useState<
+    "alle" | "ratgeber" | "sachbuch" | "workbook"
+  >("alle");
   const [shown, setShown] = useState(SHOWN_STEP);
   // Lange Cron-Begründungen (~500 Zeichen) machten die Karten unscanbar —
   // deshalb 3-Zeilen-Clamp mit Aufklappen pro Karte (Review-Fund 11.08.).
@@ -88,6 +88,8 @@ export function NicheFinder({
       thema: niche.topic_prompt,
       zielgruppe: niche.audience,
     });
+    // Workbook-Nischen wählen das Buchformat im Formular gleich mit vor.
+    if (niche.book_type === "workbook") params.set("buchtyp", "workbook");
     router.push(`/projekte?${params.toString()}#neu`);
   }
 
@@ -154,6 +156,7 @@ export function NicheFinder({
             ["alle", "Alles"],
             ["ratgeber", "Ratgeber"],
             ["sachbuch", "Sachbuch"],
+            ["workbook", "Workbook"],
           ] as const
         ).map(([value, label]) => (
           <button

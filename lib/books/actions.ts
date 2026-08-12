@@ -53,6 +53,7 @@ export async function createProjectAction(
   const parsed = newProjectSchema.safeParse({
     topic: formData.get("topic"),
     audience: formData.get("audience"),
+    bookType: formData.get("buchtyp") ?? "ratgeber",
   });
   if (!parsed.success) {
     return {
@@ -68,10 +69,17 @@ export async function createProjectAction(
 
   const topic = parsed.data.topic.trim();
   const audience = (parsed.data.audience ?? "").trim() || null;
+  const bookType = parsed.data.bookType;
 
   const { data: project, error: insertError } = await supabase
     .from("projects")
-    .insert({ user_id: user.id, topic, audience, status: "gliederung" })
+    .insert({
+      user_id: user.id,
+      topic,
+      audience,
+      status: "gliederung",
+      book_type: bookType,
+    })
     .select("id")
     .single();
   if (insertError || !project) {
@@ -79,7 +87,7 @@ export async function createProjectAction(
   }
 
   try {
-    const outline = await generateOutline(topic, audience);
+    const outline = await generateOutline(topic, audience, bookType);
     await supabase
       .from("projects")
       .update({ title: outline.titel, status: "schreiben" })

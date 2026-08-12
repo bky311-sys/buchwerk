@@ -37,18 +37,28 @@ export function ChapterProse({
 }) {
   const blocks: ReactNode[] = [];
   let list: string[] = [];
+  // "check" = Workbook-Checkliste (- [ ] …) ohne Bullet-Punkte vor den Kästchen.
+  let listMode: "plain" | "check" = "plain";
   let firstHeadingSkipped = !skipFirstHeading;
 
   const flushList = () => {
     if (!list.length) return;
     blocks.push(
-      <ul key={`ul-${blocks.length}`} className="my-4 list-disc space-y-1 pl-6">
+      <ul
+        key={`ul-${blocks.length}`}
+        className={
+          listMode === "check"
+            ? "my-4 list-none space-y-1.5"
+            : "my-4 list-disc space-y-1 pl-6"
+        }
+      >
         {list.map((item, i) => (
           <li key={i}>{inline(item)}</li>
         ))}
       </ul>,
     );
     list = [];
+    listMode = "plain";
   };
 
   for (const raw of content.split("\n")) {
@@ -88,7 +98,38 @@ export function ChapterProse({
           {inline(t.slice(3))}
         </h3>,
       );
+    } else if (/^\[UEBUNG\]\s*/i.test(t)) {
+      // Workbook-Syntax (lib/books/book-type.ts) — im Reader als abgesetzte
+      // Übungs-Überschrift, damit keine Rohmarker sichtbar werden.
+      flushList();
+      blocks.push(
+        <p
+          key={`ue-${blocks.length}`}
+          className="mt-8 mb-3 border-t-2 border-primary pt-3 font-semibold"
+        >
+          Übung: {inline(t.replace(/^\[UEBUNG\]\s*/i, ""))}
+        </p>,
+      );
+    } else if (/^\[NOTIZFELD(\s+\d+)?\]$/i.test(t)) {
+      // Schreiblinien gehören ins gedruckte Buch; am Bildschirm reicht der
+      // Hinweis, dass hier Platz zum Eintragen ist.
+      flushList();
+      blocks.push(
+        <p
+          key={`nf-${blocks.length}`}
+          className="my-4 rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground"
+        >
+          ✎ Platz für deine Notizen (im gedruckten Buch: Schreiblinien)
+        </p>,
+      );
+    } else if (/^[-*]\s+\[( |x|X)?\]\s+/.test(t)) {
+      if (listMode !== "check") flushList();
+      listMode = "check";
+      list.push(
+        `${/^[-*]\s+\[(x|X)\]/.test(t) ? "☑" : "☐"} ${t.replace(/^[-*]\s+\[( |x|X)?\]\s+/, "")}`,
+      );
     } else if (/^[-*]\s+/.test(t)) {
+      if (listMode !== "plain") flushList();
       list.push(t.replace(/^[-*]\s+/, ""));
     } else {
       flushList();

@@ -2,6 +2,7 @@ Du bist ein erfahrener deutschsprachiger Sachbuch-Lektor. Entwirf die Kapitel-Gl
 
 Thema: {{thema}}
 Zielgruppe: {{zielgruppe}}
+{{buchtyp_anweisung}}
 
 Erstelle einen passenden, konkreten Buchtitel und 6 bis 10 Kapitel. Jedes Kapitel hat eine prägnante Überschrift und eine Zusammenfassung in ein bis zwei Sätzen, die beschreibt, was darin behandelt wird. Die Kapitel bauen sinnvoll aufeinander auf.
 

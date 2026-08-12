@@ -34,13 +34,14 @@ function statusIntent(status: string): "done" | "draft" | "neutral" {
 export default async function ProjektePage({
   searchParams,
 }: {
-  searchParams: Promise<{ thema?: string; zielgruppe?: string }>;
+  searchParams: Promise<{ thema?: string; zielgruppe?: string; buchtyp?: string }>;
 }) {
-  const { thema, zielgruppe } = await searchParams;
+  const { thema, zielgruppe, buchtyp } = await searchParams;
   const defaultTopic =
     typeof thema === "string" ? thema.trim().slice(0, 300) : undefined;
   const defaultAudience =
     typeof zielgruppe === "string" ? zielgruppe.trim().slice(0, 200) : undefined;
+  const defaultBookType = buchtyp === "workbook" ? "workbook" : undefined;
   const supabase = await createClient();
   const {
     data: { user },
@@ -56,6 +57,22 @@ export default async function ProjektePage({
 
   const list = projects ?? [];
   const hasProjects = list.length > 0;
+  // Nudge fürs Amazon-Tracking: veröffentlichte Bücher ohne amazon_url können
+  // wir nachts nicht beobachten. Eigene Best-effort-Abfrage (Regel 2026-07-15).
+  const publishedIds = list
+    .filter((p) => p.published_at)
+    .map((p) => p.id);
+  const { data: amazonRows } = publishedIds.length
+    ? await supabase
+        .from("projects")
+        .select("id, amazon_url")
+        .in("id", publishedIds)
+    : { data: [] };
+  const missingAmazonLink = new Set(
+    (amazonRows ?? [])
+      .filter((r) => !r.amazon_url)
+      .map((r) => r.id),
+  );
   // Fortschritt + nächster Schritt pro Karte — der Wiedereinstieg mit einem
   // Klick (UX-Review P1: Karten zeigten nur „In Arbeit", einzige sichtbare
   // Aktion war Löschen).
@@ -109,9 +126,10 @@ export default async function ProjektePage({
           : "Erst zum Schreiben, Cover und KDP-Listing zahlst du."}
       </p>
       <NewProjectForm
-        key={`${defaultTopic ?? ""}·${defaultAudience ?? ""}`}
+        key={`${defaultTopic ?? ""}·${defaultAudience ?? ""}·${defaultBookType ?? ""}`}
         defaultTopic={defaultTopic}
         defaultAudience={defaultAudience}
+        defaultBookType={defaultBookType}
       />
       {/* "Keine Idee?"-Einstieg: Nischen aus dem wöchentlichen Pool. Ein Klick
           befüllt das Formular oben (via ?thema=…&zielgruppe=…, das key-Prop
@@ -152,6 +170,16 @@ export default async function ProjektePage({
                   )}
                 </span>
               </Link>
+
+              {missingAmazonLink.has(project.id) ? (
+                <Link
+                  href={`/projekte/${project.id}`}
+                  className="mt-3 block text-xs font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+                >
+                  Amazon-Link eintragen → tägliches Rang- und
+                  Bewertungs-Tracking
+                </Link>
+              ) : null}
 
               {info && info.total > 0 ? (
                 <div className="mt-3 flex items-center gap-3">

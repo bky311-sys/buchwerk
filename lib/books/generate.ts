@@ -6,6 +6,10 @@ import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
 import { splitChapterSources } from "@/lib/books/sources";
+import {
+  coerceBookType,
+  chapterTypeInstructions,
+} from "@/lib/books/book-type";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -148,6 +152,15 @@ export async function generateChapterContent(
     .select("title, topic, audience")
     .eq("id", chapter.project_id)
     .single();
+
+  // Buchtyp best-effort in eigener Abfrage (Regel 2026-07-15) — ohne Spalte
+  // schreibt das Kapitel wie ein Ratgeber, exakt das alte Verhalten.
+  const { data: typeRow } = await supabase
+    .from("projects")
+    .select("book_type")
+    .eq("id", chapter.project_id)
+    .maybeSingle();
+  const bookType = coerceBookType(typeRow?.book_type);
   if (!project) {
     return { ok: false, error: "Projekt nicht gefunden." };
   }
@@ -200,6 +213,7 @@ export async function generateChapterContent(
     recherche,
     wortziel: String(wortziel),
     bisherige_kapitel: bisherigeKapitel,
+    buchtyp_anweisung: chapterTypeInstructions(bookType),
   };
 
   try {

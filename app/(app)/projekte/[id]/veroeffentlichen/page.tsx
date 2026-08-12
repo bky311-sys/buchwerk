@@ -190,6 +190,7 @@ export default async function VeroeffentlichenPage({
     hasWrittenChapters,
     hasCover: Boolean(selectedCover),
     hasListing: Boolean(listingRow?.title?.trim()),
+    hasQualityReport: qualityRow?.quality_status === "fertig",
     published: Boolean(shopRow?.published_at),
   });
 
@@ -288,6 +289,8 @@ export default async function VeroeffentlichenPage({
           listing={listingRow ?? null}
           author={imprintRow?.author ?? ""}
           coverImageUrl={selectedCover?.image_url ?? null}
+          qualityScore={qualityReport?.score ?? null}
+          qualityRecommendation={qualityReport?.export_empfehlung ?? null}
         />
       </div>
 
