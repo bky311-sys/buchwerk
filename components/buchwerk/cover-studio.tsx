@@ -18,9 +18,6 @@ import {
   updateSubtitleAction,
 } from "@/lib/books/cover-actions";
 import {
-  COVER_POSITIONS,
-  COVER_TONES,
-  COVER_SURFACES,
   parseCoverStyle,
   buildCoverStyle,
   normalizeCoverTitleStyle,
@@ -43,13 +40,19 @@ import {
   defaultTemplateForBookType,
   type CoverTemplateKey,
 } from "@/lib/books/cover-directions";
+import { CoverComposition } from "@/components/buchwerk/cover-composition";
 
 const TEXTAREA_CLASS =
   "flex w-full rounded-xl border border-input bg-muted px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50";
 
-// After this long without the new cover appearing we stop waiting and offer a
-// retry — the generation almost certainly failed or was killed.
-const COVER_TIMEOUT_MS = 120_000;
+// After this long without the new covers appearing we stop waiting and offer a
+// retry — the generation almost certainly failed or was killed. Sized for a
+// 3-variant run (~30–40 s each).
+const COVER_TIMEOUT_MS = 240_000;
+
+// Motiv-Varianten pro Klick (Cover 2.2): Ideogram/Flux variieren per Zufalls-
+// Seed deutlich — drei Würfe geben echte Auswahl statt Einzelschuss.
+const VARIANTS_PER_RUN = 3;
 
 type Cover = {
   id: string;
@@ -106,12 +109,13 @@ export function CoverStudio({
   const selectedCover = covers.find((c) => c.is_selected);
   const hasSelected = Boolean(selectedCover);
 
-  // Detect completion: the new motif appeared.
+  // Detect completion: all variants appeared (dropped responses included —
+  // the poll refreshes the list; the generate loop's finally covers the rest).
   useEffect(() => {
     if (
       generating &&
       startCountRef.current !== null &&
-      covers.length > startCountRef.current
+      covers.length >= startCountRef.current + VARIANTS_PER_RUN
     ) {
       setGenerating(false);
       startCountRef.current = null;
@@ -232,37 +236,51 @@ export function CoverStudio({
     });
   }
 
-  // Generate one motif in final quality. Same prompt yields near-identical Flux
-  // images, so a batch of 4 adds no variety — instead the author iterates: tweak
-  // the prompt (or use "Motiv anpassen"), then generate again.
+  // Drei Motiv-Varianten nacheinander (sequenziell wegen des Replicate-
+  // Rate-Limits bei niedrigem Guthaben). Fertig, sobald die Liste um die
+  // Varianten gewachsen ist — der Poll übernimmt bei verworfenen Responses.
   function generate() {
     setError(null);
     startCountRef.current = covers.length;
     setGenerating(true);
     (async () => {
       try {
-        const res = await fetch(`/api/projekte/${projectId}/cover`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          // Modell folgt der Vorlage: Illustration (Ideogram) für die
-          // Design-Vorlagen, Flux Pro für Editorial Foto.
-          body: JSON.stringify({
-            prompt,
-            model: getCoverTemplate(template).model,
-          }),
-        });
-        if (!res.ok) {
-          const data = (await res.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          setError(data?.error ?? "Das Motiv konnte nicht erstellt werden.");
-          setGenerating(false);
-          startCountRef.current = null;
+        for (let i = 0; i < VARIANTS_PER_RUN; i += 1) {
+          const res = await fetch(`/api/projekte/${projectId}/cover`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            // Modell folgt der Vorlage: Illustration (Ideogram) für die
+            // Design-Vorlagen, Flux Pro für Editorial Foto.
+            body: JSON.stringify({
+              prompt,
+              model: getCoverTemplate(template).model,
+            }),
+          });
+          if (!res.ok) {
+            const data = (await res.json().catch(() => null)) as {
+              error?: string;
+            } | null;
+            // Erste Variante fehlgeschlagen → echter Fehler; spätere → die
+            // schon erzeugten Varianten stehen bereit, still aufhören.
+            if (i === 0) {
+              setError(
+                data?.error ?? "Das Motiv konnte nicht erstellt werden.",
+              );
+              setGenerating(false);
+              startCountRef.current = null;
+            }
+            break;
+          }
+          router.refresh();
         }
       } catch {
         // Dropped (long generation past the gateway limit). The poll + completion
         // effect / timeout take over from here.
       } finally {
+        // Loop beendet (alle Requests beantwortet oder verworfen) — Spinner aus,
+        // was da ist, ist da; der letzte Refresh holt den Endstand.
+        setGenerating(false);
+        startCountRef.current = null;
         router.refresh();
       }
     })();
@@ -669,7 +687,7 @@ export function CoverStudio({
         {generating ? (
           <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
             <Spinner className="size-4" />
-            Motiv wird erstellt… (~30 Sek.)
+            Motiv-Varianten werden erstellt… (~2 Min. für 3 Stück)
           </div>
         ) : (
           <Button
@@ -678,7 +696,9 @@ export function CoverStudio({
             onClick={generate}
             disabled={busy || !prompt.trim()}
           >
-            {covers.length > 0 ? "Neues Motiv erzeugen" : "Motiv erzeugen"}
+            {covers.length > 0
+              ? "3 neue Motiv-Varianten erzeugen"
+              : "3 Motiv-Varianten erzeugen"}
           </Button>
         )}
 
@@ -761,151 +781,156 @@ export function CoverStudio({
         <section className="border-t border-border pt-6">
           <h2 className="font-display text-lg font-semibold">2 · Look wählen</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Dasselbe Motiv mit acht Titel-Looks — Fläche (Farbband/Verlauf),
-            Position und Ton. Das markierte Wort bekommt automatisch die
-            Kontrast-Akzentfarbe deines Motivs.
+            Das ist dein echtes Cover — genau so landet es im Export. Justiere
+            Fläche, Position, Ton und Ausrichtung; das markierte Wort trägt
+            automatisch die Kontrast-Akzentfarbe des Motivs.
           </p>
-          <ul className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {COVER_SURFACES.flatMap((s) =>
-              COVER_POSITIONS.flatMap((p) =>
-                COVER_TONES.map((t) => {
-                  // Feinjustierung behält die Ausrichtung der Vorlage bei.
-                  const value = buildCoverStyle(
-                    p.value,
-                    t.value,
-                    s.value,
-                    parseCoverStyle(style).align,
-                  );
-                  const active = style === value;
-                  const main = motifColor ?? NEUTRAL_MAIN;
-                  const titleCss = rgbCss(bandTitleColor(t.value));
-                  const accentCss = rgbCss(
-                    accentColorFromMain(main, t.value),
-                  );
-                  const atTop = p.value === "oben";
-                  const overlayStyle =
-                    s.value === "scrim"
-                      ? {
-                          backgroundImage: `linear-gradient(${atTop ? "to bottom" : "to top"}, ${rgbCss(scrimColor(main, t.value))} 0%, ${rgbCss(scrimColor(main, t.value))} 62%, transparent 100%)`,
-                        }
-                      : {
-                          backgroundColor: rgbCss(
-                            bandColorFromMain(main, t.value),
-                          ),
-                        };
-                  const words = title.split(/\s+/).filter(Boolean);
-                  const accentIndex = pickAccentWordIndex(title);
-                  return (
-                    <li key={value}>
+
+          <div className="mt-4 flex flex-col gap-6 sm:flex-row">
+            {/* Große Live-Vorschau: exakt die Produktions-Komposition. */}
+            <div className="w-full max-w-[280px] shrink-0">
+              <CoverComposition
+                imageUrl={selectedCover.image_url}
+                title={title}
+                author={authorValue}
+                subtitle={subtitleValue}
+                styleKey={style}
+                main={motifColor}
+              />
+            </div>
+
+            <div className="min-w-0 flex-1 space-y-4">
+              {(
+                [
+                  {
+                    label: "Fläche",
+                    options: [
+                      { value: "none", text: "Pur (Vorlagen-Look)" },
+                      { value: "band", text: "Farbband" },
+                      { value: "scrim", text: "Verlauf" },
+                    ],
+                    current: parseCoverStyle(style).surface as string,
+                    apply: (v: string) => {
+                      const s = parseCoverStyle(style);
+                      chooseStyle(
+                        buildCoverStyle(
+                          s.position,
+                          s.tone,
+                          v as "none" | "band" | "scrim",
+                          s.align,
+                        ),
+                      );
+                    },
+                  },
+                  {
+                    label: "Titel-Position",
+                    options: [
+                      { value: "oben", text: "Oben" },
+                      { value: "unten", text: "Unten" },
+                    ],
+                    current: parseCoverStyle(style).position as string,
+                    apply: (v: string) => {
+                      const s = parseCoverStyle(style);
+                      chooseStyle(
+                        buildCoverStyle(
+                          v as "oben" | "unten",
+                          s.tone,
+                          s.surface,
+                          s.align,
+                        ),
+                      );
+                    },
+                  },
+                  {
+                    label: "Ton",
+                    options: [
+                      { value: "hell", text: "Hell (dunkle Schrift)" },
+                      { value: "dunkel", text: "Dunkel (helle Schrift)" },
+                    ],
+                    current: parseCoverStyle(style).tone as string,
+                    apply: (v: string) => {
+                      const s = parseCoverStyle(style);
+                      chooseStyle(
+                        buildCoverStyle(
+                          s.position,
+                          v as "hell" | "dunkel",
+                          s.surface,
+                          s.align,
+                        ),
+                      );
+                    },
+                  },
+                  {
+                    label: "Ausrichtung",
+                    options: [
+                      { value: "links", text: "Linksbündig" },
+                      { value: "mitte", text: "Zentriert" },
+                    ],
+                    current: parseCoverStyle(style).align as string,
+                    apply: (v: string) => {
+                      const s = parseCoverStyle(style);
+                      chooseStyle(
+                        buildCoverStyle(
+                          s.position,
+                          s.tone,
+                          s.surface,
+                          v as "links" | "mitte",
+                        ),
+                      );
+                    },
+                  },
+                ] as const
+              ).map((axis) => (
+                <div key={axis.label}>
+                  <p className="text-sm font-medium">{axis.label}</p>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {axis.options.map((opt) => (
                       <button
+                        key={opt.value}
                         type="button"
-                        onClick={() => chooseStyle(value)}
-                        aria-pressed={active}
-                        className={`block w-full overflow-hidden rounded-lg border text-left transition-colors ${
-                          active
-                            ? "border-primary ring-2 ring-primary"
-                            : "border-border hover:border-muted-foreground/40"
+                        onClick={() => axis.apply(opt.value)}
+                        aria-pressed={axis.current === opt.value}
+                        disabled={busy}
+                        className={`rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
+                          axis.current === opt.value
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card text-muted-foreground hover:bg-muted"
                         }`}
                       >
-                        <div className="relative">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={selectedCover.image_url}
-                            alt=""
-                            className="aspect-[2/3] w-full object-cover"
-                          />
-                          <div
-                            className={`absolute inset-x-0 px-2 ${
-                              atTop
-                                ? "top-0 pt-2 pb-3"
-                                : "bottom-0 pt-3 pb-2"
-                            }`}
-                            style={overlayStyle}
-                          >
-                            <p
-                              className="font-display text-[11px] font-bold leading-tight"
-                              style={{ color: titleCss }}
-                            >
-                              {words.map((word, i) => (
-                                <span
-                                  key={i}
-                                  style={
-                                    i === accentIndex
-                                      ? { color: accentCss }
-                                      : undefined
-                                  }
-                                >
-                                  {word}
-                                  {i < words.length - 1 ? " " : ""}
-                                </span>
-                              ))}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="block px-2 py-1.5 text-xs text-muted-foreground">
-                          {s.label} · {p.label} · {t.label}
-                          {active ? " ✓" : ""}
-                        </span>
+                        {opt.text}
                       </button>
-                    </li>
-                  );
-                }),
-              ),
-            )}
-          </ul>
+                    ))}
+                  </div>
+                </div>
+              ))}
 
-          {/* Thumbnail-Wahrheit: das Cover in echter Amazon-Suchgröße. Genau
-              hier entscheidet sich der Klick — nicht in der Großansicht. */}
-          <div className="mt-6 flex items-start gap-4 rounded-xl border border-border bg-muted/40 p-4">
-            <div className="w-[72px] shrink-0">
-              <div className="relative overflow-hidden rounded-sm border border-border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={selectedCover.image_url}
-                  alt=""
-                  className="aspect-[2/3] w-full object-cover"
-                />
-                {(() => {
-                  const { position, tone, surface } = parseCoverStyle(style);
-                  const main = motifColor ?? NEUTRAL_MAIN;
-                  const atTop = position === "oben";
-                  const overlayStyle =
-                    surface === "scrim"
-                      ? {
-                          backgroundImage: `linear-gradient(${atTop ? "to bottom" : "to top"}, ${rgbCss(scrimColor(main, tone))} 0%, ${rgbCss(scrimColor(main, tone))} 62%, transparent 100%)`,
-                        }
-                      : {
-                          backgroundColor: rgbCss(
-                            bandColorFromMain(main, tone),
-                          ),
-                        };
-                  return (
-                    <div
-                      className={`absolute inset-x-0 px-1 py-1 ${atTop ? "top-0" : "bottom-0"}`}
-                      style={overlayStyle}
-                    >
-                      <p
-                        className="font-display text-[5px] font-bold leading-[6px]"
-                        style={{ color: rgbCss(bandTitleColor(parseCoverStyle(style).tone)) }}
-                      >
-                        {title}
-                      </p>
-                    </div>
-                  );
-                })()}
+              {/* Thumbnail-Wahrheit: dieselbe Komposition in Amazon-Suchgröße. */}
+              <div className="flex items-start gap-4 rounded-xl border border-border bg-muted/40 p-4">
+                <div className="w-[72px] shrink-0">
+                  <CoverComposition
+                    imageUrl={selectedCover.image_url}
+                    title={title}
+                    author={authorValue}
+                    subtitle={subtitleValue}
+                    styleKey={style}
+                    main={motifColor}
+                    rounded={false}
+                    className="rounded-sm"
+                  />
+                </div>
+                <div className="min-w-0 text-sm">
+                  <p className="font-semibold">
+                    So klein sieht dein Cover in der Amazon-Suche aus.
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    {title.length > 60
+                      ? "Dein Titel ist lang — in dieser Größe ist er kaum lesbar. Kürzere Titel (oder das Kernthema zuerst) gewinnen im Thumbnail."
+                      : title.length > 35
+                        ? "Ordentlich. Noch stärker wird es, wenn das wichtigste Wort vorn steht — es trägt die Akzentfarbe."
+                        : "Stark: Ein kurzer Titel bleibt auch im Thumbnail groß und lesbar."}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="min-w-0 text-sm">
-              <p className="font-semibold">
-                So klein sieht dein Cover in der Amazon-Suche aus.
-              </p>
-              <p className="mt-1 text-muted-foreground">
-                {title.length > 60
-                  ? "Dein Titel ist lang — in dieser Größe ist er kaum lesbar. Kürzere Titel (oder das Kernthema zuerst) gewinnen im Thumbnail."
-                  : title.length > 35
-                    ? "Ordentlich. Noch stärker wird es, wenn das wichtigste Wort vorn steht — es trägt die Akzentfarbe."
-                    : "Stark: Ein kurzer Titel bleibt auch im Thumbnail groß und lesbar."}
-              </p>
             </div>
           </div>
         </section>
