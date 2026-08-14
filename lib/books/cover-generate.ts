@@ -25,7 +25,7 @@ export async function generateCover(
   if (!trimmed) {
     return { ok: false, error: "Bitte gib eine Bildbeschreibung ein." };
   }
-  if (model !== "schnell" && model !== "pro") {
+  if (model !== "schnell" && model !== "pro" && model !== "illustration") {
     return { ok: false, error: "Ungültiges Modell." };
   }
 

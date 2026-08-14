@@ -127,6 +127,7 @@ export default async function BuchDetailPage({
                 imageUrl={book.coverUrl}
                 title={book.title}
                 author={book.author}
+                subtitle={book.subtitle}
                 styleKey={book.coverStyle}
               />
               {book.coverUrl ? (

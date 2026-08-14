@@ -15,10 +15,12 @@ import {
   updateProjectAuthorAction,
   updateCoverTitleStyleAction,
   updateBlurbAction,
+  updateSubtitleAction,
 } from "@/lib/books/cover-actions";
 import {
   COVER_POSITIONS,
   COVER_TONES,
+  COVER_SURFACES,
   parseCoverStyle,
   buildCoverStyle,
   normalizeCoverTitleStyle,
@@ -29,6 +31,18 @@ import {
   NEUTRAL_MAIN,
   type RGB,
 } from "@/lib/books/cover-style";
+import {
+  accentColorFromMain,
+  pickAccentWordIndex,
+  scrimColor,
+  fitTitle,
+} from "@/lib/books/cover-layout";
+import {
+  COVER_DIRECTIONS,
+  getCoverDirection,
+  defaultDirectionForBookType,
+  type CoverDirectionKey,
+} from "@/lib/books/cover-directions";
 
 const TEXTAREA_CLASS =
   "flex w-full rounded-xl border border-input bg-muted px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50";
@@ -48,22 +62,32 @@ export function CoverStudio({
   projectId,
   title,
   author,
+  subtitle,
   titleStyle,
   blurb,
   covers,
+  bookType,
+  hasMarketData,
 }: {
   projectId: string;
   title: string;
   author: string;
+  subtitle: string;
   titleStyle: string;
   blurb: string;
   covers: Cover[];
+  bookType: string;
+  hasMarketData: boolean;
 }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [feedbackValue, setFeedbackValue] = useState("");
   const [authorValue, setAuthorValue] = useState(author);
+  const [subtitleValue, setSubtitleValue] = useState(subtitle);
   const [blurbValue, setBlurbValue] = useState(blurb);
+  const [direction, setDirection] = useState<CoverDirectionKey>(
+    defaultDirectionForBookType(bookType),
+  );
   const [style, setStyle] = useState<string>(
     normalizeCoverTitleStyle(titleStyle),
   );
@@ -145,13 +169,21 @@ export function CoverStudio({
     };
   }, [generating, router]);
 
-  function suggest() {
+  function suggest(dir: CoverDirectionKey = direction) {
     setError(null);
     startTransition(async () => {
-      const result = await suggestCoverPromptAction(projectId);
+      const result = await suggestCoverPromptAction(projectId, dir);
       if (result.ok && result.prompt) setPrompt(result.prompt);
       else setError(result.error ?? "Konnte keinen Vorschlag erstellen.");
     });
+  }
+
+  // Richtungswechsel holt direkt einen frischen Prompt-Vorschlag in dieser
+  // Art-Direction — die Richtung wirkt sonst erst beim nächsten Klick und
+  // fühlt sich kaputt an.
+  function chooseDirection(dir: CoverDirectionKey) {
+    setDirection(dir);
+    suggest(dir);
   }
 
   // Beim allerersten Besuch (keine Motive, leeres Feld) den Vorschlag von
@@ -203,7 +235,12 @@ export function CoverStudio({
         const res = await fetch(`/api/projekte/${projectId}/cover`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ prompt, model: "pro" }),
+          // Modell folgt der Stil-Richtung: Illustration (Ideogram) für
+          // Flat/Editorial/Workbook, Flux Pro für Foto-Emotion.
+          body: JSON.stringify({
+            prompt,
+            model: getCoverDirection(direction).model,
+          }),
         });
         if (!res.ok) {
           const data = (await res.json().catch(() => null)) as {
@@ -226,6 +263,15 @@ export function CoverStudio({
     setError(null);
     startTransition(async () => {
       const result = await updateProjectAuthorAction(projectId, authorValue);
+      if (result.ok) router.refresh();
+      else setError(result.error ?? "Etwas ist schiefgelaufen.");
+    });
+  }
+
+  function saveSubtitle() {
+    setError(null);
+    startTransition(async () => {
+      const result = await updateSubtitleAction(projectId, subtitleValue);
       if (result.ok) router.refresh();
       else setError(result.error ?? "Etwas ist schiefgelaufen.");
     });
@@ -274,51 +320,113 @@ export function CoverStudio({
         const dh = img.height * scale;
         ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
 
-        const { position, tone } = parseCoverStyle(style);
+        const { position, tone, surface } = parseCoverStyle(style);
         const main = motifColor ?? NEUTRAL_MAIN;
-        const bandColor = rgbCss(bandColorFromMain(main, tone));
         const titleColor = rgbCss(bandTitleColor(tone));
         const authorColor = rgbCss(bandAuthorColor(tone));
+        const accentCss = rgbCss(accentColorFromMain(main, tone));
 
         const pad = 96;
-        const titleSize = 84;
-        const titleLh = 104;
         ctx.textBaseline = "top";
 
-        // Wrap the title to the band width.
-        ctx.font = `700 ${titleSize}px "Bricolage Grotesque", sans-serif`;
-        const lines: string[] = [];
-        let line = "";
-        for (const word of title.split(/\s+/).filter(Boolean)) {
-          const cand = line ? `${line} ${word}` : word;
-          if (ctx.measureText(cand).width > W - 2 * pad && line) {
-            lines.push(line);
-            line = word;
-          } else {
-            line = cand;
-          }
-        }
-        if (line) lines.push(line);
+        // Cover 2.0: adaptive Titelgröße — kurze Titel werden riesig
+        // (Amazon-Thumbnail-Regel), lange bleiben in max. 4 Zeilen lesbar.
+        const titleFont = (s: number) =>
+          `700 ${s}px "Bricolage Grotesque", sans-serif`;
+        const fitted = fitTitle(
+          title,
+          W - 2 * pad,
+          (text, s) => {
+            ctx.font = titleFont(s);
+            return ctx.measureText(text).width;
+          },
+          { baseSize: 150, minSize: 72, maxLines: 4 },
+        );
 
         const authorText = authorValue.trim();
+        const subtitleText = subtitleValue.trim();
         const authorSize = 46;
-        const bandH = Math.min(
-          H * 0.5,
-          64 + lines.length * titleLh + 48 + (authorText ? authorSize + 40 : 0),
-        );
+        const subtitleSize = 52;
+        const subtitleLh = 66;
+        ctx.font = `500 ${subtitleSize}px "Instrument Sans", sans-serif`;
+        const subtitleLines = subtitleText
+          ? (() => {
+              const out: string[] = [];
+              let l = "";
+              for (const word of subtitleText.split(/\s+/).filter(Boolean)) {
+                const cand = l ? `${l} ${word}` : word;
+                if (ctx.measureText(cand).width > W - 2 * pad && l) {
+                  out.push(l);
+                  l = word;
+                } else {
+                  l = cand;
+                }
+              }
+              if (l) out.push(l);
+              return out.slice(0, 3);
+            })()
+          : [];
+
+        const contentH =
+          64 +
+          fitted.lines.length * fitted.lineHeight +
+          (subtitleLines.length ? 24 + subtitleLines.length * subtitleLh : 0) +
+          48 +
+          (authorText ? authorSize + 40 : 0);
+        const bandH = Math.min(H * 0.55, contentH);
         const bandY = position === "oben" ? 0 : H - bandH;
 
-        ctx.fillStyle = bandColor;
-        ctx.fillRect(0, bandY, W, bandH);
-        ctx.fillStyle = "rgb(28, 107, 67)"; // accent strip on the inner edge
-        ctx.fillRect(0, position === "oben" ? bandY + bandH : bandY - 8, W, 8);
+        if (surface === "scrim") {
+          // Verlauf statt deckender Fläche: Motiv bleibt hinter dem Titel
+          // sichtbar (moderner Bestseller-Look). Verlauf läuft zur Bildmitte
+          // hin aus; +40% Anlauf über der Textzone für weiche Kante.
+          const scrim = scrimColor(main, tone);
+          const solid = rgbCss(scrim);
+          const extra = Math.min(H - bandH, Math.round(bandH * 0.4));
+          const g =
+            position === "oben"
+              ? ctx.createLinearGradient(0, 0, 0, bandH + extra)
+              : ctx.createLinearGradient(0, H, 0, H - bandH - extra);
+          g.addColorStop(0, solid);
+          g.addColorStop(bandH / (bandH + extra), solid);
+          g.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = g;
+          if (position === "oben") ctx.fillRect(0, 0, W, bandH + extra);
+          else ctx.fillRect(0, H - bandH - extra, W, bandH + extra);
+        } else {
+          ctx.fillStyle = rgbCss(bandColorFromMain(main, tone));
+          ctx.fillRect(0, bandY, W, bandH);
+          // Akzentstreifen in der Kontrastfarbe des Motivs (nicht mehr fix grün).
+          ctx.fillStyle = accentCss;
+          ctx.fillRect(0, position === "oben" ? bandY + bandH : bandY - 8, W, 8);
+        }
 
-        ctx.fillStyle = titleColor;
-        ctx.font = `700 ${titleSize}px "Bricolage Grotesque", sans-serif`;
+        // Titel mit hervorgehobenem Schlüsselwort (Blickanker in Akzentfarbe).
+        ctx.font = titleFont(fitted.size);
+        const accentIndex = pickAccentWordIndex(title);
+        let wordCursor = 0;
         let ty = bandY + 64;
-        for (const l of lines) {
-          ctx.fillText(l, pad, ty);
-          ty += titleLh;
+        for (const l of fitted.lines) {
+          const lineWords = l.split(" ");
+          let tx = pad;
+          for (const word of lineWords) {
+            ctx.fillStyle =
+              wordCursor === accentIndex ? accentCss : titleColor;
+            ctx.fillText(word, tx, ty);
+            tx += ctx.measureText(`${word} `).width;
+            wordCursor += 1;
+          }
+          ty += fitted.lineHeight;
+        }
+
+        if (subtitleLines.length) {
+          ty += 24;
+          ctx.fillStyle = authorColor;
+          ctx.font = `500 ${subtitleSize}px "Instrument Sans", sans-serif`;
+          for (const l of subtitleLines) {
+            ctx.fillText(l, pad, ty);
+            ty += subtitleLh;
+          }
         }
         if (authorText) {
           ctx.fillStyle = authorColor;
@@ -356,11 +464,16 @@ export function CoverStudio({
   function downloadCover() {
     setError(null);
     startTransition(async () => {
-      const [authorRes, blurbRes] = await Promise.all([
+      const [authorRes, blurbRes, subtitleRes] = await Promise.all([
         updateProjectAuthorAction(projectId, authorValue),
         updateBlurbAction(projectId, blurbValue),
+        updateSubtitleAction(projectId, subtitleValue),
       ]);
-      const result = !authorRes.ok ? authorRes : blurbRes;
+      const result = !authorRes.ok
+        ? authorRes
+        : !blurbRes.ok
+          ? blurbRes
+          : subtitleRes;
       if (!result.ok) {
         setError(result.error ?? "Etwas ist schiefgelaufen.");
         return;
@@ -391,6 +504,35 @@ export function CoverStudio({
   return (
     <div className="mt-8 space-y-8">
       <section className="space-y-4 rounded-2xl border border-border bg-card p-6 sm:p-7">
+        <div className="space-y-2">
+          <Label>Stil-Richtung</Label>
+          <div className="flex flex-wrap gap-2">
+            {COVER_DIRECTIONS.map((d) => (
+              <button
+                key={d.key}
+                type="button"
+                onClick={() => chooseDirection(d.key)}
+                aria-pressed={direction === d.key}
+                disabled={busy}
+                title={d.hint}
+                className={`rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
+                  direction === d.key
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {getCoverDirection(direction).hint}.
+            {hasMarketData
+              ? " Der Vorschlag kennt deine Amazon-Konkurrenz aus dem Marktcheck und setzt sich farblich von ihr ab."
+              : ""}
+          </p>
+        </div>
+
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-2">
             <Label htmlFor="cover-prompt">Bildidee</Label>
@@ -398,7 +540,7 @@ export function CoverStudio({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={suggest}
+              onClick={() => suggest()}
               disabled={busy}
             >
               Neuen Vorschlag erstellen
@@ -541,60 +683,147 @@ export function CoverStudio({
         <section className="border-t border-border pt-6">
           <h2 className="font-display text-lg font-semibold">2 · Look wählen</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Dasselbe Motiv mit vier Titel-Varianten — Position (oben/unten) und
-            Farbe (hell/dunkel, aus dem Motiv abgeleitet). Wähle deinen Favoriten.
+            Dasselbe Motiv mit acht Titel-Looks — Fläche (Farbband/Verlauf),
+            Position und Ton. Das markierte Wort bekommt automatisch die
+            Kontrast-Akzentfarbe deines Motivs.
           </p>
           <ul className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {COVER_POSITIONS.flatMap((p) =>
-              COVER_TONES.map((t) => {
-                const value = buildCoverStyle(p.value, t.value);
-                const active = style === value;
-                const main = motifColor ?? NEUTRAL_MAIN;
-                const bandCss = rgbCss(bandColorFromMain(main, t.value));
-                const titleCss = rgbCss(bandTitleColor(t.value));
-                return (
-                  <li key={value}>
-                    <button
-                      type="button"
-                      onClick={() => chooseStyle(value)}
-                      aria-pressed={active}
-                      className={`block w-full overflow-hidden rounded-lg border text-left transition-colors ${
-                        active
-                          ? "border-primary ring-2 ring-primary"
-                          : "border-border hover:border-muted-foreground/40"
-                      }`}
-                    >
-                      <div className="relative">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={selectedCover.image_url}
-                          alt=""
-                          className="aspect-[2/3] w-full object-cover"
-                        />
-                        <div
-                          className={`absolute inset-x-0 px-2 pb-2 pt-2 ${
-                            p.value === "oben" ? "top-0" : "bottom-0"
-                          }`}
-                          style={{ backgroundColor: bandCss }}
-                        >
-                          <p
-                            className="font-display text-[11px] font-bold leading-tight"
-                            style={{ color: titleCss }}
+            {COVER_SURFACES.flatMap((s) =>
+              COVER_POSITIONS.flatMap((p) =>
+                COVER_TONES.map((t) => {
+                  const value = buildCoverStyle(p.value, t.value, s.value);
+                  const active = style === value;
+                  const main = motifColor ?? NEUTRAL_MAIN;
+                  const titleCss = rgbCss(bandTitleColor(t.value));
+                  const accentCss = rgbCss(
+                    accentColorFromMain(main, t.value),
+                  );
+                  const atTop = p.value === "oben";
+                  const overlayStyle =
+                    s.value === "scrim"
+                      ? {
+                          backgroundImage: `linear-gradient(${atTop ? "to bottom" : "to top"}, ${rgbCss(scrimColor(main, t.value))} 0%, ${rgbCss(scrimColor(main, t.value))} 62%, transparent 100%)`,
+                        }
+                      : {
+                          backgroundColor: rgbCss(
+                            bandColorFromMain(main, t.value),
+                          ),
+                        };
+                  const words = title.split(/\s+/).filter(Boolean);
+                  const accentIndex = pickAccentWordIndex(title);
+                  return (
+                    <li key={value}>
+                      <button
+                        type="button"
+                        onClick={() => chooseStyle(value)}
+                        aria-pressed={active}
+                        className={`block w-full overflow-hidden rounded-lg border text-left transition-colors ${
+                          active
+                            ? "border-primary ring-2 ring-primary"
+                            : "border-border hover:border-muted-foreground/40"
+                        }`}
+                      >
+                        <div className="relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={selectedCover.image_url}
+                            alt=""
+                            className="aspect-[2/3] w-full object-cover"
+                          />
+                          <div
+                            className={`absolute inset-x-0 px-2 ${
+                              atTop
+                                ? "top-0 pt-2 pb-3"
+                                : "bottom-0 pt-3 pb-2"
+                            }`}
+                            style={overlayStyle}
                           >
-                            {title}
-                          </p>
+                            <p
+                              className="font-display text-[11px] font-bold leading-tight"
+                              style={{ color: titleCss }}
+                            >
+                              {words.map((word, i) => (
+                                <span
+                                  key={i}
+                                  style={
+                                    i === accentIndex
+                                      ? { color: accentCss }
+                                      : undefined
+                                  }
+                                >
+                                  {word}
+                                  {i < words.length - 1 ? " " : ""}
+                                </span>
+                              ))}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <span className="block px-2 py-1.5 text-xs text-muted-foreground">
-                        {p.label} · {t.label}
-                        {active ? " ✓" : ""}
-                      </span>
-                    </button>
-                  </li>
-                );
-              }),
+                        <span className="block px-2 py-1.5 text-xs text-muted-foreground">
+                          {s.label} · {p.label} · {t.label}
+                          {active ? " ✓" : ""}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                }),
+              ),
             )}
           </ul>
+
+          {/* Thumbnail-Wahrheit: das Cover in echter Amazon-Suchgröße. Genau
+              hier entscheidet sich der Klick — nicht in der Großansicht. */}
+          <div className="mt-6 flex items-start gap-4 rounded-xl border border-border bg-muted/40 p-4">
+            <div className="w-[72px] shrink-0">
+              <div className="relative overflow-hidden rounded-sm border border-border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedCover.image_url}
+                  alt=""
+                  className="aspect-[2/3] w-full object-cover"
+                />
+                {(() => {
+                  const { position, tone, surface } = parseCoverStyle(style);
+                  const main = motifColor ?? NEUTRAL_MAIN;
+                  const atTop = position === "oben";
+                  const overlayStyle =
+                    surface === "scrim"
+                      ? {
+                          backgroundImage: `linear-gradient(${atTop ? "to bottom" : "to top"}, ${rgbCss(scrimColor(main, tone))} 0%, ${rgbCss(scrimColor(main, tone))} 62%, transparent 100%)`,
+                        }
+                      : {
+                          backgroundColor: rgbCss(
+                            bandColorFromMain(main, tone),
+                          ),
+                        };
+                  return (
+                    <div
+                      className={`absolute inset-x-0 px-1 py-1 ${atTop ? "top-0" : "bottom-0"}`}
+                      style={overlayStyle}
+                    >
+                      <p
+                        className="font-display text-[5px] font-bold leading-[6px]"
+                        style={{ color: rgbCss(bandTitleColor(parseCoverStyle(style).tone)) }}
+                      >
+                        {title}
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+            <div className="min-w-0 text-sm">
+              <p className="font-semibold">
+                So klein sieht dein Cover in der Amazon-Suche aus.
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                {title.length > 60
+                  ? "Dein Titel ist lang — in dieser Größe ist er kaum lesbar. Kürzere Titel (oder das Kernthema zuerst) gewinnen im Thumbnail."
+                  : title.length > 35
+                    ? "Ordentlich. Noch stärker wird es, wenn das wichtigste Wort vorn steht — es trägt die Akzentfarbe."
+                    : "Stark: Ein kurzer Titel bleibt auch im Thumbnail groß und lesbar."}
+              </p>
+            </div>
+          </div>
         </section>
       ) : null}
 
@@ -607,6 +836,34 @@ export function CoverStudio({
           Vorder- und Rückseite. Unten rechts bleibt der Bereich für den
           Amazon-Barcode frei.
         </p>
+
+        <div className="mt-4 max-w-xl space-y-1">
+          <Label htmlFor="cover-subtitle">
+            Untertitel (erscheint unter dem Titel)
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            Das Nutzenversprechen in einem Satz — bei Ratgebern kaufentscheidend.
+            Er ist derselbe wie der KDP-Untertitel.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              id="cover-subtitle"
+              value={subtitleValue}
+              onChange={(event) => setSubtitleValue(event.target.value)}
+              disabled={busy}
+              placeholder="z. B. Der 30-Tage-Plan für entspannte Familienabende"
+              className="h-10"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={saveSubtitle}
+              disabled={busy}
+            >
+              Speichern
+            </Button>
+          </div>
+        </div>
 
         <div className="mt-4 max-w-sm space-y-1">
           <Label htmlFor="author">Autor (erscheint auf dem Cover)</Label>

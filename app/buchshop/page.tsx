@@ -73,6 +73,7 @@ function BookCard({ book, boosted }: { book: ShopBook; boosted: boolean }) {
           imageUrl={book.coverUrl}
           title={book.title}
           author={book.author}
+          subtitle={book.subtitle}
           styleKey={book.coverStyle}
         />
         {boosted ? (

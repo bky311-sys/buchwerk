@@ -35,16 +35,30 @@ export default async function CoverPage({
     .eq("project_id", id)
     .order("created_at", { ascending: false });
 
-  // Klappentext lives in the KDP listing; surface it here so it can be written
-  // before the listing step (the back cover needs it).
-  const [{ data: listing }, workflowSteps] = await Promise.all([
-    supabase
-      .from("kdp_listings")
-      .select("description")
-      .eq("project_id", id)
-      .maybeSingle(),
-    getWorkflowSteps(supabase, id),
-  ]);
+  // Klappentext + Untertitel live in the KDP listing; surfaced here because the
+  // cover step comes first (back cover needs the blurb, front cover the
+  // subtitle). Buchtyp + Marktcheck best-effort in eigenen Abfragen (Regel
+  // 2026-07-15): Workbooks starten mit der Workbook-Stilrichtung, und mit
+  // Marktdaten differenziert der Prompt-Vorschlag gegen die Konkurrenz.
+  const [{ data: listing }, workflowSteps, { data: typeRow }, { data: marketRow }] =
+    await Promise.all([
+      supabase
+        .from("kdp_listings")
+        .select("description, subtitle")
+        .eq("project_id", id)
+        .maybeSingle(),
+      getWorkflowSteps(supabase, id),
+      supabase
+        .from("projects")
+        .select("book_type")
+        .eq("id", id)
+        .maybeSingle(),
+      supabase
+        .from("projects")
+        .select("market_snapshot")
+        .eq("id", id)
+        .maybeSingle(),
+    ]);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -76,9 +90,12 @@ export default async function CoverPage({
         projectId={id}
         title={project.title ?? project.topic}
         author={project.author ?? ""}
+        subtitle={listing?.subtitle ?? ""}
         titleStyle={project.cover_title_style}
         blurb={listing?.description ?? ""}
         covers={covers ?? []}
+        bookType={typeRow?.book_type ?? "ratgeber"}
+        hasMarketData={marketRow?.market_snapshot != null}
       />
 
       {(covers ?? []).some((c) => c.is_selected) ? (

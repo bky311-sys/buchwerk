@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { normalizeCoverTitleStyle } from "@/lib/books/cover-style";
+import { getCoverDirection } from "@/lib/books/cover-directions";
+import { coerceMarketSnapshot } from "@/lib/books/market-check";
 
 export type CoverResult = { ok: boolean; error?: string };
 export type SuggestResult = { ok: boolean; prompt?: string; error?: string };
@@ -64,6 +66,7 @@ export async function suggestBlurbAction(
 
 export async function suggestCoverPromptAction(
   projectId: string,
+  directionKey?: string,
 ): Promise<SuggestResult> {
   const supabase = await createClient();
   const { data: project } = await supabase
@@ -73,11 +76,33 @@ export async function suggestCoverPromptAction(
     .single();
   if (!project) return { ok: false, error: "Projekt nicht gefunden." };
 
+  // Marktcheck-Differenzierung (Cover 2.0): kennt das Projekt seine
+  // Wettbewerber, bekommt Claude sie mit dem Auftrag, sich farblich/motivisch
+  // von der Nische abzusetzen. Best-effort in eigener Abfrage (Regel
+  // 2026-07-15) — ohne Snapshot bleibt der Platzhalter schlicht leer.
+  const { data: marketRow } = await supabase
+    .from("projects")
+    .select("market_snapshot")
+    .eq("id", projectId)
+    .maybeSingle();
+  const snapshot = coerceMarketSnapshot(marketRow?.market_snapshot ?? null);
+  const competitors = (snapshot?.wettbewerber ?? [])
+    .slice(0, 8)
+    .map((w) => `- „${w.titel}“${w.autor ? ` (${w.autor})` : ""}`)
+    .join("\n");
+  const marktKontext = competitors
+    ? `Marktumfeld (echte Amazon-Konkurrenz dieser Nische):\n${competitors}\nWähle bewusst eine Farbwelt und Bildsprache, die sich von den bei solchen Titeln üblichen Covern ABHEBT — das Cover muss in der Amazon-Suchliste neben ihnen auffallen.`
+    : "";
+
+  const direction = getCoverDirection(directionKey);
+
   try {
     const prompt = await loadPrompt("cover-prompt", {
       titel: project.title ?? project.topic,
       thema: project.topic,
       zielgruppe: project.audience ?? "allgemein interessierte Erwachsene",
+      stil_anweisung: direction.styleInstruction,
+      markt_kontext: marktKontext,
     });
     const text = await claudeText({
       messages: [{ role: "user", content: prompt }],
@@ -181,6 +206,23 @@ export async function updateBlurbAction(
   const supabase = await createClient();
   const { error } = await supabase.from("kdp_listings").upsert(
     { project_id: projectId, description: blurb.trim() || null },
+    { onConflict: "project_id" },
+  );
+  if (error) return { ok: false, error: "Konnte nicht gespeichert werden." };
+
+  return { ok: true };
+}
+
+// Der Untertitel steht seit Cover 2.0 auch auf dem Cover (Nutzenversprechen —
+// Ratgeber-Konvention). Er lebt wie der Klappentext im KDP-Listing, damit
+// Cover und Listing nie auseinanderlaufen.
+export async function updateSubtitleAction(
+  projectId: string,
+  subtitle: string,
+): Promise<CoverResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("kdp_listings").upsert(
+    { project_id: projectId, subtitle: subtitle.trim() || null },
     { onConflict: "project_id" },
   );
   if (error) return { ok: false, error: "Konnte nicht gespeichert werden." };

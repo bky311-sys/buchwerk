@@ -3,7 +3,11 @@
 
 const MODELS = {
   schnell: "black-forest-labs/flux-schnell", // ~$0.003, fast drafts
-  pro: "black-forest-labs/flux-1.1-pro", // ~$0.04, final quality
+  pro: "black-forest-labs/flux-1.1-pro", // ~$0.04, photorealistic finals
+  // Flat-/Design-Illustration (Cover 2.0). Ideogram statt Recraft: liefert PNG
+  // (Recraft nur WebP — pdf-lib kann WebP nicht in die Full-Wrap-PDF einbetten;
+  // real getestet 14.08.).
+  illustration: "ideogram-ai/ideogram-v3-turbo", // ~$0.03
 } as const;
 
 export type CoverModel = keyof typeof MODELS;
@@ -23,11 +27,21 @@ export async function generateCoverImage(
   const token = process.env.REPLICATE_API_TOKEN;
   if (!token) throw new Error("REPLICATE_API_TOKEN ist nicht gesetzt.");
 
-  const input: Record<string, unknown> = {
-    prompt,
-    aspect_ratio: "2:3", // portrait book cover
-    output_format: "png", // PNG embeds reliably into the cover PDF (pdf-lib)
-  };
+  // Ideogram: Design-Stil, Magic Prompt aus (unser Prompt ist bereits von
+  // Claude ausformuliert — Umschreiben würde die Stil-Richtung verwässern).
+  const input: Record<string, unknown> =
+    model === "illustration"
+      ? {
+          prompt,
+          aspect_ratio: "2:3", // portrait book cover
+          style_type: "Design",
+          magic_prompt_option: "Off",
+        }
+      : {
+          prompt,
+          aspect_ratio: "2:3", // portrait book cover
+          output_format: "png", // PNG embeds reliably into the cover PDF (pdf-lib)
+        };
   if (model === "schnell") {
     input.num_outputs = 1;
     input.go_fast = true;

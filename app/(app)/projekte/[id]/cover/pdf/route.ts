@@ -11,6 +11,12 @@ import {
   bandAuthorColor,
   NEUTRAL_MAIN,
 } from "@/lib/books/cover-style";
+import {
+  accentColorFromMain,
+  pickAccentWordIndex,
+  scrimColor,
+  fitTitle,
+} from "@/lib/books/cover-layout";
 import { coverDisposition } from "@/lib/books/filename";
 import { coerceSources } from "@/lib/books/sources";
 import { buildManuscriptPdf, TRIM_W, TRIM_H } from "@/lib/books/manuscript-pdf";
@@ -93,7 +99,7 @@ export async function GET(
 
   const { data: listing } = await supabase
     .from("kdp_listings")
-    .select("description")
+    .select("description, subtitle")
     .eq("project_id", id)
     .maybeSingle();
 
@@ -198,54 +204,119 @@ export async function GET(
     height: dh,
   });
 
-  const { position, tone } = parseCoverStyle(project.cover_title_style);
-  const bandRgb = bandColorFromMain(main, tone);
+  const { position, tone, surface } = parseCoverStyle(project.cover_title_style);
   const tRgb = bandTitleColor(tone);
   const aRgb = bandAuthorColor(tone);
+  const accent = accentColorFromMain(main, tone);
+  const accentRgb = rgb(accent.r, accent.g, accent.b);
   const bandAtTop = position === "oben";
+  const subtitle = listing?.subtitle?.trim() ?? "";
 
-  const titleSize = 30;
-  const titleLh = 38;
-  const titleLines = wrap(
-    safe(title),
-    helveticaBold,
-    titleSize,
+  // Cover 2.0: adaptive Titelgröße (kurze Titel groß — Thumbnail-Regel),
+  // muss dem Canvas-Export in cover-studio proportional entsprechen
+  // (Canvas 1600px ↔ Front-Panel ~405pt: Faktor ~0.25).
+  const safeTitle = safe(title);
+  const fitted = fitTitle(
+    safeTitle,
     TRIM_W - 2 * SAFE,
+    (text, s) => helveticaBold.widthOfTextAtSize(text, s),
+    { baseSize: 38, minSize: 18, maxLines: 4 },
   );
+
+  const subtitleSize = 13;
+  const subtitleLh = 17;
+  const subtitleLines = subtitle
+    ? wrap(safe(subtitle), helvetica, subtitleSize, TRIM_W - 2 * SAFE).slice(0, 3)
+    : [];
   const authorBlock = author ? 42 : 0;
   const bandH = Math.min(
-    totalH * 0.5,
-    titleLines.length * titleLh + 2 * SAFE + 40 + authorBlock,
+    totalH * 0.55,
+    fitted.lines.length * fitted.lineHeight +
+      (subtitleLines.length ? 10 + subtitleLines.length * subtitleLh : 0) +
+      2 * SAFE +
+      40 +
+      authorBlock,
   );
   const bandY = bandAtTop ? totalH - bandH : 0;
 
-  // Band spans the whole front art width (bleeds to the right/top/bottom edge).
-  page.drawRectangle({
-    x: frontTrimX0,
-    y: bandY,
-    width: frontArtW,
-    height: bandH,
-    color: rgb(bandRgb.r, bandRgb.g, bandRgb.b),
-  });
-  page.drawRectangle({
-    x: frontTrimX0,
-    y: bandAtTop ? bandY - 5 : bandY + bandH,
-    width: frontArtW,
-    height: 5,
-    color: rgb(0.11, 0.42, 0.24),
-  });
+  if (surface === "scrim") {
+    // pdf-lib kennt keine Verläufe — der Scrim wird als Treppe aus schmalen
+    // Rechtecken mit abnehmender Deckkraft gezeichnet (24 Stufen reichen im
+    // Druck; verifiziert per pdftoppm-Rendering).
+    const sc = scrimColor(main, tone);
+    const scRgb = rgb(sc.r, sc.g, sc.b);
+    const extra = Math.min(totalH - bandH, bandH * 0.4);
+    page.drawRectangle({
+      x: frontTrimX0,
+      y: bandY,
+      width: frontArtW,
+      height: bandH,
+      color: scRgb,
+    });
+    const steps = 24;
+    for (let i = 0; i < steps; i += 1) {
+      const h = extra / steps;
+      const y = bandAtTop ? bandY - (i + 1) * h : bandY + bandH + i * h;
+      page.drawRectangle({
+        x: frontTrimX0,
+        y,
+        width: frontArtW,
+        height: h + 0.5, // minimal überlappen gegen Rendering-Fugen
+        color: scRgb,
+        opacity: 1 - (i + 1) / steps,
+      });
+    }
+  } else {
+    const bandRgb = bandColorFromMain(main, tone);
+    // Band spans the whole front art width (bleeds to the right/top/bottom edge).
+    page.drawRectangle({
+      x: frontTrimX0,
+      y: bandY,
+      width: frontArtW,
+      height: bandH,
+      color: rgb(bandRgb.r, bandRgb.g, bandRgb.b),
+    });
+    // Akzentstreifen in der Kontrastfarbe des Motivs (nicht mehr fix grün).
+    page.drawRectangle({
+      x: frontTrimX0,
+      y: bandAtTop ? bandY - 5 : bandY + bandH,
+      width: frontArtW,
+      height: 5,
+      color: accentRgb,
+    });
+  }
 
   const frontTextX = frontTrimX0 + SAFE;
-  let ty = bandY + bandH - SAFE - titleSize;
-  for (const l of titleLines) {
-    page.drawText(l, {
-      x: frontTextX,
-      y: ty,
-      size: titleSize,
-      font: helveticaBold,
-      color: rgb(tRgb.r, tRgb.g, tRgb.b),
-    });
-    ty -= titleLh;
+  const accentIndex = pickAccentWordIndex(safeTitle);
+  let wordCursor = 0;
+  let ty = bandY + bandH - SAFE - fitted.size;
+  for (const l of fitted.lines) {
+    let tx = frontTextX;
+    for (const word of l.split(" ")) {
+      page.drawText(word, {
+        x: tx,
+        y: ty,
+        size: fitted.size,
+        font: helveticaBold,
+        color: wordCursor === accentIndex ? accentRgb : rgb(tRgb.r, tRgb.g, tRgb.b),
+      });
+      tx += helveticaBold.widthOfTextAtSize(`${word} `, fitted.size);
+      wordCursor += 1;
+    }
+    ty -= fitted.lineHeight;
+  }
+  if (subtitleLines.length) {
+    ty -= 4;
+    for (const l of subtitleLines) {
+      page.drawText(l, {
+        x: frontTextX,
+        y: ty,
+        size: subtitleSize,
+        font: helvetica,
+        color: rgb(aRgb.r, aRgb.g, aRgb.b),
+      });
+      ty -= subtitleLh;
+    }
   }
   if (author) {
     page.drawText(safe(author), {

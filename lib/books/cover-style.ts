@@ -6,8 +6,12 @@
 
 export type CoverPosition = "oben" | "unten";
 export type CoverTone = "hell" | "dunkel";
+// Dritte Achse seit Cover 2.0 (14.08.): "band" = deckende Farbfläche (bisheriger
+// Look), "scrim" = weicher Verlauf über dem Motiv (moderner Bestseller-Look,
+// das Motiv bleibt hinter dem Titel sichtbar).
+export type CoverSurface = "band" | "scrim";
 
-export const DEFAULT_COVER_STYLE = "unten-dunkel";
+export const DEFAULT_COVER_STYLE = "unten-dunkel-band";
 
 export const COVER_POSITIONS: { value: CoverPosition; label: string }[] = [
   { value: "oben", label: "Oben" },
@@ -19,35 +23,47 @@ export const COVER_TONES: { value: CoverTone; label: string }[] = [
   { value: "dunkel", label: "Dunkel" },
 ];
 
-// Parse the stored cover_title_style into its two axes. Backward-compatible with
-// the earlier single-word values (klassisch/kopf/hell).
+export const COVER_SURFACES: { value: CoverSurface; label: string }[] = [
+  { value: "band", label: "Farbband" },
+  { value: "scrim", label: "Verlauf" },
+];
+
+// Parse the stored cover_title_style into its axes. Backward-compatible with
+// the earlier single-word values (klassisch/kopf/hell) and the two-axis form
+// ("unten-dunkel" → surface "band").
 export function parseCoverStyle(value: string | null | undefined): {
   position: CoverPosition;
   tone: CoverTone;
+  surface: CoverSurface;
 } {
-  if (value === "klassisch") return { position: "unten", tone: "dunkel" };
-  if (value === "kopf") return { position: "oben", tone: "dunkel" };
-  if (value === "hell") return { position: "unten", tone: "hell" };
-  const [p, t] = String(value ?? "").split("-");
+  if (value === "klassisch")
+    return { position: "unten", tone: "dunkel", surface: "band" };
+  if (value === "kopf")
+    return { position: "oben", tone: "dunkel", surface: "band" };
+  if (value === "hell")
+    return { position: "unten", tone: "hell", surface: "band" };
+  const [p, t, s] = String(value ?? "").split("-");
   return {
     position: p === "oben" ? "oben" : "unten",
     tone: t === "hell" ? "hell" : "dunkel",
+    surface: s === "scrim" ? "scrim" : "band",
   };
 }
 
 export function buildCoverStyle(
   position: CoverPosition,
   tone: CoverTone,
+  surface: CoverSurface = "band",
 ): string {
-  return `${position}-${tone}`;
+  return `${position}-${tone}-${surface}`;
 }
 
-// Normalises any stored/legacy value into the canonical "<position>-<tone>" form.
+// Normalises any stored/legacy value into "<position>-<tone>-<surface>".
 export function normalizeCoverTitleStyle(
   value: string | null | undefined,
 ): string {
-  const { position, tone } = parseCoverStyle(value);
-  return buildCoverStyle(position, tone);
+  const { position, tone, surface } = parseCoverStyle(value);
+  return buildCoverStyle(position, tone, surface);
 }
 
 export type RGB = { r: number; g: number; b: number };
