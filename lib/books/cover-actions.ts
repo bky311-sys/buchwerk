@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { normalizeCoverTitleStyle } from "@/lib/books/cover-style";
-import { getCoverDirection } from "@/lib/books/cover-directions";
+import { getCoverTemplate } from "@/lib/books/cover-directions";
 import { coerceMarketSnapshot } from "@/lib/books/market-check";
 
 export type CoverResult = { ok: boolean; error?: string };
@@ -94,7 +94,7 @@ export async function suggestCoverPromptAction(
     ? `Marktumfeld (echte Amazon-Konkurrenz dieser Nische):\n${competitors}\nWähle bewusst eine Farbwelt und Bildsprache, die sich von den bei solchen Titeln üblichen Covern ABHEBT — das Cover muss in der Amazon-Suchliste neben ihnen auffallen.`
     : "";
 
-  const direction = getCoverDirection(directionKey);
+  const direction = getCoverTemplate(directionKey);
 
   try {
     const prompt = await loadPrompt("cover-prompt", {

@@ -38,10 +38,10 @@ import {
   fitTitle,
 } from "@/lib/books/cover-layout";
 import {
-  COVER_DIRECTIONS,
-  getCoverDirection,
-  defaultDirectionForBookType,
-  type CoverDirectionKey,
+  COVER_TEMPLATES,
+  getCoverTemplate,
+  defaultTemplateForBookType,
+  type CoverTemplateKey,
 } from "@/lib/books/cover-directions";
 
 const TEXTAREA_CLASS =
@@ -85,8 +85,8 @@ export function CoverStudio({
   const [authorValue, setAuthorValue] = useState(author);
   const [subtitleValue, setSubtitleValue] = useState(subtitle);
   const [blurbValue, setBlurbValue] = useState(blurb);
-  const [direction, setDirection] = useState<CoverDirectionKey>(
-    defaultDirectionForBookType(bookType),
+  const [template, setTemplate] = useState<CoverTemplateKey>(
+    defaultTemplateForBookType(bookType),
   );
   const [style, setStyle] = useState<string>(
     normalizeCoverTitleStyle(titleStyle),
@@ -169,21 +169,30 @@ export function CoverStudio({
     };
   }, [generating, router]);
 
-  function suggest(dir: CoverDirectionKey = direction) {
+  function suggest(tpl: CoverTemplateKey = template) {
     setError(null);
     startTransition(async () => {
-      const result = await suggestCoverPromptAction(projectId, dir);
+      const result = await suggestCoverPromptAction(projectId, tpl);
       if (result.ok && result.prompt) setPrompt(result.prompt);
       else setError(result.error ?? "Konnte keinen Vorschlag erstellen.");
     });
   }
 
-  // Richtungswechsel holt direkt einen frischen Prompt-Vorschlag in dieser
-  // Art-Direction — die Richtung wirkt sonst erst beim nächsten Klick und
-  // fühlt sich kaputt an.
-  function chooseDirection(dir: CoverDirectionKey) {
-    setDirection(dir);
-    suggest(dir);
+  // Vorlagen-Wechsel = komplettes Design-System: setzt das Typo-Preset der
+  // Vorlage (Fläche/Ausrichtung/Ton/Position) UND holt sofort einen frischen
+  // Bild-Prompt in dieser Art-Direction.
+  function chooseTemplate(key: CoverTemplateKey) {
+    setTemplate(key);
+    const preset = getCoverTemplate(key).style;
+    chooseStyle(
+      buildCoverStyle(
+        preset.position,
+        preset.tone,
+        preset.surface,
+        preset.align,
+      ),
+    );
+    suggest(key);
   }
 
   // Beim allerersten Besuch (keine Motive, leeres Feld) den Vorschlag von
@@ -235,11 +244,11 @@ export function CoverStudio({
         const res = await fetch(`/api/projekte/${projectId}/cover`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          // Modell folgt der Stil-Richtung: Illustration (Ideogram) für
-          // Flat/Editorial/Workbook, Flux Pro für Foto-Emotion.
+          // Modell folgt der Vorlage: Illustration (Ideogram) für die
+          // Design-Vorlagen, Flux Pro für Editorial Foto.
           body: JSON.stringify({
             prompt,
-            model: getCoverDirection(direction).model,
+            model: getCoverTemplate(template).model,
           }),
         });
         if (!res.ok) {
@@ -320,11 +329,12 @@ export function CoverStudio({
         const dh = img.height * scale;
         ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
 
-        const { position, tone, surface } = parseCoverStyle(style);
+        const { position, tone, surface, align } = parseCoverStyle(style);
         const main = motifColor ?? NEUTRAL_MAIN;
         const titleColor = rgbCss(bandTitleColor(tone));
         const authorColor = rgbCss(bandAuthorColor(tone));
         const accentCss = rgbCss(accentColorFromMain(main, tone));
+        const centered = align === "mitte";
 
         const pad = 96;
         ctx.textBaseline = "top";
@@ -340,7 +350,9 @@ export function CoverStudio({
             ctx.font = titleFont(s);
             return ctx.measureText(text).width;
           },
-          { baseSize: 150, minSize: 72, maxLines: 4 },
+          // baseSize 235 ≈ PDF 60 (Canvas 1600px ↔ Front ~405pt): kurze Titel
+          // brechen in 2 riesige Zeilen — der Big-Type-Look.
+          { baseSize: 235, minSize: 75, maxLines: 4 },
         );
 
         const authorText = authorValue.trim();
@@ -367,16 +379,23 @@ export function CoverStudio({
             })()
           : [];
 
+        // Vorlagen ohne Fläche mit Titel oben führen den Autor klassisch ganz
+        // unten auf dem Cover (Zentrum-&-Symbol-/Premium-Konvention).
+        const authorAtBottom = surface === "none" && position === "oben";
+        // Ohne Fläche mehr Innenabstand (Motive tragen Randelemente).
+        const topInset = surface === "none" ? 154 : 64;
         const contentH =
-          64 +
+          topInset +
           fitted.lines.length * fitted.lineHeight +
           (subtitleLines.length ? 24 + subtitleLines.length * subtitleLh : 0) +
           48 +
-          (authorText ? authorSize + 40 : 0);
+          (authorText && !authorAtBottom ? authorSize + 40 : 0);
         const bandH = Math.min(H * 0.55, contentH);
         const bandY = position === "oben" ? 0 : H - bandH;
 
-        if (surface === "scrim") {
+        if (surface === "none") {
+          // Vorlagen-Motiv liefert die ruhige Fläche selbst — keine Zeichnung.
+        } else if (surface === "scrim") {
           // Verlauf statt deckender Fläche: Motiv bleibt hinter dem Titel
           // sichtbar (moderner Bestseller-Look). Verlauf läuft zur Bildmitte
           // hin aus; +40% Anlauf über der Textzone für weiche Kante.
@@ -401,14 +420,20 @@ export function CoverStudio({
           ctx.fillRect(0, position === "oben" ? bandY + bandH : bandY - 8, W, 8);
         }
 
-        // Titel mit hervorgehobenem Schlüsselwort (Blickanker in Akzentfarbe).
+        // Titel mit hervorgehobenem Schlüsselwort (Blickanker in Akzentfarbe);
+        // zentrierte Layouts (Vorlagen) mittig, sonst linksbündig.
         ctx.font = titleFont(fitted.size);
+        const lineStartX = (line: string) =>
+          centered
+            ? pad + Math.max(0, (W - 2 * pad - ctx.measureText(line).width) / 2)
+            : pad;
         const accentIndex = pickAccentWordIndex(title);
         let wordCursor = 0;
-        let ty = bandY + 64;
+        let ty = bandY + topInset;
         for (const l of fitted.lines) {
           const lineWords = l.split(" ");
-          let tx = pad;
+          ctx.font = titleFont(fitted.size);
+          let tx = lineStartX(l);
           for (const word of lineWords) {
             ctx.fillStyle =
               wordCursor === accentIndex ? accentCss : titleColor;
@@ -424,14 +449,21 @@ export function CoverStudio({
           ctx.fillStyle = authorColor;
           ctx.font = `500 ${subtitleSize}px "Instrument Sans", sans-serif`;
           for (const l of subtitleLines) {
-            ctx.fillText(l, pad, ty);
+            ctx.fillText(l, lineStartX(l), ty);
             ty += subtitleLh;
           }
         }
         if (authorText) {
+          // Zentrierte Layouts: Autor in Versalien (Premium-Konvention);
+          // Vorlagen ohne Fläche mit Titel oben: Autor ganz unten.
+          const drawnAuthor = centered ? authorText.toUpperCase() : authorText;
+          const drawnSize = centered ? 40 : authorSize;
           ctx.fillStyle = authorColor;
-          ctx.font = `500 ${authorSize}px "Instrument Sans", sans-serif`;
-          ctx.fillText(authorText, pad, bandY + bandH - authorSize - 44);
+          ctx.font = `500 ${drawnSize}px "Instrument Sans", sans-serif`;
+          const ay = authorAtBottom
+            ? H - drawnSize - 72
+            : bandY + bandH - drawnSize - 44;
+          ctx.fillText(drawnAuthor, lineStartX(drawnAuthor), ay);
         }
 
         const slug =
@@ -505,32 +537,78 @@ export function CoverStudio({
     <div className="mt-8 space-y-8">
       <section className="space-y-4 rounded-2xl border border-border bg-card p-6 sm:p-7">
         <div className="space-y-2">
-          <Label>Stil-Richtung</Label>
-          <div className="flex flex-wrap gap-2">
-            {COVER_DIRECTIONS.map((d) => (
-              <button
-                key={d.key}
-                type="button"
-                onClick={() => chooseDirection(d.key)}
-                aria-pressed={direction === d.key}
-                disabled={busy}
-                title={d.hint}
-                className={`rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
-                  direction === d.key
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
+          <Label>Vorlage wählen</Label>
           <p className="text-xs text-muted-foreground">
-            {getCoverDirection(direction).hint}.
+            Sechs Cover-Systeme nach aktuellen Bestseller-Mustern — die Vorlage
+            steuert Motiv-Stil UND Titel-Layout.
             {hasMarketData
               ? " Der Vorschlag kennt deine Amazon-Konkurrenz aus dem Marktcheck und setzt sich farblich von ihr ab."
               : ""}
           </p>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {COVER_TEMPLATES.map((t) => {
+              const active = template === t.key;
+              const centeredMock = t.style.align === "mitte";
+              return (
+                <li key={t.key}>
+                  <button
+                    type="button"
+                    onClick={() => chooseTemplate(t.key)}
+                    aria-pressed={active}
+                    disabled={busy}
+                    className={`block w-full overflow-hidden rounded-xl border text-left transition-colors disabled:opacity-50 ${
+                      active
+                        ? "border-primary ring-2 ring-primary"
+                        : "border-border hover:border-muted-foreground/40"
+                    }`}
+                  >
+                    {/* Mini-Mock des Vorlagen-Looks — reine CSS-Andeutung. */}
+                    <div
+                      className={`flex aspect-[2/3] w-full flex-col justify-between p-2.5 ${
+                        centeredMock ? "items-center text-center" : ""
+                      }`}
+                      style={{ backgroundColor: t.swatch.bg }}
+                    >
+                      <div>
+                        <p
+                          className="font-display text-[13px] font-bold leading-tight"
+                          style={{ color: t.swatch.fg }}
+                        >
+                          Dein{" "}
+                          <span style={{ color: t.swatch.accent }}>Titel</span>
+                        </p>
+                        <p
+                          className="mt-0.5 text-[7px]"
+                          style={{ color: t.swatch.fg, opacity: 0.75 }}
+                        >
+                          Untertitel mit Versprechen
+                        </p>
+                      </div>
+                      <div
+                        className={`h-6 w-6 rounded-full ${centeredMock ? "self-center" : ""}`}
+                        style={{ backgroundColor: t.swatch.accent, opacity: 0.85 }}
+                      />
+                      <p
+                        className="text-[6px] tracking-widest"
+                        style={{ color: t.swatch.fg, opacity: 0.7 }}
+                      >
+                        AUTORNAME
+                      </p>
+                    </div>
+                    <span className="block px-2.5 py-2">
+                      <span className="block text-sm font-semibold">
+                        {t.label}
+                        {active ? " ✓" : ""}
+                      </span>
+                      <span className="block text-xs leading-snug text-muted-foreground">
+                        {t.hint}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
 
         <div className="space-y-1">
@@ -691,7 +769,13 @@ export function CoverStudio({
             {COVER_SURFACES.flatMap((s) =>
               COVER_POSITIONS.flatMap((p) =>
                 COVER_TONES.map((t) => {
-                  const value = buildCoverStyle(p.value, t.value, s.value);
+                  // Feinjustierung behält die Ausrichtung der Vorlage bei.
+                  const value = buildCoverStyle(
+                    p.value,
+                    t.value,
+                    s.value,
+                    parseCoverStyle(style).align,
+                  );
                   const active = style === value;
                   const main = motifColor ?? NEUTRAL_MAIN;
                   const titleCss = rgbCss(bandTitleColor(t.value));

@@ -60,10 +60,11 @@ export function accentColorFromMain(main: RGB, tone: CoverTone): RGB {
       : FALLBACK_ACCENT;
   }
   const accentHue = (h + 0.5) % 1;
-  // Sättigung hoch, Helligkeit je nach Untergrund: hell genug auf dunklem
-  // Band, dunkel genug auf hellem.
-  const lightness = tone === "dunkel" ? 0.62 : 0.42;
-  return hslToRgb(accentHue, 0.72, lightness);
+  // Sättigung hoch, Helligkeit je nach Untergrund: auf dunklem Grund deutlich
+  // hell (0.72 — bei 0.62 soff das Akzentwort auf Navy ab, Testrender 14.08.),
+  // auf hellem Grund satt-dunkel.
+  const lightness = tone === "dunkel" ? 0.72 : 0.42;
+  return hslToRgb(accentHue, 0.8, lightness);
 }
 
 // --- Schlüsselwort ---------------------------------------------------------

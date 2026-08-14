@@ -62,19 +62,24 @@ export async function BookCover({
     );
   }
 
-  const { position, tone, surface } = parseCoverStyle(styleKey);
+  const { position, tone, surface, align } = parseCoverStyle(styleKey);
   const main = await getCoverMainColor(imageUrl);
   const titleCss = rgbCss(bandTitleColor(tone));
   const authorCss = rgbCss(bandAuthorColor(tone));
   const accentCss = rgbCss(accentColorFromMain(main, tone));
   const atTop = position === "oben";
-
+  const centered = align === "mitte";
+  // "none": das Vorlagen-Motiv liefert die ruhige Fläche selbst (Cover 2.1).
   const overlayStyle =
-    surface === "scrim"
-      ? {
-          backgroundImage: `linear-gradient(${atTop ? "to bottom" : "to top"}, ${rgbCss(scrimColor(main, tone))} 0%, ${rgbCss(scrimColor(main, tone))} 62%, transparent 100%)`,
-        }
-      : { backgroundColor: rgbCss(bandColorFromMain(main, tone)) };
+    surface === "none"
+      ? undefined
+      : surface === "scrim"
+        ? {
+            backgroundImage: `linear-gradient(${atTop ? "to bottom" : "to top"}, ${rgbCss(scrimColor(main, tone))} 0%, ${rgbCss(scrimColor(main, tone))} 62%, transparent 100%)`,
+          }
+        : { backgroundColor: rgbCss(bandColorFromMain(main, tone)) };
+  // Autor ganz unten, wenn die Vorlage ohne Fläche mit Titel oben arbeitet.
+  const authorAtBottom = surface === "none" && atTop && Boolean(author);
 
   const words = title.split(/\s+/).filter(Boolean);
   const accentIndex = pickAccentWordIndex(title);
@@ -92,6 +97,8 @@ export async function BookCover({
       />
       <div
         className={`absolute inset-x-0 ${atTop ? "top-0" : "bottom-0"} px-[6cqw] ${
+          centered ? "text-center" : ""
+        } ${
           surface === "scrim"
             ? atTop
               ? "pt-[4cqw] pb-[8cqw]"
@@ -130,15 +137,25 @@ export async function BookCover({
             {subtitle}
           </p>
         ) : null}
-        {author ? (
+        {author && !authorAtBottom ? (
           <p
-            className="mt-[3cqw] font-medium text-[2.9cqw]"
+            className={`mt-[3cqw] font-medium text-[2.9cqw] ${centered ? "uppercase tracking-[0.14em]" : ""}`}
             style={{ color: authorCss }}
           >
             {author}
           </p>
         ) : null}
       </div>
+      {authorAtBottom ? (
+        <p
+          className={`absolute inset-x-0 bottom-[4cqw] px-[6cqw] font-medium text-[2.9cqw] ${
+            centered ? "text-center uppercase tracking-[0.14em]" : ""
+          }`}
+          style={{ color: authorCss }}
+        >
+          {author}
+        </p>
+      ) : null}
     </div>
   );
 }
