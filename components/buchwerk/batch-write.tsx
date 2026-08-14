@@ -12,15 +12,23 @@ import { Spinner } from "@/components/buchwerk/spinner";
 const CHAPTER_FETCH_TIMEOUT_MS = 90_000;
 
 async function fireGenerate(chapterId: string): Promise<void> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), CHAPTER_FETCH_TIMEOUT_MS);
-  try {
-    await fetch(`/api/chapters/${chapterId}/generate`, {
-      method: "POST",
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timer);
+  // 409 = ein anderes Kapitel des Buchs läuft noch (z. B. ein manuell
+  // angestoßenes, oder der vorige Batch-Schritt schreibt serverseitig weiter,
+  // obwohl sein Response verworfen wurde). Dann warten und erneut versuchen,
+  // statt das Kapitel zu überspringen.
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CHAPTER_FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(`/api/chapters/${chapterId}/generate`, {
+        method: "POST",
+        signal: controller.signal,
+      });
+      if (res.status !== 409) return;
+    } finally {
+      clearTimeout(timer);
+    }
+    await new Promise((r) => setTimeout(r, 15_000));
   }
 }
 

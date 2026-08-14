@@ -380,6 +380,7 @@ export default async function ProjektPage({
                         !hasResearch && chapter.id === firstUnwrittenId
                       }
                       researchStages={RESEARCH_TOTAL_STAGES}
+                      otherGenerating={anyGenerating && !chapter.isGenerating}
                     />
                   </div>
                 ) : null}

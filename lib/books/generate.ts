@@ -23,7 +23,12 @@ const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 // when someone hammers a single chapter.
 const CHAPTER_GENERATION_LIMIT = 10;
 
-export type GenerateResult = { ok: boolean; error?: string };
+export type GenerateResult = {
+  ok: boolean;
+  error?: string;
+  /** Ein anderes Kapitel dieses Buchs wird gerade geschrieben (HTTP 409). */
+  busy?: boolean;
+};
 
 // A chapter "schreiben" status older than this is treated as failed: the
 // serverless function was almost certainly killed (Vercel duration limit) before
@@ -120,6 +125,31 @@ export async function generateChapterContent(
   // Production is gated behind payment.
   const gate = await gateProduction(supabase, chapter.project_id);
   if (!gate.ok) return { ok: false, error: gate.error };
+
+  // Immer nur EIN Kapitel pro Buch gleichzeitig (Benjamins Fund 14.08.: Klick
+  // auf ein Einzelkapitel während „Alle Kapitel schreiben" lief parallel und
+  // interferierte — der Anti-Wiederholungs-Kontext sieht halbfertige
+  // Geschwister, und Läufe fressen doppelt Limits). Ein festgefahrener Lauf
+  // (älter als STALE_GENERATION_MS) blockiert nicht.
+  const { data: siblings } = await supabase
+    .from("chapters")
+    .select("id, updated_at")
+    .eq("project_id", chapter.project_id)
+    .eq("status", "schreiben");
+  const guardNow = Date.now();
+  const activeSibling = (siblings ?? []).some(
+    (s) =>
+      s.id !== chapter.id &&
+      guardNow - new Date(s.updated_at).getTime() < STALE_GENERATION_MS,
+  );
+  if (activeSibling) {
+    return {
+      ok: false,
+      busy: true,
+      error:
+        "Gerade wird schon ein anderes Kapitel dieses Buchs geschrieben. Warte, bis es fertig ist — dann kannst du hier weitermachen.",
+    };
+  }
 
   // Abuse brake (see CHAPTER_GENERATION_LIMIT). Best-effort like the research
   // dossier below: if this migration isn't applied yet the select errors and we

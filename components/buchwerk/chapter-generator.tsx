@@ -18,6 +18,11 @@ type Props = {
   // first chapter of a book without a dossier.
   willResearch: boolean;
   researchStages: number;
+  // Ein ANDERES Kapitel dieses Buchs wird gerade geschrieben (z. B. durch
+  // „Alle Kapitel schreiben") — dann ist dieser Button gesperrt, parallele
+  // Läufe interferieren (Benjamins Fund 14.08.). Der Server lehnt zusätzlich
+  // mit 409 ab.
+  otherGenerating?: boolean;
 };
 
 export function ChapterGenerator({
@@ -28,6 +33,7 @@ export function ChapterGenerator({
   isStale,
   willResearch,
   researchStages,
+  otherGenerating = false,
 }: Props) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
@@ -105,6 +111,7 @@ export function ChapterGenerator({
         variant={hasContent ? "outline" : "default"}
         size="lg"
         onClick={run}
+        disabled={otherGenerating}
       >
         {isStale
           ? "Erneut versuchen"
@@ -112,6 +119,12 @@ export function ChapterGenerator({
             ? "Kapitel neu schreiben"
             : "Kapitel schreiben"}
       </Button>
+      {otherGenerating ? (
+        <p className="text-sm text-muted-foreground">
+          Gerade wird ein anderes Kapitel geschrieben — dieses ist gleich dran
+          bzw. wieder freigegeben.
+        </p>
+      ) : null}
       {isStale ? (
         <p className="text-sm text-muted-foreground">
           Der letzte Versuch wurde unterbrochen. Starte ihn einfach neu.

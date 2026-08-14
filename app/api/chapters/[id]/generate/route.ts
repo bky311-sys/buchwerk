@@ -12,5 +12,8 @@ export async function POST(
 ) {
   const { id } = await params;
   const result = await generateChapterContent(id);
-  return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+  // 409: ein anderes Kapitel des Buchs läuft gerade — der Batch-Client wartet
+  // darauf und versucht es erneut statt abzubrechen.
+  const status = result.ok ? 200 : result.busy ? 409 : 400;
+  return NextResponse.json(result, { status });
 }

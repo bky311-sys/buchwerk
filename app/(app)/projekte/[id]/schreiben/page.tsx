@@ -207,6 +207,7 @@ export default async function SchreibenPage({
                         !hasResearch && chapter.id === firstUnwrittenId
                       }
                       researchStages={RESEARCH_TOTAL_STAGES}
+                      otherGenerating={anyGenerating && !chapter.isGenerating}
                     />
                   </div>
                 </ChapterCollapse>
