@@ -48,9 +48,32 @@ export function ReviewWidget(props: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  if (isOwnBook) return null;
-
   const box = "rounded-2xl border border-border bg-card p-6";
+
+  // Autor-Zustand statt stillem null (Benjamins Fund 14.08.): die Erklärbox
+  // darüber wirbt fürs Bewerten — verschwindet das Widget kommentarlos, liest
+  // sich die eigene Buchseite wie kaputt. Bewerten kann der Autor bewusst
+  // nicht; gesagt werden muss es trotzdem.
+  if (isOwnBook) {
+    return (
+      <div className={box} id="bewerten">
+        <h2 className="font-display text-lg font-semibold">
+          Dein Buch — hier bewerten deine Leser
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Das eigene Buch lässt sich nicht bewerten (niemand bewertet sein
+          eigenes Buch — das gilt für alle). Sobald Leser bewerten, erscheinen
+          die Bewertungen hier; ob sie öffentlich werden, entscheidest du bei
+          der Freigabe.
+        </p>
+        <Button asChild variant="outline" className="mt-4">
+          <Link href={`/projekte/${bookId}/veroeffentlichen`}>
+            Zur Bewertungs-Freigabe
+          </Link>
+        </Button>
+      </div>
+    );
+  }
 
   function run(action: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
