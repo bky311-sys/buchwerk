@@ -11,6 +11,7 @@ import {
   pickAccentWordIndex,
   scrimColor,
   fitTitle,
+  splitCoverTitle,
 } from "@/lib/books/cover-layout";
 
 // Front-Cover-Komposition für PDFs (Cover 2.1): ein Modul für die
@@ -107,19 +108,21 @@ export function drawFrontCover(opts: {
   const accentRgb = rgb(accent.r, accent.g, accent.b);
   const atTop = position === "oben";
 
-  const title = safeText(opts.title);
-  const subtitle = safeText(opts.subtitle.trim());
+  // Doppelpunkt-Titel automatisch splitten: Haupttitel riesig, Rest als
+  // Untertitel — sonst quetscht ein langer Ratgeber-Titel die Schrift klein.
+  const split = splitCoverTitle(opts.title, opts.subtitle);
+  const title = safeText(split.title);
+  const subtitle = safeText(split.subtitle);
   const author = safeText(opts.author.trim());
 
-  // Adaptive Titelgröße (Thumbnail-Regel: so groß wie möglich, max. 4 Zeilen).
-  // baseSize 60: kurze Titel brechen bewusst in 2 riesige Zeilen — das ist der
-  // Big-Type-Look; lange Titel schrumpfen automatisch (Testrender 14.08.:
-  // bei 38 wirkte „Endlich fokussiert" verloren).
+  // Adaptive Titelgröße (Thumbnail-Regel: so groß wie möglich). baseSize 66:
+  // kurze Haupttitel brechen bewusst in 2 riesige Zeilen — der Big-Type-Look;
+  // lange Titel ohne Doppelpunkt dürfen 5 Zeilen nutzen, bevor sie schrumpfen.
   const fitted = fitTitle(
     title,
     textMaxWidth,
     (text, s) => fonts.bold.widthOfTextAtSize(text, s),
-    { baseSize: 60, minSize: 19, maxLines: 4 },
+    { baseSize: 66, minSize: 20, maxLines: 5 },
   );
 
   const subtitleSize = 13;

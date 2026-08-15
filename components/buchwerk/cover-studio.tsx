@@ -33,6 +33,7 @@ import {
   pickAccentWordIndex,
   scrimColor,
   fitTitle,
+  splitCoverTitle,
 } from "@/lib/books/cover-layout";
 import {
   COVER_TEMPLATES,
@@ -357,24 +358,28 @@ export function CoverStudio({
         const pad = 96;
         ctx.textBaseline = "top";
 
-        // Cover 2.0: adaptive Titelgröße — kurze Titel werden riesig
-        // (Amazon-Thumbnail-Regel), lange bleiben in max. 4 Zeilen lesbar.
+        // Doppelpunkt-Titel splitten (Haupttitel riesig, Rest Untertitel) —
+        // identisch zu PDF und Web-Vorschau.
+        const splitTitle = splitCoverTitle(title, subtitleValue);
+        const displayTitle = splitTitle.title;
+
+        // Adaptive Titelgröße — kurze Titel werden riesig (Amazon-Thumbnail-
+        // Regel), lange dürfen 5 Zeilen nutzen, bevor sie schrumpfen.
         const titleFont = (s: number) =>
           `700 ${s}px "Bricolage Grotesque", sans-serif`;
         const fitted = fitTitle(
-          title,
+          displayTitle,
           W - 2 * pad,
           (text, s) => {
             ctx.font = titleFont(s);
             return ctx.measureText(text).width;
           },
-          // baseSize 235 ≈ PDF 60 (Canvas 1600px ↔ Front ~405pt): kurze Titel
-          // brechen in 2 riesige Zeilen — der Big-Type-Look.
-          { baseSize: 235, minSize: 75, maxLines: 4 },
+          // baseSize 258 ≈ PDF 66 (Canvas 1600px ↔ Front ~405pt).
+          { baseSize: 258, minSize: 78, maxLines: 5 },
         );
 
         const authorText = authorValue.trim();
-        const subtitleText = subtitleValue.trim();
+        const subtitleText = splitTitle.subtitle;
         const authorSize = 46;
         const subtitleSize = 52;
         const subtitleLh = 66;
@@ -445,7 +450,7 @@ export function CoverStudio({
           centered
             ? pad + Math.max(0, (W - 2 * pad - ctx.measureText(line).width) / 2)
             : pad;
-        const accentIndex = pickAccentWordIndex(title);
+        const accentIndex = pickAccentWordIndex(displayTitle);
         let wordCursor = 0;
         let ty = bandY + topInset;
         for (const l of fitted.lines) {
@@ -923,11 +928,17 @@ export function CoverStudio({
                     So klein sieht dein Cover in der Amazon-Suche aus.
                   </p>
                   <p className="mt-1 text-muted-foreground">
-                    {title.length > 60
-                      ? "Dein Titel ist lang — in dieser Größe ist er kaum lesbar. Kürzere Titel (oder das Kernthema zuerst) gewinnen im Thumbnail."
-                      : title.length > 35
-                        ? "Ordentlich. Noch stärker wird es, wenn das wichtigste Wort vorn steht — es trägt die Akzentfarbe."
-                        : "Stark: Ein kurzer Titel bleibt auch im Thumbnail groß und lesbar."}
+                    {(() => {
+                      // Der Hinweis bewertet den tatsächlich gezeigten
+                      // Haupttitel (nach dem automatischen Doppelpunkt-Split).
+                      const len = splitCoverTitle(title, subtitleValue).title
+                        .length;
+                      return len > 60
+                        ? "Dein Titel ist lang — in dieser Größe ist er kaum lesbar. Kürzere Titel (oder das Kernthema zuerst) gewinnen im Thumbnail."
+                        : len > 35
+                          ? "Ordentlich. Noch stärker wird es, wenn das wichtigste Wort vorn steht — es trägt die Akzentfarbe."
+                          : "Stark: Ein kurzer Titel bleibt auch im Thumbnail groß und lesbar.";
+                    })()}
                   </p>
                 </div>
               </div>

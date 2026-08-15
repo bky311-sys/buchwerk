@@ -101,6 +101,27 @@ export function pickAccentWordIndex(title: string): number {
   return best;
 }
 
+// --- Titel-Split -----------------------------------------------------------
+
+/**
+ * Deutsche Ratgeber-Titel tragen ihr Nutzenversprechen oft im selben Feld
+ * („Haupttitel: Untertitel"). Auf dem Cover quetscht das den Titel klein
+ * (Benjamins Fund 14.08.). Ohne eigenen Untertitel wird deshalb am ersten
+ * Doppelpunkt/Gedankenstrich gesplittet: Haupttitel riesig, Rest als
+ * Untertitel. Ein explizit gesetzter Untertitel gewinnt immer.
+ */
+export function splitCoverTitle(
+  title: string,
+  subtitle: string | null | undefined,
+): { title: string; subtitle: string } {
+  const sub = (subtitle ?? "").trim();
+  const t = title.trim();
+  if (sub) return { title: t, subtitle: sub };
+  const m = t.match(/^(.{3,48}?)\s*[:–—]\s+(.{8,})$/);
+  if (m) return { title: m[1], subtitle: m[2] };
+  return { title: t, subtitle: "" };
+}
+
 // --- Adaptive Titelgröße ---------------------------------------------------
 
 export type MeasureFn = (text: string, size: number) => number;

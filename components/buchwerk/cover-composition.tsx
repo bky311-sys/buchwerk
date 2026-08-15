@@ -11,6 +11,7 @@ import {
   accentColorFromMain,
   pickAccentWordIndex,
   scrimColor,
+  splitCoverTitle,
 } from "@/lib/books/cover-layout";
 
 // Die EINE Cover-Komposition fürs Web (Cover 2.2): pure Präsentation ohne
@@ -35,9 +36,9 @@ function titleScale(len: number): { size: string; lh: string } {
 
 export function CoverComposition({
   imageUrl,
-  title,
+  title: rawTitle,
   author,
-  subtitle,
+  subtitle: rawSubtitle,
   styleKey,
   main,
   className = "",
@@ -53,6 +54,9 @@ export function CoverComposition({
   className?: string;
   rounded?: boolean;
 }) {
+  // Doppelpunkt-Titel automatisch splitten (Haupttitel riesig, Rest als
+  // Untertitel) — identisch zum PDF-Renderer.
+  const { title, subtitle } = splitCoverTitle(rawTitle, rawSubtitle);
   const { position, tone, surface, align } = parseCoverStyle(styleKey);
   const mainColor = main ?? NEUTRAL_MAIN;
   const titleCss = rgbCss(bandTitleColor(tone));
