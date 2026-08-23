@@ -19,10 +19,35 @@ const AUTH_PAGES = ["/anmelden", "/registrieren"] as const;
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
+  const path = request.nextUrl.pathname;
+
+  // Anonyme Besucher (kein Supabase-Auth-Cookie) brauchen keinen Session-
+  // Refresh: kein Supabase-Roundtrip pro Seitenaufruf, und die öffentlichen
+  // Seiten bleiben erreichbar, selbst wenn Supabase Auth hängt.
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"));
+  if (!hasAuthCookie) {
+    if (PROTECTED_PREFIXES.some((p) => path.startsWith(p))) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/anmelden";
+      url.searchParams.set("weiter", path);
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
+
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: {
+        // Hängender Auth-Server darf nie die Seite blockieren: Vercel killt
+        // Middleware hart nach 25 s (504 für den Besucher). Nach 5 s brechen
+        // wir selbst ab und lassen den Request ohne Refresh durch.
+        fetch: (input, init) =>
+          fetch(input, { ...init, signal: AbortSignal.timeout(5000) }),
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -42,11 +67,18 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: do not run any code between createServerClient and getUser().
   // getUser() revalidates the token with Supabase and refreshes cookies.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const path = request.nextUrl.pathname;
+  let user: Awaited<
+    ReturnType<typeof supabase.auth.getUser>
+  >["data"]["user"] = null;
+  try {
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  } catch {
+    // Timeout/Netzfehler: Request durchlassen, die Seiten prüfen Auth selbst
+    // (Server-Komponenten rufen getUser erneut auf, Writes deckt RLS).
+    return supabaseResponse;
+  }
 
   if (!user && PROTECTED_PREFIXES.some((p) => path.startsWith(p))) {
     const url = request.nextUrl.clone();
