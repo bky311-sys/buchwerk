@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/analytics";
 import { getStripe, PRICE_BOOK, PRICE_SUBSCRIPTION } from "@/lib/stripe/client";
 
 export type CheckoutResult = { error: string | null };
@@ -88,6 +89,7 @@ export async function checkoutBookAction(
   });
 
   if (!session.url) return { error: "Checkout konnte nicht gestartet werden." };
+  await trackEvent("checkout_start", { art: "buch" });
   redirect(session.url);
 }
 
@@ -125,5 +127,6 @@ export async function checkoutSubscriptionAction(
   });
 
   if (!session.url) return { error: "Checkout konnte nicht gestartet werden." };
+  await trackEvent("checkout_start", { art: "abo" });
   redirect(session.url);
 }

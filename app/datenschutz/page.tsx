@@ -80,8 +80,27 @@ export default function DatenschutzPage() {
             <div className="space-y-2">
               <h3 className={subTitleClass}>Analyse-Tools</h3>
               <p>
-                Eine statistische Auswertung kann erfolgen. Details sind in
-                dieser Erklärung aufgeführt.
+                Wir nutzen Vercel Web Analytics (Vercel Inc., 340 S Lemon Ave
+                #4133, Walnut, CA 91789, USA), um die Nutzung unserer Website
+                statistisch auszuwerten (z.&nbsp;B. Seitenaufrufe, Herkunft des
+                Besuchs, verwendeter Browser). Das Tool arbeitet ohne Cookies
+                und ohne geräteübergreifendes Tracking; IP-Adressen werden
+                nicht gespeichert, Besucher werden nur anhand eines
+                kurzlebigen, anonymisierten Hashes unterschieden.
+                Rechtsgrundlage ist unser berechtigtes Interesse an der
+                Analyse und Verbesserung unseres Angebots (Art.&nbsp;6
+                Abs.&nbsp;1 lit.&nbsp;f DSGVO).
+              </p>
+              <p>
+                Datenschutz:{" "}
+                <a
+                  href="https://vercel.com/legal/privacy-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkClass}
+                >
+                  https://vercel.com/legal/privacy-policy
+                </a>
               </p>
             </div>
           </section>

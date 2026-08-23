@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/analytics";
 import {
   loginSchema,
   registerSchema,
@@ -98,6 +99,8 @@ export async function signUpAction(
         "Die Registrierung ist fehlgeschlagen. Versuch es in einem Moment noch einmal.",
     };
   }
+
+  await trackEvent("registrierung");
 
   // If email confirmation is disabled in Supabase, signUp returns a session
   // immediately and the user is logged in right away.

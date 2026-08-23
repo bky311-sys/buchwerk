@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import "@fontsource-variable/instrument-sans";
 import "@fontsource-variable/bricolage-grotesque";
 import "./globals.css";
@@ -76,6 +77,8 @@ export default function RootLayout({
             strategy="afterInteractive"
           />
         ) : null}
+        {/* Vercel Web Analytics: cookielos, lädt nur in Production. */}
+        <Analytics />
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { trackEvent } from "@/lib/analytics";
 
 export const runtime = "nodejs";
 
@@ -120,6 +121,10 @@ export async function POST(request: Request) {
           "Dein Buch ist freigeschaltet – Buchwerk",
           "<p>Danke für deinen Kauf. Dein Buchprojekt ist jetzt freigeschaltet (Kapitel, Cover, KDP-Listing, PDF).</p><p>Mit dem Kauf hast du bestätigt, dass die Leistung sofort bereitgestellt wird und dein Widerrufsrecht damit erlischt (§ 356 Abs. 5 BGB).</p><p>— Buchwerk</p>",
         );
+        await trackEvent("kauf", {
+          art: "buch",
+          betrag_cents: session.amount_total ?? 1999,
+        });
       } else if (meta.kind === "subscription" && meta.user_id && session.subscription) {
         const sub = (await stripe.subscriptions.retrieve(
           session.subscription,
@@ -131,6 +136,10 @@ export async function POST(request: Request) {
           "Dein Buchwerk-Abo ist aktiv",
           "<p>Danke! Dein Abo ist aktiv – du kannst bis zu 10 Bücher pro Monat freischalten und produzieren.</p><p>Mit dem Abschluss hast du bestätigt, dass die Leistung sofort bereitgestellt wird und dein Widerrufsrecht damit erlischt (§ 356 Abs. 5 BGB).</p><p>— Buchwerk</p>",
         );
+        await trackEvent("kauf", {
+          art: "abo",
+          betrag_cents: session.amount_total ?? 2999,
+        });
       }
       break;
     }
