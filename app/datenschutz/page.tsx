@@ -46,7 +46,7 @@ export default function DatenschutzPage() {
               </h3>
               <p>
                 Die Datenverarbeitung erfolgt durch den Websitebetreiber.
-                Kontaktdaten finden Sie unter „Verantwortliche Stelle".
+                Kontaktdaten finden Sie unter „Verantwortliche Stelle“.
               </p>
             </div>
 
@@ -608,7 +608,7 @@ export default function DatenschutzPage() {
               <p>
                 Zur Erzeugung von Cover-Motiven übermitteln wir den Bildprompt
                 an Replicate, Inc., San Francisco, USA, das die eingesetzten
-                Bildmodelle (derzeit „Flux" und „Ideogram") betreibt.
+                Bildmodelle (derzeit „Flux“ und „Ideogram“) betreibt.
               </p>
             </div>
           </section>
