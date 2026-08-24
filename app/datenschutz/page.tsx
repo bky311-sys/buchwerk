@@ -426,6 +426,25 @@ export default function DatenschutzPage() {
             </div>
 
             <div className="space-y-2">
+              <h3 className={subTitleClass}>Eingesetzte Cookies</h3>
+              <ul className="ml-5 list-disc space-y-1">
+                <li>
+                  Anmelde-Cookies: halten Ihre Sitzung nach dem Login aufrecht
+                  (technisch notwendig).
+                </li>
+                <li>
+                  Kampagnen-Cookie („bw_utm&quot;): speichert bis zu 30 Tage,
+                  über welche Werbekampagne Sie unsere Website gefunden haben
+                  (z.&nbsp;B. Suchmaschinen-Anzeige). Es enthält keine
+                  personenbezogenen Daten, verfolgt Sie nicht über andere
+                  Websites hinweg und wird nicht an Dritte weitergegeben. Wir
+                  nutzen es ausschließlich, um die Wirksamkeit unserer Werbung
+                  auszuwerten.
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
               <h3 className={subTitleClass}>Funktionen</h3>
               <ul className="ml-5 list-disc space-y-1">
                 <li>Technische Bereitstellung</li>

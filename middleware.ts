@@ -51,10 +51,44 @@ function maintenanceGate(request: NextRequest): NextResponse | null {
   return NextResponse.rewrite(url);
 }
 
+const UTM_COOKIE = "bw_utm";
+const UTM_KEYS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_term",
+  "utm_content",
+] as const;
+
+// First-Touch-Kampagnenzuordnung: Landet ein Besucher mit utm_-Parametern
+// (Werbeklick), wird die Herkunft 30 Tage als Cookie gehalten und bei der
+// Registrierung ans Profil geschrieben (profiles.acquisition). Ein schon
+// gesetztes Cookie gewinnt — der erste Kontakt zählt.
+function captureUtm(request: NextRequest, response: NextResponse): void {
+  if (request.cookies.get(UTM_COOKIE)) return;
+  const params = request.nextUrl.searchParams;
+  if (!params.get("utm_source")) return;
+  const data: Record<string, string> = {};
+  for (const key of UTM_KEYS) {
+    const value = params.get(key);
+    if (value) data[key] = value.slice(0, 120);
+  }
+  data.landing = request.nextUrl.pathname.slice(0, 200);
+  data.ts = new Date().toISOString();
+  response.cookies.set(UTM_COOKIE, JSON.stringify(data), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+}
+
 export async function middleware(request: NextRequest) {
   const gate = maintenanceGate(request);
   if (gate) return gate;
-  return await updateSession(request);
+  const response = await updateSession(request);
+  captureUtm(request, response);
+  return response;
 }
 
 export const config = {

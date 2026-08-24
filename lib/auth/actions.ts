@@ -1,8 +1,9 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { trackEvent } from "@/lib/analytics";
 import {
   loginSchema,
@@ -101,6 +102,25 @@ export async function signUpAction(
   }
 
   await trackEvent("registrierung");
+
+  // Kampagnen-Zuordnung (First-Touch-UTM aus der Middleware) am frischen
+  // Konto festhalten — die Werbe-Auswertung joint purchases → profiles.
+  // Best-effort: Ein fehlendes Cookie oder eine fehlende Spalte darf die
+  // Registrierung nie brechen.
+  try {
+    const utmRaw = (await cookies()).get("bw_utm")?.value;
+    if (utmRaw && data.user) {
+      const parsed: unknown = JSON.parse(utmRaw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        await createAdminClient()
+          .from("profiles")
+          .update({ acquisition: parsed as Record<string, string> })
+          .eq("id", data.user.id);
+      }
+    }
+  } catch {
+    // bewusst still
+  }
 
   // If email confirmation is disabled in Supabase, signUp returns a session
   // immediately and the user is logged in right away.

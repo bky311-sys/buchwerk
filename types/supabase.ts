@@ -68,6 +68,7 @@ export interface Database {
           display_name: string | null;
           plan: string;
           stripe_customer_id: string | null;
+          acquisition: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -77,6 +78,7 @@ export interface Database {
           display_name?: string | null;
           plan?: string;
           stripe_customer_id?: string | null;
+          acquisition?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -86,6 +88,7 @@ export interface Database {
           display_name?: string | null;
           plan?: string;
           stripe_customer_id?: string | null;
+          acquisition?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
