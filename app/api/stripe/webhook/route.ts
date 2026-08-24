@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { trackEvent } from "@/lib/analytics";
+import { renderBrandedEmail, type EmailContent } from "@/lib/email/template";
 
 export const runtime = "nodejs";
 
@@ -45,12 +46,13 @@ async function upsertSubscription(
 async function sendConfirmationEmail(
   to: string | null | undefined,
   subject: string,
-  body: string,
+  content: EmailContent,
 ): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   if (!key || !to) return;
   try {
-    await fetch("https://api.resend.com/emails", {
+    const { html, text } = renderBrandedEmail(content);
+    const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
@@ -60,11 +62,18 @@ async function sendConfirmationEmail(
         from: "Buchwerk <welcome@buchwerk.info>",
         to,
         subject,
-        html: body,
+        html,
+        text,
       }),
     });
-  } catch {
+    if (!res.ok) {
+      // non-fatal, aber sichtbar: vorher wurde ein Resend-4xx komplett
+      // verschluckt und die Mail fehlte kommentarlos.
+      console.error("Resend-Fehler", res.status, await res.text());
+    }
+  } catch (err) {
     // non-fatal — the purchase is already recorded
+    console.error("Bestätigungsmail fehlgeschlagen", err);
   }
 }
 
@@ -128,11 +137,20 @@ export async function POST(request: Request) {
             { project_id: meta.project_id, user_id: meta.user_id, source: "purchase" },
             { onConflict: "project_id" },
           );
-        await sendConfirmationEmail(
-          email,
-          "Dein Buch ist freigeschaltet – Buchwerk",
-          "<p>Danke für deinen Kauf. Dein Buchprojekt ist jetzt freigeschaltet (Kapitel, Cover, KDP-Listing, PDF).</p><p>Mit dem Kauf hast du bestätigt, dass die Leistung sofort bereitgestellt wird und dein Widerrufsrecht damit erlischt (§ 356 Abs. 5 BGB).</p><p>— Buchwerk</p>",
-        );
+        await sendConfirmationEmail(email, "Dein Buch ist freigeschaltet – Buchwerk", {
+          preheader: "Kapitel, Cover, KDP-Listing und Export sind jetzt frei.",
+          heading: "Danke für deinen Kauf!",
+          paragraphs: [
+            "Dein Buchprojekt ist jetzt vollständig freigeschaltet: Kapitel schreiben, Cover gestalten, KDP-Listing erstellen und dein fertiges Buch als PDF und EPUB exportieren.",
+            "Leg direkt los — dein Projekt wartet auf dich.",
+          ],
+          cta: {
+            label: "Zu deinem Buchprojekt",
+            url: `https://buchwerk.info/projekte/${meta.project_id}`,
+          },
+          footnote:
+            "Mit dem Kauf hast du bestätigt, dass die Leistung sofort bereitgestellt wird und dein Widerrufsrecht damit erlischt (§ 356 Abs. 5 BGB).",
+        });
         await trackEvent("kauf", {
           art: "buch",
           betrag_cents: session.amount_total ?? 1999,
@@ -143,11 +161,20 @@ export async function POST(request: Request) {
         )) as unknown as StripeSubLike;
         await upsertSubscription(admin, meta.user_id, sub);
         await admin.from("profiles").update({ plan: "paid" }).eq("id", meta.user_id);
-        await sendConfirmationEmail(
-          email,
-          "Dein Buchwerk-Abo ist aktiv",
-          "<p>Danke! Dein Abo ist aktiv – du kannst bis zu 10 Bücher pro Monat freischalten und produzieren.</p><p>Mit dem Abschluss hast du bestätigt, dass die Leistung sofort bereitgestellt wird und dein Widerrufsrecht damit erlischt (§ 356 Abs. 5 BGB).</p><p>— Buchwerk</p>",
-        );
+        await sendConfirmationEmail(email, "Dein Buchwerk-Abo ist aktiv", {
+          preheader: "Bis zu 10 Bücher pro Monat — dein Abo läuft.",
+          heading: "Dein Abo ist aktiv!",
+          paragraphs: [
+            "Danke für dein Vertrauen. Du kannst ab sofort bis zu 10 Bücher pro Monat freischalten und komplett produzieren — von der Recherche bis zum fertigen Export.",
+            "Starte mit deinem nächsten Buchprojekt, wann immer du bereit bist.",
+          ],
+          cta: {
+            label: "Zu deinen Projekten",
+            url: "https://buchwerk.info/projekte",
+          },
+          footnote:
+            "Mit dem Abschluss hast du bestätigt, dass die Leistung sofort bereitgestellt wird und dein Widerrufsrecht damit erlischt (§ 356 Abs. 5 BGB).",
+        });
         await trackEvent("kauf", {
           art: "abo",
           betrag_cents: session.amount_total ?? 2999,
