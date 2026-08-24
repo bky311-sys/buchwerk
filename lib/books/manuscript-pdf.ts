@@ -223,9 +223,22 @@ export async function buildManuscriptPdf(
   paragraph(title, bold, 26, 32, 16);
   if (author) paragraph(author, body, 14, 20, 0);
 
+  // --- Inhaltsverzeichnis: eine Seite direkt nach der Titelei reservieren.
+  // Die Einträge kennen ihre Seitenzahlen erst nach dem Kapitel-Layout, also
+  // wird die Seite erst am Ende beschrieben. Eine Seite reicht immer: die
+  // Gliederung erzeugt höchstens 10 Kapitel (+ Quellen + Impressum).
+  newPage();
+  const tocPage = page;
+  const tocLeftX = leftX;
+  const tocEntries: { label: string; pageNo: number }[] = [];
+
   // --- Chapters ---
   for (const chapter of chapters) {
     newPage();
+    tocEntries.push({
+      label: `Kapitel ${chapter.position} — ${chapter.heading}`,
+      pageNo: pdf.getPageCount(),
+    });
 
     paragraph(`Kapitel ${chapter.position}`, body, 10, 14, 4);
     paragraph(chapter.heading, bold, 18, 23, 18);
@@ -270,6 +283,7 @@ export async function buildManuscriptPdf(
   // --- Quellenverzeichnis (back matter), grouped by chapter ---
   if (sourceGroups.length > 0) {
     newPage();
+    tocEntries.push({ label: "Quellen", pageNo: pdf.getPageCount() });
     paragraph("Quellen", bold, 18, 23, 16);
     for (const group of sourceGroups) {
       paragraph(group.heading, bold, 13, 18, 8);
@@ -283,6 +297,7 @@ export async function buildManuscriptPdf(
 
   // --- Impressum (mandatory, at the very end of the book) ---
   newPage();
+  tocEntries.push({ label: "Impressum", pageNo: pdf.getPageCount() });
   paragraph("Impressum", bold, 16, 22, 16);
   paragraph(`© ${year} ${imprint.name}`, body, 11, 16, 12);
   paragraph(imprint.name, body, 11, 16, 2);
@@ -295,6 +310,55 @@ export async function buildManuscriptPdf(
     15,
     0,
   );
+
+  // --- Inhaltsverzeichnis auf die reservierte Seite schreiben ---
+  {
+    const entrySize = 11;
+    let ty = TRIM_H - M_TOP - 18;
+    tocPage.drawText("Inhalt", {
+      x: tocLeftX,
+      y: ty,
+      size: 18,
+      font: bold,
+      color: INK,
+    });
+    ty -= 30;
+    for (const entry of tocEntries) {
+      const pageLabel = String(entry.pageNo);
+      const pageLabelW = body.widthOfTextAtSize(pageLabel, entrySize);
+      // Platz für die rechtsbündige Seitenzahl freihalten.
+      const lines = wrap(
+        safe(entry.label),
+        body,
+        entrySize,
+        CONTENT_W - pageLabelW - 14,
+      );
+      let first = true;
+      for (const l of lines) {
+        if (ty < M_BOTTOM) break; // Überlauf-Schutz; praktisch unerreichbar
+        ty -= entrySize;
+        tocPage.drawText(l, {
+          x: tocLeftX,
+          y: ty,
+          size: entrySize,
+          font: body,
+          color: INK,
+        });
+        if (first) {
+          tocPage.drawText(pageLabel, {
+            x: tocLeftX + CONTENT_W - pageLabelW,
+            y: ty,
+            size: entrySize,
+            font: body,
+            color: INK,
+          });
+          first = false;
+        }
+        ty -= 5;
+      }
+      ty -= 8;
+    }
+  }
 
   // Page numbers, centered at the bottom — skip the title page (page 1).
   pdf.getPages().forEach((p, index) => {

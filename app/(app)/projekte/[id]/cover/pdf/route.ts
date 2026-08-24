@@ -234,11 +234,30 @@ export async function GET(
     const blurbBottom = barcodeTop + 20;
     const lh = 18;
     const maxLines = Math.max(1, Math.floor((blurbTop - blurbBottom) / lh));
-    const lines = wrap(safe(blurb), helvetica, 12, backTextW);
-    const shown = lines.slice(0, maxLines);
-    if (lines.length > maxLines && shown.length > 0) {
-      shown[shown.length - 1] =
-        shown[shown.length - 1].replace(/\.*$/, "") + " …";
+    // Passt der Klappentext nicht, wird satzweise von hinten gekürzt statt
+    // mitten im Satz abzuschneiden (QS-Durchlauf 23.08.: Rückseite endete mit
+    // „… Dieser …“). Absatzstruktur bleibt erhalten, weil am Originaltext
+    // geschnitten wird.
+    const blurbText = safe(blurb);
+    let shown = wrap(blurbText, helvetica, 12, backTextW);
+    if (shown.length > maxLines) {
+      const sentenceEnds = [...blurbText.matchAll(/[.!?](?=\s|$)/g)]
+        .map((m) => m.index + 1)
+        .reverse();
+      for (const end of sentenceEnds) {
+        const candidate = blurbText.slice(0, end).trimEnd();
+        const lines = wrap(candidate, helvetica, 12, backTextW);
+        if (lines.length <= maxLines) {
+          shown = lines;
+          break;
+        }
+      }
+      // Notbremse (ein einziger Riesensatz): harter Zeilenschnitt mit Ellipse.
+      if (shown.length > maxLines) {
+        shown = shown.slice(0, maxLines);
+        shown[shown.length - 1] =
+          shown[shown.length - 1].replace(/\.*$/, "") + " …";
+      }
     }
     let by = blurbTop;
     for (const l of shown) {

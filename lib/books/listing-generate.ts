@@ -97,6 +97,11 @@ export async function generateListing(
       zielgruppe: project.audience ?? DEFAULT_AUDIENCE,
       gliederung,
       wortzahl: totalWords > 0 ? String(totalWords) : "unbekannt",
+      datum: new Date().toLocaleDateString("de-DE", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
       marktdaten,
       kategorien_liste: KDP_CATEGORIES.map((c) => `- ${c}`).join("\n"),
     });

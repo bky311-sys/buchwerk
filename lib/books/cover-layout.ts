@@ -103,12 +103,26 @@ export function pickAccentWordIndex(title: string): number {
 
 // --- Titel-Split -----------------------------------------------------------
 
+// Inhaltstragende Wortmenge für den Redundanz-Vergleich zweier Textstücke.
+function contentWords(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((w) => w.length >= 4 && !STOPWORDS.has(w)),
+  );
+}
+
 /**
  * Deutsche Ratgeber-Titel tragen ihr Nutzenversprechen oft im selben Feld
  * („Haupttitel: Untertitel"). Auf dem Cover quetscht das den Titel klein
  * (Benjamins Fund 14.08.). Ohne eigenen Untertitel wird deshalb am ersten
  * Doppelpunkt/Gedankenstrich gesplittet: Haupttitel riesig, Rest als
- * Untertitel. Ein explizit gesetzter Untertitel gewinnt immer.
+ * Untertitel. Ein explizit gesetzter Untertitel gewinnt — aber wenn er den
+ * Doppelpunkt-Anhang des Titels im Wesentlichen wiederholt (KDP-Untertitel
+ * sind oft die ausformulierte Fassung desselben Versprechens), wird der Titel
+ * trotzdem gesplittet und nur der Kopf gezeigt. Sonst stehen Anhang UND
+ * Untertitel fast wortgleich untereinander (QS-Durchlauf 23.08.).
  */
 export function splitCoverTitle(
   title: string,
@@ -116,8 +130,18 @@ export function splitCoverTitle(
 ): { title: string; subtitle: string } {
   const sub = (subtitle ?? "").trim();
   const t = title.trim();
-  if (sub) return { title: t, subtitle: sub };
   const m = t.match(/^(.{3,48}?)\s*[:–—]\s+(.{8,})$/);
+  if (sub) {
+    if (m) {
+      const tailWords = contentWords(m[2]);
+      const subWords = contentWords(sub);
+      const shared = [...tailWords].filter((w) => subWords.has(w)).length;
+      if (tailWords.size > 0 && shared / tailWords.size >= 0.5) {
+        return { title: m[1], subtitle: sub };
+      }
+    }
+    return { title: t, subtitle: sub };
+  }
   if (m) return { title: m[1], subtitle: m[2] };
   return { title: t, subtitle: "" };
 }

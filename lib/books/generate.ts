@@ -56,11 +56,28 @@ function chapterWordTarget(chapterCount: number): number {
   return Math.ceil(TARGET_TOTAL_WORDS / count);
 }
 
-// What the already-written chapters cover, as heading + their ### subheadings.
-// This goes into the chapter prompt so the model stops re-explaining the same
-// ground in every chapter — the most common flaw of AI-written books. Chapters
-// were previously written fully independently (only the outline as context).
-// Subheadings are extracted with a regex, so this costs no extra model call.
+// Unit-bearing figures a chapter already states (800 Watt, 120 bis 210 Euro …).
+// Fed into the prompt so a later chapter reuses the exact value statt dieselbe
+// Größe neu und leicht anders zu errechnen (QS-Durchlauf 23.08.: K1 nennt
+// „120–210 Euro“ Jahresersparnis, K8 rechnet „105–241 Euro“). Längere Einheiten
+// stehen in der Alternation zuerst, damit „800 Wp“ nicht als „800 W“ endet.
+export function extractKeyFigures(content: string): string[] {
+  const matches = content.match(
+    /\d[\d.,]*(?:\s?(?:bis|und|–|-)\s?\d[\d.,]*)?\s?(?:kWh|kWp|Wp|Watt|Euro|Cent|Prozent|%|€|Jahren|Jahre|Monaten|Monate|W\b)/g,
+  );
+  if (!matches) return [];
+  return [...new Set(matches.map((s) => s.replace(/\s+/g, " ").trim()))].slice(
+    0,
+    15,
+  );
+}
+
+// What the already-written chapters cover, as heading + their ### subheadings
+// + their key figures. This goes into the chapter prompt so the model stops
+// re-explaining the same ground in every chapter — the most common flaw of
+// AI-written books. Chapters were previously written fully independently (only
+// the outline as context). Everything is extracted with regexes, so this costs
+// no extra model call.
 export function summarizeWrittenChapters(
   chapters: Array<{
     position: number;
@@ -75,9 +92,11 @@ export function summarizeWrittenChapters(
     const subheads = [...c.content.matchAll(/^###\s+(.+)$/gm)]
       .map((m) => m[1].trim())
       .slice(0, 12);
+    const figures = extractKeyFigures(c.content);
     lines.push(
       `Kapitel ${c.position} „${c.heading}“` +
-        (subheads.length ? ` behandelt bereits: ${subheads.join("; ")}` : ""),
+        (subheads.length ? ` behandelt bereits: ${subheads.join("; ")}` : "") +
+        (figures.length ? ` — genannte Zahlen: ${figures.join(", ")}` : ""),
     );
   }
   return lines.length

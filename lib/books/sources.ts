@@ -85,8 +85,14 @@ export function parseUsedSources(block: string): BookSource[] {
           .replace(/\*\*/g, "")
           .trim();
       } else {
-        // Source without a URL (e.g. a book or study). Keep it as a title entry.
-        title = line.replace(/\*\*/g, "").trim();
+        // Source without a URL (e.g. a book or study). Keep it as a title
+        // entry — minus apology suffixes the model gern anhängt („— keine
+        // direkte URL im Dossier angegeben“); die landeten wörtlich im
+        // gedruckten Quellenverzeichnis (QS-Durchlauf 23.08.).
+        title = line
+          .replace(/\*\*/g, "")
+          .replace(/\s*[—–-]?\s*[(\[]?\s*keine\s+(direkte\s+)?(URL|Internetquelle|Webadresse|Quelle)[^)\]]*[)\]]?\s*$/i, "")
+          .trim();
       }
     }
 

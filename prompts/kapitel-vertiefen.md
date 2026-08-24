@@ -16,6 +16,7 @@ Bisheriges Kapitel:
 Aufgabe:
 - Erweitere das Kapitel auf **mindestens {{wortziel}} Wörter**.
 - Füge Substanz hinzu: zusätzliche Fakten und Zahlen aus dem Dossier, weitere Beispiele, tiefere Erklärungen, praktische Anwendungen. Keine Füllsätze, keine Wiederholungen.
+- Zahlen bleiben konsistent: Nennt die Liste oben eine Größe bereits, übernimm exakt diesen Wert statt neu zu rechnen. Ergänze kein Schlussfazit und keine Inhaltsvorschau auf andere Kapitel.
 - Behalte Stil, Struktur und die vorhandene Kapitelüberschrift ("## …") bei.
 - Erfinde keine Zahlen oder Quellen.
 - Gib das **vollständige** überarbeitete Kapitel in Markdown zurück, beginnend mit der Kapitelüberschrift. Keine Meta-Kommentare. Erstelle **kein** Quellenverzeichnis im Kapiteltext.
