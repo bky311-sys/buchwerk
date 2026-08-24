@@ -18,7 +18,13 @@ export async function POST(
   } | null;
 
   const prompt = typeof body?.prompt === "string" ? body.prompt : "";
-  const model = (body?.model === "pro" ? "pro" : "schnell") as CoverModel;
+  // Alle drei Modelle durchlassen — "illustration" (Ideogram) trägt die
+  // Cover-2.x-Vorlagen; die alte pro/schnell-Weiche warf es still auf Flux
+  // Schnell zurück.
+  const model: CoverModel =
+    body?.model === "pro" || body?.model === "illustration"
+      ? body.model
+      : "schnell";
 
   const result = await generateCover(id, prompt, model);
   return NextResponse.json(result, { status: result.ok ? 200 : 400 });

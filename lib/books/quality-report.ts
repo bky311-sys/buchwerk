@@ -41,7 +41,10 @@ const QUALITY_JSON_SCHEMA = {
     gesamt: {
       type: "object",
       properties: {
-        score: { type: "integer", minimum: 0, maximum: 100 },
+        // Kein minimum/maximum: Anthropics Structured Output lehnt diese
+        // Properties für integer ab — der Wertebereich wird beim Parsen
+        // geklemmt (Math.min/max weiter unten).
+        score: { type: "integer" },
         urteil: { type: "string" },
         export_empfehlung: {
           enum: ["ok", "mit_einschraenkungen", "nicht_empfohlen"],
