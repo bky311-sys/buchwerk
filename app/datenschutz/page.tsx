@@ -559,27 +559,6 @@ export default function DatenschutzPage() {
             </div>
 
             <div className="space-y-2">
-              <h3 className={subTitleClass}>Anmeldung mit Google</h3>
-              <p>
-                Optional können Sie sich mit Ihrem Google-Konto anmelden
-                (Google OAuth, Anbieter: Google Ireland Limited, Gordon House,
-                Barrow Street, Dublin 4, Irland). Dabei erhalten wir Ihre
-                E-Mail-Adresse zur Konto-Identifikation. Es werden nur die für
-                die Anmeldung erforderlichen Daten übertragen. Rechtsgrundlage
-                ist Art. 6 Abs. 1 lit. b DSGVO. Datenschutzhinweise von Google:{" "}
-                <a
-                  href="https://policies.google.com/privacy"
-                  className={linkClass}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  policies.google.com/privacy
-                </a>
-                .
-              </p>
-            </div>
-
-            <div className="space-y-2">
               <h3 className={subTitleClass}>Speicherdauer</h3>
               <p>
                 Kontodaten werden bis zur Löschung des Kontos gespeichert. Sie
@@ -625,11 +604,11 @@ export default function DatenschutzPage() {
             </div>
 
             <div className="space-y-2">
-              <h3 className={subTitleClass}>Coverbilder: Replicate (Flux)</h3>
+              <h3 className={subTitleClass}>Coverbilder: Replicate</h3>
               <p>
                 Zur Erzeugung von Cover-Motiven übermitteln wir den Bildprompt
-                an Replicate, Inc., San Francisco, USA, das das Modell „Flux"
-                betreibt.
+                an Replicate, Inc., San Francisco, USA, das die eingesetzten
+                Bildmodelle (derzeit „Flux" und „Ideogram") betreibt.
               </p>
             </div>
           </section>
@@ -677,6 +656,69 @@ export default function DatenschutzPage() {
                 einschlägig — eines Angemessenheitsbeschlusses (EU-US Data
                 Privacy Framework). Supabase und Stripe verarbeiten die Daten in
                 der EU (Irland).
+              </p>
+            </div>
+          </section>
+
+          {/* 10 */}
+          <section className="space-y-6">
+            <h2 className={sectionTitleClass}>
+              10. Werbeanzeigen und Soziale Medien
+            </h2>
+
+            <div className="space-y-2">
+              <h3 className={subTitleClass}>Werbeanzeigen (Google Ads)</h3>
+              <p>
+                Wir schalten Werbeanzeigen über Google Ads (Google Ireland
+                Limited, Gordon House, Barrow Street, Dublin 4, Irland). Auf
+                unserer Website selbst sind dabei <strong>keine</strong>{" "}
+                Tracking-Dienste von Google eingebunden — kein Google-Tag, kein
+                Conversion-Pixel, kein Remarketing. Die Erfolgsmessung unserer
+                Anzeigen erfolgt ausschließlich über das eigene Kampagnen-Cookie
+                (siehe Abschnitt „Cookies&quot;), ohne Datenweitergabe an
+                Google. Welche Daten Google beim Anzeigen und Anklicken von
+                Werbung in eigener Verantwortung verarbeitet, entnehmen Sie den
+                Datenschutzhinweisen von Google:{" "}
+                <a
+                  href="https://policies.google.com/privacy"
+                  className={linkClass}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  policies.google.com/privacy
+                </a>
+                .
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className={subTitleClass}>
+                Onlinepräsenzen: Facebook und Instagram
+              </h3>
+              <p>
+                Wir unterhalten Präsenzen auf Facebook und Instagram (Meta
+                Platforms Ireland Limited, Merrion Road, Dublin 4, Irland), um
+                über unser Angebot zu informieren und mit Interessierten in
+                Kontakt zu treten. Rechtsgrundlage ist unser berechtigtes
+                Interesse an Außendarstellung und Kommunikation (Art.&nbsp;6
+                Abs.&nbsp;1 lit.&nbsp;f DSGVO). Beim Besuch dieser Präsenzen
+                verarbeitet Meta Ihre Daten in eigener Verantwortung; für die
+                dort erhobenen Seiten-Statistiken („Insights&quot;) sind wir mit
+                Meta gemeinsam verantwortlich (Art.&nbsp;26 DSGVO, Grundlage ist
+                die von Meta bereitgestellte Insights-Vereinbarung). Ein
+                Drittlandtransfer durch Meta erfolgt auf Grundlage des EU-US
+                Data Privacy Framework. Auf unserer Website selbst sind keine
+                Meta-Plugins oder -Pixel eingebunden. Datenschutzhinweise von
+                Meta:{" "}
+                <a
+                  href="https://www.facebook.com/privacy/policy"
+                  className={linkClass}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  facebook.com/privacy/policy
+                </a>
+                .
               </p>
             </div>
           </section>
