@@ -98,7 +98,19 @@ export async function POST(request: Request) {
         metadata?: Record<string, string> | null;
       };
       const meta = session.metadata ?? {};
-      const email = session.customer_details?.email ?? null;
+      // Bestätigung ans Buchwerk-Konto, nicht an die im Stripe-Checkout
+      // eingetippte Adresse — die beiden können abweichen (Benjamins Fund
+      // 24.08.: Kauf-Mail landete im „falschen" Postfach). Checkout-Adresse
+      // nur als Fallback.
+      let email = session.customer_details?.email ?? null;
+      if (meta.user_id) {
+        const { data: profileRow } = await admin
+          .from("profiles")
+          .select("email")
+          .eq("id", meta.user_id)
+          .maybeSingle();
+        if (profileRow?.email) email = profileRow.email;
+      }
 
       if (meta.kind === "book" && meta.user_id && meta.project_id) {
         await admin.from("purchases").upsert(
