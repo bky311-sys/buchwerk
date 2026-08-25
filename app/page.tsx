@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/buchwerk/site-header";
 import { HeroLeadForm } from "@/components/buchwerk/hero-lead-form";
-import { ProductPreview } from "@/components/buchwerk/product-preview";
 
 export default function Home() {
   return (
@@ -27,30 +26,27 @@ export default function Home() {
 }
 
 
+// Ruhiger Hero ohne Produkt-Attrappe (Benjamins Entscheidung 25.08.): Text
+// und Formular zentriert, die Headline trägt allein.
 function HeroSection() {
   return (
     <section className="border-b border-border">
-      <div className="mx-auto grid max-w-5xl gap-12 px-6 py-20 sm:py-28 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            Das Self-Publishing-Studio — Ratgeber, Sachbücher &amp; Workbooks
-          </p>
-          <h1 className="font-display mt-5 text-5xl font-extrabold leading-[0.98] tracking-tight text-foreground sm:text-6xl">
-            Dein Buch. Recherchiert, druckfertig, live auf Amazon.
-          </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Buchwerk prüft deine Nische mit echten Amazon-Zahlen, recherchiert im
-            Web, schreibt ein vollständiges Manuskript und liefert das komplette
-            KDP-Paket: druckfertiges PDF, Cover, Listing. Danach findet dein Buch
-            im Buchshop seine ersten Leser — und du siehst täglich, wie es sich
-            bei Amazon schlägt.
-          </p>
-          <div className="mt-8">
-            <HeroLeadForm />
-          </div>
-        </div>
-        <div className="min-w-0 lg:pl-4">
-          <ProductPreview />
+      <div className="mx-auto max-w-3xl px-6 py-20 text-center sm:py-28">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+          Das Self-Publishing-Studio — Ratgeber, Sachbücher &amp; Workbooks
+        </p>
+        <h1 className="font-display mt-5 text-5xl font-extrabold leading-[0.98] tracking-tight text-foreground sm:text-6xl">
+          Dein Buch. Recherchiert, druckfertig, live auf Amazon.
+        </h1>
+        <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+          Buchwerk prüft deine Nische mit echten Amazon-Zahlen, recherchiert im
+          Web, schreibt ein vollständiges Manuskript und liefert das komplette
+          KDP-Paket: druckfertiges PDF, Cover, Listing. Danach findet dein Buch
+          im Buchshop seine ersten Leser — und du siehst täglich, wie es sich
+          bei Amazon schlägt.
+        </p>
+        <div className="mx-auto mt-8 max-w-xl">
+          <HeroLeadForm />
         </div>
       </div>
     </section>
