@@ -20,7 +20,10 @@ export function ProductPreview() {
         <span className="size-2.5 rounded-full bg-input" />
         <span className="size-2.5 rounded-full bg-input" />
         <span className="ml-3 rounded-md border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
-          buchwerk.info/projekte
+          Dein Projektbereich
+        </span>
+        <span className="ml-auto rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+          Beispiel
         </span>
       </div>
 
@@ -57,6 +60,11 @@ export function ProductPreview() {
             </div>
           ))}
         </div>
+
+        <p className="mt-4 text-xs text-muted-foreground">
+          Beispielansicht. Deine Projekte sind privat und nur für dich
+          sichtbar.
+        </p>
       </div>
     </div>
   );
