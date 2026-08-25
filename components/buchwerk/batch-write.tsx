@@ -40,6 +40,10 @@ type Props = {
   // writes stay fast and within the function time limit.
   needsResearch: boolean;
   researchStages: number;
+  // Ein Kapitel läuft gerade (z. B. einzeln angestoßen): Der Sammel-Start ist
+  // dann gesperrt — vorher blieb der Button klickbar und lief serverseitig
+  // in die 409-Warteschleife (Benjamins Befund 25.08.).
+  otherGenerating: boolean;
 };
 
 type Phase = "idle" | "research" | "writing";
@@ -49,6 +53,7 @@ export function BatchWrite({
   chapterIds,
   needsResearch,
   researchStages,
+  otherGenerating,
 }: Props) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
@@ -126,6 +131,23 @@ export function BatchWrite({
         <p className="mt-2 text-xs text-muted-foreground">
           Bitte den Tab offen lassen. Jedes Kapitel dauert ~30 Sek.
         </p>
+      </div>
+    );
+  }
+
+  if (otherGenerating) {
+    return (
+      <div className="rounded-2xl border border-border bg-muted p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Gerade wird ein Kapitel geschrieben. Sobald es fertig ist, kannst
+            du hier die restlichen {total} auf einmal schreiben lassen.
+          </p>
+          <Button type="button" size="lg" disabled>
+            <Spinner className="size-4" />
+            Kapitel läuft…
+          </Button>
+        </div>
       </div>
     );
   }

@@ -154,6 +154,7 @@ export default async function SchreibenPage({
                 chapterIds={unwrittenIds}
                 needsResearch={!hasResearch}
                 researchStages={RESEARCH_TOTAL_STAGES}
+                otherGenerating={anyGenerating}
               />
             </div>
           ) : null}
