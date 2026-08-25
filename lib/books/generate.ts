@@ -10,6 +10,7 @@ import {
   coerceBookType,
   chapterTypeInstructions,
 } from "@/lib/books/book-type";
+import { coerceLengthTier, LENGTH_TIERS } from "@/lib/books/length";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -38,22 +39,25 @@ export type GenerateResult = {
 // parallelen Zweitversuch ein.
 export const STALE_GENERATION_MS = 330_000;
 
-// The book as a whole must reach at least 7000 words. We aim higher so the total
-// clears the minimum with margin even if a chapter lands a little short.
-export const TARGET_TOTAL_WORDS = 8500;
-export const MIN_TOTAL_WORDS = 7000;
 // A chapter shorter than target * this ratio triggers one "deepen" pass.
 const MIN_CHAPTER_RATIO = 0.85;
+
+// Ab diesem Kapitel-Wortziel wird in Abschnitts-Läufen geschrieben: ein
+// einzelner Modell-Call liefert keine 2.000+ deutschen Wörter in konstanter
+// Qualität (und riskiert Output-Abbruch bei maxTokens).
+const SECTION_THRESHOLD = 1700;
+// Zielgröße eines einzelnen Abschnitts-Laufs.
+const SECTION_WORDS = 1300;
 
 // Rough word count for German markdown text (word tokens, ignoring markup).
 export function countWords(text: string): number {
   return (text.match(/[\wäöüÄÖÜß]+/g) ?? []).length;
 }
 
-// Per-chapter word target so the whole book clears TARGET_TOTAL_WORDS.
-function chapterWordTarget(chapterCount: number): number {
+// Per-chapter word target so the whole book clears the tier's target.
+function chapterWordTarget(chapterCount: number, targetTotal: number): number {
   const count = Math.max(1, chapterCount);
-  return Math.ceil(TARGET_TOTAL_WORDS / count);
+  return Math.ceil(targetTotal / count);
 }
 
 // Unit-bearing figures a chapter already states (800 Watt, 120 bis 210 Euro …).
@@ -210,6 +214,14 @@ export async function generateChapterContent(
     .eq("id", chapter.project_id)
     .maybeSingle();
   const bookType = coerceBookType(typeRow?.book_type);
+
+  // Umfangswahl best-effort (fehlende Spalte ⇒ kompakt = altes Verhalten).
+  const { data: tierRow } = await supabase
+    .from("projects")
+    .select("length_tier")
+    .eq("id", chapter.project_id)
+    .maybeSingle();
+  const lengthTier = coerceLengthTier(tierRow?.length_tier);
   if (!project) {
     return { ok: false, error: "Projekt nicht gefunden." };
   }
@@ -253,7 +265,10 @@ export async function generateChapterContent(
   const recherche =
     researchRow?.research?.trim() ||
     "(Kein Recherche-Dossier vorhanden. Schreibe sorgfältig nach bestem Wissen und erfinde keine Zahlen oder Quellen.)";
-  const wortziel = chapterWordTarget((allChapters ?? []).length);
+  const wortziel = chapterWordTarget(
+    (allChapters ?? []).length,
+    LENGTH_TIERS[lengthTier].targetWords,
+  );
 
   const commonVars = {
     titel: project.title ?? project.topic,
@@ -266,6 +281,63 @@ export async function generateChapterContent(
   };
 
   try {
+    // --- Abschnitts-Modus (Standard/Premium): lange Kapitel entstehen in
+    // 2–3 aufeinander aufbauenden Läufen. Ein einzelner Call trägt keine
+    // 2.000+ Wörter in konstanter Qualität; außerdem checkpointet jeder
+    // Abschnitt, sodass ein Timeout nur den Rest kostet.
+    if (wortziel > SECTION_THRESHOLD) {
+      const sectionCount = Math.min(3, Math.max(2, Math.ceil(wortziel / SECTION_WORDS)));
+      const perSection = Math.ceil(wortziel / sectionCount);
+      let content = `## ${chapter.heading}`;
+      const seen = new Set<string>();
+      const mergedSources: { title: string; url: string }[] = [];
+
+      for (let i = 1; i <= sectionCount; i += 1) {
+        const isLast = i === sectionCount;
+        const tail =
+          content.length > 9000 ? `…${content.slice(-9000)}` : content;
+        const prompt = await loadPrompt("kapitel-abschnitt", {
+          ...commonVars,
+          nummer: String(chapter.position),
+          ueberschrift: chapter.heading,
+          zusammenfassung: chapter.summary ?? "",
+          abschnitt_nummer: String(i),
+          abschnitt_gesamt: String(sectionCount),
+          abschnitt_wortziel: String(perSection),
+          bisheriger_verlauf:
+            i === 1
+              ? "Bisheriger Kapiteltext: nur die Überschrift. Beginne mit einem direkten, kapitelspezifischen Einstieg (keine allgemeine Einführung ins Buchthema)."
+              : `Bisheriger Kapiteltext (setze exakt hier nahtlos fort):\n${tail}`,
+          abschluss_anweisung: isLast
+            ? "- Dies ist der LETZTE Abschnitt: Führe das Kapitel zu einem inhaltlichen Ende. KEIN zusammenfassender Schlussabsatz, keine Vorschau auf spätere Kapitel."
+            : "- Das Kapitel geht nach diesem Abschnitt weiter: Höre an einer sinnvollen Stelle auf, ohne das Kapitel abzuschließen.",
+        });
+        const raw = await claudeText({
+          messages: [{ role: "user", content: prompt }],
+          maxTokens: 8000,
+        });
+        const { body, sources } = splitChapterSources(raw);
+        content = `${content}\n\n${body.trim()}`;
+        for (const s of sources) {
+          const key = (s.url || s.title).toLowerCase();
+          if (key && !seen.has(key)) {
+            seen.add(key);
+            mergedSources.push(s);
+          }
+        }
+        // Checkpoint nach jedem Abschnitt — der letzte setzt "fertig".
+        await supabase
+          .from("chapters")
+          .update({
+            content,
+            sources: mergedSources,
+            ...(isLast ? { status: "fertig" } : {}),
+          })
+          .eq("id", chapter.id);
+      }
+      return { ok: true };
+    }
+
     const prompt = await loadPrompt("kapitel", {
       ...commonVars,
       gliederung,

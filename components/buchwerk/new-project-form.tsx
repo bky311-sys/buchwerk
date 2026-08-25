@@ -27,6 +27,29 @@ const BOOK_TYPES = [
   },
 ] as const;
 
+// Umfangswahl: steuert Kapitelzahl und Wortziele (lib/books/length.ts).
+// Seitenangaben beziehen sich aufs KDP-Taschenbuch 5,5×8,5".
+const LENGTH_OPTIONS = [
+  {
+    value: "kompakt",
+    label: "Kompakt",
+    seiten: "ca. 80 Seiten",
+    hint: "Auf den Punkt — für klar umrissene Themen",
+  },
+  {
+    value: "standard",
+    label: "Standard",
+    seiten: "ca. 130 Seiten",
+    hint: "Ausgewachsener Ratgeber mit Tiefe",
+  },
+  {
+    value: "premium",
+    label: "Premium",
+    seiten: "ca. 200 Seiten",
+    hint: "Das umfassende Standardwerk deiner Nische",
+  },
+] as const;
+
 export function NewProjectForm({
   defaultTopic,
   defaultAudience,
@@ -70,6 +93,39 @@ export function NewProjectForm({
           ))}
         </div>
       </fieldset>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Umfang</legend>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {LENGTH_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-start gap-2 rounded-xl border border-input bg-card px-3 py-2 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+            >
+              <input
+                type="radio"
+                name="umfang"
+                value={option.value}
+                defaultChecked={option.value === "kompakt"}
+                disabled={isPending}
+                className="mt-0.5 size-4 shrink-0 accent-primary"
+              />
+              <span>
+                <span className="block font-medium">
+                  {option.label}
+                  <span className="ml-1 font-normal text-muted-foreground">
+                    · {option.seiten}
+                  </span>
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {option.hint}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <div className="space-y-2">
         <Label htmlFor="topic">Worum soll dein Buch gehen?</Label>
         <textarea

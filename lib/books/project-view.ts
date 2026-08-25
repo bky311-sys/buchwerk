@@ -1,6 +1,10 @@
 import "server-only";
 
-import { STALE_GENERATION_MS, MIN_TOTAL_WORDS, countWords } from "./generate";
+import { STALE_GENERATION_MS, countWords } from "./generate";
+
+// Fallback-Mindestlänge, wenn der Aufrufer keine Umfangsstufe kennt —
+// entspricht der alten globalen MIN_TOTAL_WORDS-Grenze.
+const FALLBACK_MIN_WORDS = 7000;
 
 export type ChapterRow = {
   id: string;
@@ -42,6 +46,7 @@ export type ProjectChapterView = {
 export function computeChapterView(
   chapters: ChapterRow[] | null | undefined,
   nowMs: number,
+  minWords: number = FALLBACK_MIN_WORDS,
 ): ProjectChapterView {
   const list = chapters ?? [];
   const views: ChapterView[] = list.map((c) => {
@@ -63,7 +68,7 @@ export function computeChapterView(
     (sum, c) => sum + (c.content ? countWords(c.content) : 0),
     0,
   );
-  const belowMinimum = hasWrittenChapters && totalWords < MIN_TOTAL_WORDS;
+  const belowMinimum = hasWrittenChapters && totalWords < minWords;
   const anyGenerating = views.some((c) => c.isGenerating);
   const unwrittenIds = views.filter((c) => !c.content).map((c) => c.id);
   const firstUnwrittenId = unwrittenIds[0] ?? null;

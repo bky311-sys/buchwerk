@@ -54,6 +54,7 @@ export async function createProjectAction(
     topic: formData.get("topic"),
     audience: formData.get("audience"),
     bookType: formData.get("buchtyp") ?? "ratgeber",
+    umfang: formData.get("umfang") ?? "kompakt",
   });
   if (!parsed.success) {
     return {
@@ -70,6 +71,7 @@ export async function createProjectAction(
   const topic = parsed.data.topic.trim();
   const audience = (parsed.data.audience ?? "").trim() || null;
   const bookType = parsed.data.bookType;
+  const umfang = parsed.data.umfang;
 
   const { data: project, error: insertError } = await supabase
     .from("projects")
@@ -79,6 +81,7 @@ export async function createProjectAction(
       audience,
       status: "gliederung",
       book_type: bookType,
+      length_tier: umfang,
     })
     .select("id")
     .single();
@@ -87,7 +90,7 @@ export async function createProjectAction(
   }
 
   try {
-    const outline = await generateOutline(topic, audience, bookType);
+    const outline = await generateOutline(topic, audience, bookType, umfang);
     await supabase
       .from("projects")
       .update({ title: outline.titel, status: "schreiben" })

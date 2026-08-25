@@ -14,6 +14,12 @@ import {
   outlineTypeInstructions,
   type BookType,
 } from "@/lib/books/book-type";
+import {
+  coerceLengthTier,
+  LENGTH_TIERS,
+  DEFAULT_LENGTH_TIER,
+  type LengthTier,
+} from "@/lib/books/length";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -31,11 +37,13 @@ export async function generateOutline(
   topic: string,
   audience: string | null,
   bookType: BookType = "ratgeber",
+  lengthTier: LengthTier = DEFAULT_LENGTH_TIER,
 ): Promise<Outline> {
   const prompt = await loadPrompt("gliederung", {
     thema: topic,
     zielgruppe: audience ?? DEFAULT_AUDIENCE,
     buchtyp_anweisung: outlineTypeInstructions(bookType),
+    kapitel_spanne: LENGTH_TIERS[lengthTier].kapitelSpanne,
   });
   const raw = await claudeJson({
     messages: [{ role: "user", content: prompt }],
@@ -87,6 +95,11 @@ export async function regenerateOutline(
     .select("book_type")
     .eq("id", projectId)
     .maybeSingle();
+  const { data: tierRow } = await supabase
+    .from("projects")
+    .select("length_tier")
+    .eq("id", projectId)
+    .maybeSingle();
 
   await supabase
     .from("projects")
@@ -98,6 +111,7 @@ export async function regenerateOutline(
       project.topic,
       project.audience,
       coerceBookType(typeRow?.book_type),
+      coerceLengthTier(tierRow?.length_tier),
     );
     await supabase.from("chapters").delete().eq("project_id", projectId);
     await supabase

@@ -15,6 +15,8 @@ export const newProjectSchema = z.object({
   // Buchformat: klassischer Ratgeber/Sachbuch-Fließtext oder Workbook mit
   // Übungen, Checklisten und Notizfeldern. Steuert Prompts und Rendering.
   bookType: z.enum(["ratgeber", "workbook"]).default("ratgeber"),
+  // Umfangswahl: steuert Kapitelzahl, Wortziele und den Abschnitts-Modus.
+  umfang: z.enum(["kompakt", "standard", "premium"]).default("kompakt"),
 });
 
 export type NewProjectInput = z.infer<typeof newProjectSchema>;

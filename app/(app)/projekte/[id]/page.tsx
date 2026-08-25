@@ -9,7 +9,8 @@ import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
 import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
 import { Spinner } from "@/components/buchwerk/spinner";
-import { STALE_GENERATION_MS, MIN_TOTAL_WORDS } from "@/lib/books/generate";
+import { STALE_GENERATION_MS } from "@/lib/books/generate";
+import { LENGTH_TIERS, coerceLengthTier } from "@/lib/books/length";
 import { computeChapterView } from "@/lib/books/project-view";
 import { buildWorkflowSteps } from "@/lib/books/workflow";
 import { RESEARCH_TOTAL_STAGES } from "@/lib/books/research";
@@ -61,22 +62,29 @@ export default async function ProjektPage({
     .eq("project_id", id)
     .maybeSingle();
 
-  const [{ data: chapters }, unlocked, { data: researchRow }, { data: qualityRow }] =
-    await Promise.all([
-      supabase
-        .from("chapters")
-        .select("id, position, heading, summary, content, status, updated_at")
-        .eq("project_id", id)
-        .order("position"),
-      canAccessProject(supabase, id),
-      supabase.from("projects").select("research").eq("id", id).maybeSingle(),
-      supabase
-        .from("projects")
-        .select("quality_status")
-        .eq("id", id)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: chapters },
+    unlocked,
+    { data: researchRow },
+    { data: qualityRow },
+    { data: tierRow },
+  ] = await Promise.all([
+    supabase
+      .from("chapters")
+      .select("id, position, heading, summary, content, status, updated_at")
+      .eq("project_id", id)
+      .order("position"),
+    canAccessProject(supabase, id),
+    supabase.from("projects").select("research").eq("id", id).maybeSingle(),
+    supabase
+      .from("projects")
+      .select("quality_status")
+      .eq("id", id)
+      .maybeSingle(),
+    supabase.from("projects").select("length_tier").eq("id", id).maybeSingle(),
+  ]);
   const hasResearch = Boolean(researchRow?.research?.trim());
+  const lengthTier = LENGTH_TIERS[coerceLengthTier(tierRow?.length_tier)];
 
   // Server Component: the per-request wall clock is exactly what we want here —
   // the poller re-renders this page every few seconds, so staleness is
@@ -93,7 +101,7 @@ export default async function ProjektPage({
     belowMinimum,
     anyGenerating,
     firstUnwrittenId,
-  } = computeChapterView(chapters, now);
+  } = computeChapterView(chapters, now, lengthTier.minWords);
 
   // A fresh "gliederung_läuft" status means a new outline is being generated.
   // Once it's stale we fall back to the normal buttons so it can be retried.
@@ -181,7 +189,7 @@ export default async function ProjektPage({
             className={`text-sm font-medium tabular-nums ${
               belowMinimum ? "text-clay-strong" : "text-muted-foreground"
             }`}
-            title={`Mindestlänge ${MIN_TOTAL_WORDS.toLocaleString("de-DE")} Wörter`}
+            title={`Mindestlänge ${lengthTier.minWords.toLocaleString("de-DE")} Wörter (${lengthTier.label}, ${lengthTier.seiten})`}
           >
             ≈ {totalWords.toLocaleString("de-DE")} Wörter
             {belowMinimum ? " (unter Minimum)" : ""}

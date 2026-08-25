@@ -11,7 +11,7 @@ import { BatchWrite } from "@/components/buchwerk/batch-write";
 import { ChapterCollapse } from "@/components/buchwerk/chapter-collapse";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { Spinner } from "@/components/buchwerk/spinner";
-import { MIN_TOTAL_WORDS } from "@/lib/books/generate";
+import { LENGTH_TIERS, coerceLengthTier } from "@/lib/books/length";
 import { RESEARCH_TOTAL_STAGES } from "@/lib/books/research";
 import { computeChapterView } from "@/lib/books/project-view";
 import { getWorkflowSteps } from "@/lib/books/workflow";
@@ -38,7 +38,7 @@ export default async function SchreibenPage({
     .single();
   if (!project) notFound();
 
-  const [{ data: chapters }, unlocked, { data: researchRow }] =
+  const [{ data: chapters }, unlocked, { data: researchRow }, { data: tierRow }] =
     await Promise.all([
       supabase
         .from("chapters")
@@ -51,7 +51,9 @@ export default async function SchreibenPage({
         .select("research")
         .eq("id", id)
         .maybeSingle(),
+      supabase.from("projects").select("length_tier").eq("id", id).maybeSingle(),
     ]);
+  const lengthTier = LENGTH_TIERS[coerceLengthTier(tierRow?.length_tier)];
 
   const hasResearch = Boolean(researchRow?.research?.trim());
   const workflowSteps = await getWorkflowSteps(supabase, id);
@@ -71,7 +73,7 @@ export default async function SchreibenPage({
     anyGenerating,
     unwrittenIds,
     firstUnwrittenId,
-  } = computeChapterView(chapters, now);
+  } = computeChapterView(chapters, now, lengthTier.minWords);
 
   const title = project.title ?? project.topic;
 
@@ -129,7 +131,7 @@ export default async function SchreibenPage({
                 className={`text-sm font-medium tabular-nums ${
                   belowMinimum ? "text-clay-strong" : "text-muted-foreground"
                 }`}
-                title={`Mindestlänge ${MIN_TOTAL_WORDS.toLocaleString("de-DE")} Wörter`}
+                title={`Mindestlänge ${lengthTier.minWords.toLocaleString("de-DE")} Wörter (${lengthTier.label}, ${lengthTier.seiten})`}
               >
                 ≈ {totalWords.toLocaleString("de-DE")} Wörter
                 {belowMinimum ? " (unter Minimum)" : ""}

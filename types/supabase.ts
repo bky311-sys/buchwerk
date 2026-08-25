@@ -126,6 +126,7 @@ export interface Database {
           shop_slug: string | null;
           amazon_url: string | null;
           book_type: string;
+          length_tier: string;
           boosted_until: string | null;
           quality_report: Json;
           quality_status: string;
@@ -165,6 +166,7 @@ export interface Database {
           shop_slug?: string | null;
           amazon_url?: string | null;
           book_type?: string;
+          length_tier?: string;
           boosted_until?: string | null;
           quality_report?: Json;
           quality_status?: string;
@@ -204,6 +206,7 @@ export interface Database {
           shop_slug?: string | null;
           amazon_url?: string | null;
           book_type?: string;
+          length_tier?: string;
           boosted_until?: string | null;
           quality_report?: Json;
           quality_status?: string;
