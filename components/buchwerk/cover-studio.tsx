@@ -22,11 +22,19 @@ import {
   buildCoverStyle,
   normalizeCoverTitleStyle,
   bandColorFromMain,
-  bandTitleColor,
   bandAuthorColor,
+  resolveTitleColor,
   rgbCss,
+  COVER_SIZES,
+  COVER_FONTS,
+  COVER_COLORS,
+  COVER_SIZE_FACTORS,
   NEUTRAL_MAIN,
   type RGB,
+  type CoverSize,
+  type CoverFont,
+  type CoverColor,
+  type ParsedCoverStyle,
 } from "@/lib/books/cover-style";
 import {
   accentColorFromMain,
@@ -314,6 +322,24 @@ export function CoverStudio({
     });
   }
 
+  // Eine Achse ändern, die übrigen sechs behalten (Cover 3.0). Vorher baute
+  // jede Achse den kompletten Style-String selbst zusammen — mit sieben Achsen
+  // wäre das eine Fehlerquelle.
+  function patchStyle(patch: Partial<ParsedCoverStyle>) {
+    const s = { ...parseCoverStyle(style), ...patch };
+    chooseStyle(
+      buildCoverStyle(
+        s.position,
+        s.tone,
+        s.surface,
+        s.align,
+        s.size,
+        s.font,
+        s.color,
+      ),
+    );
+  }
+
   function chooseStyle(next: string) {
     setStyle(next); // optimistic — the preview updates immediately
     setError(null);
@@ -348,12 +374,24 @@ export function CoverStudio({
         const dh = img.height * scale;
         ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
 
-        const { position, tone, surface, align } = parseCoverStyle(style);
+        const {
+          position,
+          tone,
+          surface,
+          align,
+          size: sizeKey,
+          font: fontKey,
+          color: colorKey,
+        } = parseCoverStyle(style);
         const main = motifColor ?? NEUTRAL_MAIN;
-        const titleColor = rgbCss(bandTitleColor(tone));
+        const accentRgbValue = accentColorFromMain(main, tone);
+        const titleColor = rgbCss(
+          resolveTitleColor(colorKey, tone, accentRgbValue),
+        );
         const authorColor = rgbCss(bandAuthorColor(tone));
-        const accentCss = rgbCss(accentColorFromMain(main, tone));
+        const accentCss = rgbCss(accentRgbValue);
         const centered = align === "mitte";
+        const sizeFactor = COVER_SIZE_FACTORS[sizeKey];
 
         const pad = 96;
         ctx.textBaseline = "top";
@@ -366,7 +404,9 @@ export function CoverStudio({
         // Adaptive Titelgröße — kurze Titel werden riesig (Amazon-Thumbnail-
         // Regel), lange dürfen 5 Zeilen nutzen, bevor sie schrumpfen.
         const titleFont = (s: number) =>
-          `700 ${s}px "Bricolage Grotesque", sans-serif`;
+          fontKey === "grotesk"
+            ? `700 ${s}px "Bricolage Grotesque", sans-serif`
+            : `700 ${s}px Georgia, "Source Serif 4", serif`;
         const fitted = fitTitle(
           displayTitle,
           W - 2 * pad,
@@ -375,7 +415,11 @@ export function CoverStudio({
             return ctx.measureText(text).width;
           },
           // baseSize 258 ≈ PDF 66 (Canvas 1600px ↔ Front ~405pt).
-          { baseSize: 258, minSize: 78, maxLines: 5 },
+          {
+            baseSize: Math.round(258 * sizeFactor),
+            minSize: Math.round(78 * sizeFactor),
+            maxLines: 5,
+          },
         );
 
         const authorText = authorValue.trim();
@@ -450,7 +494,8 @@ export function CoverStudio({
           centered
             ? pad + Math.max(0, (W - 2 * pad - ctx.measureText(line).width) / 2)
             : pad;
-        const accentIndex = pickAccentWordIndex(displayTitle);
+        const accentIndex =
+          colorKey === "auto" ? pickAccentWordIndex(displayTitle) : -1;
         let wordCursor = 0;
         let ty = bandY + topInset;
         for (const l of fitted.lines) {
@@ -560,10 +605,11 @@ export function CoverStudio({
     <div className="mt-8 space-y-8">
       <section className="space-y-4 rounded-2xl border border-border bg-card p-6 sm:p-7">
         <div className="space-y-2">
-          <Label>Vorlage wählen</Label>
+          <Label>1 · Stil wählen</Label>
           <p className="text-xs text-muted-foreground">
-            Sechs Cover-Systeme nach aktuellen Bestseller-Mustern — die Vorlage
-            steuert Motiv-Stil UND Titel-Layout.
+            Sechs Cover-Systeme nach aktuellen Bestseller-Mustern — der Stil
+            bestimmt Bildsprache und Titel-Layout. Beides kannst du danach
+            frei anpassen.
             {hasMarketData
               ? " Der Vorschlag kennt deine Amazon-Konkurrenz aus dem Marktcheck und setzt sich farblich von ihr ab."
               : ""}
@@ -716,11 +762,11 @@ export function CoverStudio({
 
       <section>
         <h2 className="font-display text-lg font-semibold">
-          1 · Motiv wählen
+          2 · Coverbild wählen
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Erzeuge Motive, passe den Prompt zwischendurch an und wähle das beste.
-          Den Titel-Look legst du danach fest — Bild und Text bleiben getrennt.
+          Die Schrift gestaltest du danach — Bild und Text bleiben getrennt.
         </p>
         {covers.length === 0 && !generating ? (
           <p className="mt-3 text-sm text-muted-foreground">
@@ -784,16 +830,18 @@ export function CoverStudio({
 
       {selectedCover ? (
         <section className="border-t border-border pt-6">
-          <h2 className="font-display text-lg font-semibold">2 · Look wählen</h2>
+          <h2 className="font-display text-lg font-semibold">
+            3 · Schrift gestalten
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Das ist dein echtes Cover — genau so landet es im Export. Justiere
-            Fläche, Position, Ton und Ausrichtung; das markierte Wort trägt
-            automatisch die Kontrast-Akzentfarbe des Motivs.
+            Das ist dein echtes Cover — genau so landet es im Export. Jede
+            Änderung ist sofort links zu sehen.
           </p>
 
           <div className="mt-4 flex flex-col gap-6 sm:flex-row">
-            {/* Große Live-Vorschau: exakt die Produktions-Komposition. */}
-            <div className="w-full max-w-[280px] shrink-0">
+            {/* Große Live-Vorschau: exakt die Produktions-Komposition.
+                Sticky, damit sie beim Justieren im Blick bleibt. */}
+            <div className="w-full max-w-[280px] shrink-0 sm:sticky sm:top-6 sm:self-start">
               <CoverComposition
                 imageUrl={selectedCover.image_url}
                 title={title}
@@ -808,62 +856,34 @@ export function CoverStudio({
               {(
                 [
                   {
-                    label: "Fläche",
-                    options: [
-                      { value: "none", text: "Pur (Vorlagen-Look)" },
-                      { value: "band", text: "Farbband" },
-                      { value: "scrim", text: "Verlauf" },
-                    ],
-                    current: parseCoverStyle(style).surface as string,
-                    apply: (v: string) => {
-                      const s = parseCoverStyle(style);
-                      chooseStyle(
-                        buildCoverStyle(
-                          s.position,
-                          s.tone,
-                          v as "none" | "band" | "scrim",
-                          s.align,
-                        ),
-                      );
-                    },
+                    label: "Schriftgröße",
+                    options: COVER_SIZES.map((s) => ({
+                      value: s.value as string,
+                      text: s.label,
+                    })),
+                    current: parseCoverStyle(style).size as string,
+                    apply: (v: string) =>
+                      patchStyle({ size: v as CoverSize }),
                   },
                   {
-                    label: "Titel-Position",
-                    options: [
-                      { value: "oben", text: "Oben" },
-                      { value: "unten", text: "Unten" },
-                    ],
-                    current: parseCoverStyle(style).position as string,
-                    apply: (v: string) => {
-                      const s = parseCoverStyle(style);
-                      chooseStyle(
-                        buildCoverStyle(
-                          v as "oben" | "unten",
-                          s.tone,
-                          s.surface,
-                          s.align,
-                        ),
-                      );
-                    },
+                    label: "Schriftart",
+                    options: COVER_FONTS.map((f) => ({
+                      value: f.value as string,
+                      text: `${f.label} — ${f.hint}`,
+                    })),
+                    current: parseCoverStyle(style).font as string,
+                    apply: (v: string) =>
+                      patchStyle({ font: v as CoverFont }),
                   },
                   {
-                    label: "Ton",
-                    options: [
-                      { value: "hell", text: "Hell (dunkle Schrift)" },
-                      { value: "dunkel", text: "Dunkel (helle Schrift)" },
-                    ],
-                    current: parseCoverStyle(style).tone as string,
-                    apply: (v: string) => {
-                      const s = parseCoverStyle(style);
-                      chooseStyle(
-                        buildCoverStyle(
-                          s.position,
-                          v as "hell" | "dunkel",
-                          s.surface,
-                          s.align,
-                        ),
-                      );
-                    },
+                    label: "Schriftfarbe",
+                    options: COVER_COLORS.map((c) => ({
+                      value: c.value as string,
+                      text: c.label,
+                    })),
+                    current: parseCoverStyle(style).color as string,
+                    apply: (v: string) =>
+                      patchStyle({ color: v as CoverColor }),
                   },
                   {
                     label: "Ausrichtung",
@@ -872,17 +892,39 @@ export function CoverStudio({
                       { value: "mitte", text: "Zentriert" },
                     ],
                     current: parseCoverStyle(style).align as string,
-                    apply: (v: string) => {
-                      const s = parseCoverStyle(style);
-                      chooseStyle(
-                        buildCoverStyle(
-                          s.position,
-                          s.tone,
-                          s.surface,
-                          v as "links" | "mitte",
-                        ),
-                      );
-                    },
+                    apply: (v: string) =>
+                      patchStyle({ align: v as "links" | "mitte" }),
+                  },
+                  {
+                    label: "Position",
+                    options: [
+                      { value: "oben", text: "Oben" },
+                      { value: "unten", text: "Unten" },
+                    ],
+                    current: parseCoverStyle(style).position as string,
+                    apply: (v: string) =>
+                      patchStyle({ position: v as "oben" | "unten" }),
+                  },
+                  {
+                    label: "Hintergrund hinter der Schrift",
+                    options: [
+                      { value: "none", text: "Kein — direkt aufs Motiv" },
+                      { value: "band", text: "Farbfläche" },
+                      { value: "scrim", text: "Weicher Verlauf" },
+                    ],
+                    current: parseCoverStyle(style).surface as string,
+                    apply: (v: string) =>
+                      patchStyle({ surface: v as "none" | "band" | "scrim" }),
+                  },
+                  {
+                    label: "Helligkeit der Fläche",
+                    options: [
+                      { value: "hell", text: "Hell" },
+                      { value: "dunkel", text: "Dunkel" },
+                    ],
+                    current: parseCoverStyle(style).tone as string,
+                    apply: (v: string) =>
+                      patchStyle({ tone: v as "hell" | "dunkel" }),
                   },
                 ] as const
               ).map((axis) => (
@@ -949,7 +991,7 @@ export function CoverStudio({
 
       <section className="border-t border-border pt-6">
         <h2 className="font-display text-lg font-semibold">
-          3 · Feinschliff &amp; Download
+          4 · Feinschliff &amp; Download
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Autor und Klappentext (Rückseite), dann das fertige Cover-PDF mit

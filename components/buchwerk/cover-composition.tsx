@@ -1,9 +1,10 @@
 import {
   parseCoverStyle,
   bandColorFromMain,
-  bandTitleColor,
   bandAuthorColor,
+  resolveTitleColor,
   rgbCss,
+  COVER_SIZE_FACTORS,
   NEUTRAL_MAIN,
   type RGB,
 } from "@/lib/books/cover-style";
@@ -26,12 +27,20 @@ import {
 
 // cqw-Stufen zur Titellänge — gefühlt äquivalent zum echten fitTitle-Messen
 // in Canvas/PDF (im Server-HTML gibt es keine Textmessung).
-function titleScale(len: number): { size: string; lh: string } {
-  if (len <= 18) return { size: "text-[11cqw]", lh: "leading-[12.6cqw]" };
-  if (len <= 32) return { size: "text-[8.6cqw]", lh: "leading-[10cqw]" };
-  if (len <= 52) return { size: "text-[6.8cqw]", lh: "leading-[8cqw]" };
-  if (len <= 80) return { size: "text-[5.5cqw]", lh: "leading-[6.6cqw]" };
-  return { size: "text-[4.6cqw]", lh: "leading-[5.6cqw]" };
+// Liefert Inline-CSS (keine Tailwind-Klassen): Die Größe hängt vom
+// Nutzer-Faktor ab, und Tailwind kann dynamisch zusammengesetzte Klassen
+// nicht zur Bauzeit erzeugen.
+function titleScale(
+  len: number,
+  factor: number,
+): { fontSize: string; lineHeight: string } {
+  const base =
+    len <= 18 ? 11 : len <= 32 ? 8.6 : len <= 52 ? 6.8 : len <= 80 ? 5.5 : 4.6;
+  const size = Math.round(base * factor * 10) / 10;
+  return {
+    fontSize: `${size}cqw`,
+    lineHeight: `${Math.round(size * 1.16 * 10) / 10}cqw`,
+  };
 }
 
 export function CoverComposition({
@@ -57,11 +66,13 @@ export function CoverComposition({
   // Doppelpunkt-Titel automatisch splitten (Haupttitel riesig, Rest als
   // Untertitel) — identisch zum PDF-Renderer.
   const { title, subtitle } = splitCoverTitle(rawTitle, rawSubtitle);
-  const { position, tone, surface, align } = parseCoverStyle(styleKey);
+  const { position, tone, surface, align, size: sizeKey, font, color } =
+    parseCoverStyle(styleKey);
   const mainColor = main ?? NEUTRAL_MAIN;
-  const titleCss = rgbCss(bandTitleColor(tone));
+  const accentRgb = accentColorFromMain(mainColor, tone);
+  const titleCss = rgbCss(resolveTitleColor(color, tone, accentRgb));
   const authorCss = rgbCss(bandAuthorColor(tone));
-  const accentCss = rgbCss(accentColorFromMain(mainColor, tone));
+  const accentCss = rgbCss(accentRgb);
   const atTop = position === "oben";
   const centered = align === "mitte";
   const overlayStyle =
@@ -75,8 +86,11 @@ export function CoverComposition({
   const authorAtBottom = surface === "none" && atTop && Boolean(author);
 
   const words = title.split(/\s+/).filter(Boolean);
-  const accentIndex = pickAccentWordIndex(title);
-  const { size, lh } = titleScale(title.length);
+  // Bei frei gewählter Titelfarbe wird kein Wort zusätzlich eingefärbt —
+  // sonst kämpfen zwei Farben im Titel.
+  const accentIndex = color === "auto" ? pickAccentWordIndex(title) : -1;
+  const titleType = titleScale(title.length, COVER_SIZE_FACTORS[sizeKey]);
+  const fontClass = font === "grotesk" ? "font-display" : "font-cover-serif";
 
   return (
     <div
@@ -113,8 +127,8 @@ export function CoverComposition({
           />
         ) : null}
         <p
-          className={`font-display font-bold ${size} ${lh}`}
-          style={{ color: titleCss }}
+          className={`${fontClass} font-bold`}
+          style={{ color: titleCss, ...titleType }}
         >
           {words.map((word, i) => (
             <span

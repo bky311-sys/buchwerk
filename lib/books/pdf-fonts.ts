@@ -13,16 +13,31 @@ import { StandardFonts, type PDFDocument, type PDFFont } from "pdf-lib";
 // next.config.ts must keep these .ttf files in the serverless bundle via
 // outputFileTracingIncludes, since they're read from disk at runtime.
 
-let regularBytes: Uint8Array | null = null;
-let boldBytes: Uint8Array | null = null;
+const cache = new Map<string, Uint8Array>();
 
 function read(name: string): Uint8Array {
-  if (name === "serif-bold.ttf") {
-    boldBytes ??= fs.readFileSync(path.join(process.cwd(), "lib/fonts", name));
-    return boldBytes;
+  const hit = cache.get(name);
+  if (hit) return hit;
+  const bytes = fs.readFileSync(path.join(process.cwd(), "lib/fonts", name));
+  cache.set(name, bytes);
+  return bytes;
+}
+
+/**
+ * Zweite Cover-Schrift (Cover 3.0): Bricolage Grotesque Bold — die
+ * Display-Schrift der Marke, statisch auf Gewicht 700 instanziiert. Wird nur
+ * fürs Cover eingebettet; scheitert das Laden, fällt der Aufrufer auf die
+ * Serif zurück (kein 500 im Export).
+ */
+export async function embedCoverDisplayFont(
+  pdf: PDFDocument,
+): Promise<PDFFont | null> {
+  try {
+    pdf.registerFontkit(fontkit);
+    return await pdf.embedFont(read("grotesk-bold.ttf"), { subset: true });
+  } catch {
+    return null;
   }
-  regularBytes ??= fs.readFileSync(path.join(process.cwd(), "lib/fonts", name));
-  return regularBytes;
 }
 
 export async function embedBookFonts(

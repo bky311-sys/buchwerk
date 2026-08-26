@@ -2,8 +2,9 @@ import { rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import {
   parseCoverStyle,
   bandColorFromMain,
-  bandTitleColor,
   bandAuthorColor,
+  resolveTitleColor,
+  COVER_SIZE_FACTORS,
   type RGB,
 } from "@/lib/books/cover-style";
 import {
@@ -75,7 +76,8 @@ export function drawFrontCover(opts: {
   author: string;
   styleKey: string | null | undefined;
   main: RGB;
-  fonts: { body: PDFFont; bold: PDFFont };
+  /** `display` = optionale Grotesk-Titelschrift (Cover 3.0); fehlt sie, bleibt es bei der Serif. */
+  fonts: { body: PDFFont; bold: PDFFont; display?: PDFFont | null };
 }): void {
   const {
     page,
@@ -101,12 +103,23 @@ export function drawFrontCover(opts: {
     height: dh,
   });
 
-  const { position, tone, surface, align } = parseCoverStyle(styleKey);
-  const tRgb = bandTitleColor(tone);
-  const aRgb = bandAuthorColor(tone);
+  const {
+    position,
+    tone,
+    surface,
+    align,
+    size: sizeKey,
+    font: fontKey,
+    color: colorKey,
+  } = parseCoverStyle(styleKey);
   const accent = accentColorFromMain(main, tone);
   const accentRgb = rgb(accent.r, accent.g, accent.b);
+  const tRgb = resolveTitleColor(colorKey, tone, accent);
+  const aRgb = bandAuthorColor(tone);
   const atTop = position === "oben";
+  // Titelschrift nach Nutzerwahl; ohne eingebettete Grotesk bleibt die Serif.
+  const titleFont =
+    fontKey === "grotesk" && fonts.display ? fonts.display : fonts.bold;
 
   // Doppelpunkt-Titel automatisch splitten: Haupttitel riesig, Rest als
   // Untertitel — sonst quetscht ein langer Ratgeber-Titel die Schrift klein.
@@ -118,11 +131,16 @@ export function drawFrontCover(opts: {
   // Adaptive Titelgröße (Thumbnail-Regel: so groß wie möglich). baseSize 66:
   // kurze Haupttitel brechen bewusst in 2 riesige Zeilen — der Big-Type-Look;
   // lange Titel ohne Doppelpunkt dürfen 5 Zeilen nutzen, bevor sie schrumpfen.
+  const sizeFactor = COVER_SIZE_FACTORS[sizeKey];
   const fitted = fitTitle(
     title,
     textMaxWidth,
-    (text, s) => fonts.bold.widthOfTextAtSize(text, s),
-    { baseSize: 66, minSize: 20, maxLines: 5 },
+    (text, s) => titleFont.widthOfTextAtSize(text, s),
+    {
+      baseSize: Math.round(66 * sizeFactor),
+      minSize: Math.round(20 * sizeFactor),
+      maxLines: 5,
+    },
   );
 
   const subtitleSize = 13;
@@ -194,22 +212,23 @@ export function drawFrontCover(opts: {
     return x + safeInset + Math.max(0, (textMaxWidth - w) / 2);
   };
 
-  // Titel mit hervorgehobenem Schlüsselwort (Blickanker in Akzentfarbe).
-  const accentIndex = pickAccentWordIndex(title);
+  // Titel mit hervorgehobenem Schlüsselwort (Blickanker in Akzentfarbe) —
+  // entfällt bei frei gewählter Titelfarbe, sonst kämpfen zwei Farben.
+  const accentIndex = colorKey === "auto" ? pickAccentWordIndex(title) : -1;
   let wordCursor = 0;
   let ty = zoneY + zoneH - topInset - fitted.size;
   for (const l of fitted.lines) {
-    let tx = lineX(l, fitted.size, fonts.bold);
+    let tx = lineX(l, fitted.size, titleFont);
     for (const word of l.split(" ")) {
       page.drawText(word, {
         x: tx,
         y: ty,
         size: fitted.size,
-        font: fonts.bold,
+        font: titleFont,
         color:
           wordCursor === accentIndex ? accentRgb : rgb(tRgb.r, tRgb.g, tRgb.b),
       });
-      tx += fonts.bold.widthOfTextAtSize(`${word} `, fitted.size);
+      tx += titleFont.widthOfTextAtSize(`${word} `, fitted.size);
       wordCursor += 1;
     }
     ty -= fitted.lineHeight;

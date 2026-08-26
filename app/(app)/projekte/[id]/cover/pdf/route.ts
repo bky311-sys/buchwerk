@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { PDFDocument, rgb, type PDFFont } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
-import { embedBookFonts } from "@/lib/books/pdf-fonts";
+import { embedBookFonts, embedCoverDisplayFont } from "@/lib/books/pdf-fonts";
 import { canAccessProject } from "@/lib/billing/access";
 import { averagePngColor } from "@/lib/books/image-color";
 import { NEUTRAL_MAIN } from "@/lib/books/cover-style";
@@ -145,6 +145,7 @@ export async function GET(
 
   const pdf = await PDFDocument.create();
   const { body: helvetica, bold: helveticaBold } = await embedBookFonts(pdf);
+  const coverDisplay = await embedCoverDisplayFont(pdf);
 
   let image;
   try {
@@ -197,7 +198,7 @@ export async function GET(
     author,
     styleKey: project.cover_title_style,
     main,
-    fonts: { body: helvetica, bold: helveticaBold },
+    fonts: { body: helvetica, bold: helveticaBold, display: coverDisplay },
   });
 
   // --- BACK (left panel): title + blurb, with the barcode area kept clear ---

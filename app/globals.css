@@ -108,4 +108,10 @@
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
+  /* Cover-Serif (Cover 3.0): Web-Annäherung an die im PDF eingebettete
+     Source Serif 4 — die Vorschau soll dem Export möglichst nahekommen. */
+  .font-cover-serif {
+    font-family: Georgia, "Source Serif 4", "Times New Roman", serif;
+    letter-spacing: -0.01em;
+  }
 }

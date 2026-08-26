@@ -14,8 +14,42 @@ export type CoverSurface = "band" | "scrim" | "none";
 // Vierte Achse (Cover 2.1): Textausrichtung — zentrierte Layouts sind der
 // Standard bei Symbol-/Premium-Covern, linksbündig bei Foto/Band.
 export type CoverAlign = "links" | "mitte";
+// Achsen 5–7 (Cover 3.0, 26.08.): Der Kunde bestimmt Schriftgröße, Schriftart
+// und Titelfarbe selbst — vorher war alles automatisch aus dem Motiv
+// abgeleitet und nicht justierbar (Benjamins Auftrag: „Schrift vergrößern,
+// zentrieren, Farbe und Stil anpassen").
+export type CoverSize = "s" | "m" | "l" | "xl";
+export type CoverFont = "serif" | "grotesk";
+export type CoverColor = "auto" | "weiss" | "schwarz" | "akzent";
 
-export const DEFAULT_COVER_STYLE = "unten-dunkel-band-links";
+export const DEFAULT_COVER_STYLE = "unten-dunkel-band-links-m-serif-auto";
+
+// Skalierungsfaktoren für die Titelgröße (1 = bisheriges Verhalten).
+export const COVER_SIZE_FACTORS: Record<CoverSize, number> = {
+  s: 0.78,
+  m: 1,
+  l: 1.22,
+  xl: 1.5,
+};
+
+export const COVER_SIZES: { value: CoverSize; label: string }[] = [
+  { value: "s", label: "S" },
+  { value: "m", label: "M" },
+  { value: "l", label: "L" },
+  { value: "xl", label: "XL" },
+];
+
+export const COVER_FONTS: { value: CoverFont; label: string; hint: string }[] = [
+  { value: "serif", label: "Serif", hint: "klassisch, ruhig" },
+  { value: "grotesk", label: "Grotesk", hint: "modern, kräftig" },
+];
+
+export const COVER_COLORS: { value: CoverColor; label: string }[] = [
+  { value: "auto", label: "Automatisch" },
+  { value: "weiss", label: "Weiß" },
+  { value: "schwarz", label: "Schwarz" },
+  { value: "akzent", label: "Akzentfarbe" },
+];
 
 export const COVER_POSITIONS: { value: CoverPosition; label: string }[] = [
   { value: "oben", label: "Oben" },
@@ -35,24 +69,34 @@ export const COVER_SURFACES: { value: CoverSurface; label: string }[] = [
 // Parse the stored cover_title_style into its axes. Backward-compatible with
 // the earlier single-word values (klassisch/kopf/hell), the two-axis form
 // ("unten-dunkel" → band/links) and the three-axis form.
-export function parseCoverStyle(value: string | null | undefined): {
+export type ParsedCoverStyle = {
   position: CoverPosition;
   tone: CoverTone;
   surface: CoverSurface;
   align: CoverAlign;
-} {
+  size: CoverSize;
+  font: CoverFont;
+  color: CoverColor;
+};
+
+export function parseCoverStyle(value: string | null | undefined): ParsedCoverStyle {
+  const defaults = { size: "m", font: "serif", color: "auto" } as const;
   if (value === "klassisch")
-    return { position: "unten", tone: "dunkel", surface: "band", align: "links" };
+    return { position: "unten", tone: "dunkel", surface: "band", align: "links", ...defaults };
   if (value === "kopf")
-    return { position: "oben", tone: "dunkel", surface: "band", align: "links" };
+    return { position: "oben", tone: "dunkel", surface: "band", align: "links", ...defaults };
   if (value === "hell")
-    return { position: "unten", tone: "hell", surface: "band", align: "links" };
-  const [p, t, s, a] = String(value ?? "").split("-");
+    return { position: "unten", tone: "hell", surface: "band", align: "links", ...defaults };
+  const [p, t, s, a, sz, f, c] = String(value ?? "").split("-");
   return {
     position: p === "oben" ? "oben" : "unten",
     tone: t === "hell" ? "hell" : "dunkel",
     surface: s === "scrim" ? "scrim" : s === "none" ? "none" : "band",
     align: a === "mitte" ? "mitte" : "links",
+    size: sz === "s" || sz === "l" || sz === "xl" ? sz : "m",
+    font: f === "grotesk" ? "grotesk" : "serif",
+    color:
+      c === "weiss" || c === "schwarz" || c === "akzent" ? c : "auto",
   };
 }
 
@@ -61,16 +105,32 @@ export function buildCoverStyle(
   tone: CoverTone,
   surface: CoverSurface = "band",
   align: CoverAlign = "links",
+  size: CoverSize = "m",
+  font: CoverFont = "serif",
+  color: CoverColor = "auto",
 ): string {
-  return `${position}-${tone}-${surface}-${align}`;
+  return `${position}-${tone}-${surface}-${align}-${size}-${font}-${color}`;
+}
+
+// Titelfarbe nach Nutzerwahl; "auto" behält die bisherige Ton-Logik.
+export function resolveTitleColor(
+  color: CoverColor,
+  tone: CoverTone,
+  accent: RGB,
+): RGB {
+  if (color === "weiss") return { r: 1, g: 1, b: 1 };
+  if (color === "schwarz") return { r: 0.09, g: 0.08, b: 0.07 };
+  if (color === "akzent") return accent;
+  return bandTitleColor(tone);
 }
 
 // Normalises any stored/legacy value into "<position>-<tone>-<surface>-<align>".
 export function normalizeCoverTitleStyle(
   value: string | null | undefined,
 ): string {
-  const { position, tone, surface, align } = parseCoverStyle(value);
-  return buildCoverStyle(position, tone, surface, align);
+  const { position, tone, surface, align, size, font, color } =
+    parseCoverStyle(value);
+  return buildCoverStyle(position, tone, surface, align, size, font, color);
 }
 
 export type RGB = { r: number; g: number; b: number };
