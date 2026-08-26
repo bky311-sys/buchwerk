@@ -14,6 +14,9 @@ export type ChapterRow = {
   content: string | null;
   status: string;
   updated_at: string;
+  // Live-Detail des Abschnitts-Modus („Abschnitt 2/3"); optional, damit
+  // Aufrufer ohne die Spalte im Select (Hub) weiter kompilieren.
+  generation_step?: string | null;
 };
 
 export type ChapterView = ChapterRow & {

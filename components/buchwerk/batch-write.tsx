@@ -70,6 +70,17 @@ export function BatchWrite({
     return () => clearInterval(t);
   }, [phase, router]);
 
+  // Der Batch läuft clientseitig Kapitel für Kapitel — Tab zu = Lauf bricht
+  // kommentarlos ab. Beim Verlassen deshalb warnen (Schreib-Cockpit 25.08.).
+  useEffect(() => {
+    if (phase === "idle") return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [phase]);
+
   const total = chapterIds.length;
   if (total === 0) return null;
 
@@ -119,54 +130,42 @@ export function BatchWrite({
     router.refresh();
   }
 
+  // Kompakte Darstellung für die Sticky-Leiste des Schreib-Cockpits: nur der
+  // Button (bzw. sein Laufzustand), der erklärende Kontext steht in der Leiste.
   if (phase !== "idle") {
     return (
-      <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
-        <div className="flex items-center gap-2 text-sm font-medium text-clay-strong">
+      <div className="flex flex-col items-end gap-1">
+        <Button type="button" disabled>
           <Spinner className="size-4" />
           {phase === "research"
-            ? `KI recherchiert dein Thema im Web — Etappe ${researchStage}/${researchStages}…`
-            : `Schreibe Kapitel ${Math.min(doneCount + 1, total)} von ${total}…`}
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Bitte den Tab offen lassen. Jedes Kapitel dauert ~30 Sek.
-        </p>
+            ? `Recherche ${researchStage}/${researchStages}…`
+            : `Schreibt ${Math.min(doneCount + 1, total)}/${total}…`}
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          Tab bitte offen lassen
+        </span>
       </div>
     );
   }
 
   if (otherGenerating) {
     return (
-      <div className="rounded-2xl border border-border bg-muted p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            Gerade wird ein Kapitel geschrieben. Sobald es fertig ist, kannst
-            du hier die restlichen {total} auf einmal schreiben lassen.
-          </p>
-          <Button type="button" size="lg" disabled>
-            <Spinner className="size-4" />
-            Kapitel läuft…
-          </Button>
-        </div>
-      </div>
+      <Button type="button" disabled title="Gerade wird ein Kapitel geschrieben — der Sammel-Lauf ist so lange gesperrt.">
+        <Spinner className="size-4" />
+        Kapitel läuft…
+      </Button>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {total} offene{total === 1 ? "s" : ""} Kapitel — schreib alle auf
-          einmal, statt einzeln zu klicken und zu warten.
-        </p>
-        <Button type="button" size="lg" onClick={run}>
-          Alle {total} Kapitel schreiben
-        </Button>
-      </div>
+    <div className="flex flex-col items-end gap-1">
+      <Button type="button" onClick={run}>
+        Alle {total} Kapitel schreiben
+      </Button>
       {error ? (
-        <p role="alert" className="mt-2 text-sm text-destructive">
+        <span role="alert" className="text-xs text-destructive">
           {error}
-        </p>
+        </span>
       ) : null}
     </div>
   );

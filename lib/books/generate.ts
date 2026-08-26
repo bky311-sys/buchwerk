@@ -239,7 +239,7 @@ export async function generateChapterContent(
   // page reload) sees the spinner even while the model call is still running.
   await supabase
     .from("chapters")
-    .update({ status: "schreiben" })
+    .update({ status: "schreiben", generation_step: null })
     .eq("id", chapter.id);
 
   // content is included so the prompt can list what sibling chapters already
@@ -294,6 +294,12 @@ export async function generateChapterContent(
 
       for (let i = 1; i <= sectionCount; i += 1) {
         const isLast = i === sectionCount;
+        // Live-Fortschritt fürs Schreib-Cockpit („Abschnitt 2/3"). Best-effort:
+        // ohne Spalte scheitert nur dieses Update, nicht der Lauf.
+        await supabase
+          .from("chapters")
+          .update({ generation_step: `Abschnitt ${i}/${sectionCount}` })
+          .eq("id", chapter.id);
         const tail =
           content.length > 9000 ? `…${content.slice(-9000)}` : content;
         const prompt = await loadPrompt("kapitel-abschnitt", {
@@ -331,7 +337,7 @@ export async function generateChapterContent(
           .update({
             content,
             sources: mergedSources,
-            ...(isLast ? { status: "fertig" } : {}),
+            ...(isLast ? { status: "fertig", generation_step: null } : {}),
           })
           .eq("id", chapter.id);
       }
@@ -390,7 +396,7 @@ export async function generateChapterContent(
     // Keep any previously written content; only the status signals the failure.
     await supabase
       .from("chapters")
-      .update({ status: "fehler" })
+      .update({ status: "fehler", generation_step: null })
       .eq("id", chapter.id);
     return {
       ok: false,

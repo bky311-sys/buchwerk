@@ -9,6 +9,8 @@ import { ChapterGenerator } from "@/components/buchwerk/chapter-generator";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
 import { BatchWrite } from "@/components/buchwerk/batch-write";
 import { ChapterCollapse } from "@/components/buchwerk/chapter-collapse";
+import { ChapterAccordion } from "@/components/buchwerk/chapter-accordion";
+import { ChapterNavigator } from "@/components/buchwerk/chapter-navigator";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import { Spinner } from "@/components/buchwerk/spinner";
 import { LENGTH_TIERS, coerceLengthTier } from "@/lib/books/length";
@@ -42,7 +44,9 @@ export default async function SchreibenPage({
     await Promise.all([
       supabase
         .from("chapters")
-        .select("id, position, heading, summary, content, status, updated_at")
+        .select(
+          "id, position, heading, summary, content, status, updated_at, generation_step",
+        )
         .eq("project_id", id)
         .order("position"),
       canAccessProject(supabase, id),
@@ -77,8 +81,38 @@ export default async function SchreibenPage({
 
   const title = project.title ?? project.topic;
 
+  // Cockpit-Ableitungen: das laufende Kapitel (für Status-Leiste + Auto-Folge
+  // des Akkordeons) und der Navigator-Zustand je Kapitel.
+  const generating = views.find((c) => c.isGenerating) ?? null;
+  const generatingLabel = generating
+    ? `Kapitel ${generating.position} wird geschrieben${
+        generating.generation_step ? ` — ${generating.generation_step}` : ""
+      }…`
+    : null;
+  const anchorOf = (chapterId: string) => `kap-${chapterId}`;
+  const navigatorItems = views.map((c, index) => ({
+    anchorId: anchorOf(c.id),
+    number: index + 1,
+    heading: c.heading,
+    state: c.isGenerating
+      ? ("generating" as const)
+      : c.isStale && !c.content
+        ? ("error" as const)
+        : c.status === "fertig" && c.content
+          ? ("done" as const)
+          : c.content
+            ? ("draft" as const)
+            : ("open" as const),
+  }));
+  const initialOpenId = generating
+    ? anchorOf(generating.id)
+    : firstUnwrittenId
+      ? anchorOf(firstUnwrittenId)
+      : null;
+  const followId = generating ? anchorOf(generating.id) : null;
+
   return (
-    <div className="mx-auto max-w-3xl px-6 py-16">
+    <div className="mx-auto max-w-5xl px-6 py-16">
       <Link
         href={`/projekte/${project.id}`}
         className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
@@ -115,56 +149,82 @@ export default async function SchreibenPage({
           </div>
         </div>
       ) : (
-        <>
-          <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
-            <div className="h-2 w-full max-w-[220px] overflow-hidden rounded-full bg-input">
-              <div
-                className="h-full rounded-full bg-primary transition-[width]"
-                style={{ width: `${progressPct}%` }}
-              />
+        <ChapterAccordion initialOpenId={initialOpenId} followId={followId}>
+          {/* Sticky Status-Leiste: Fortschritt, Wortzahl, Live-Vorgang und der
+              eine kontextabhängige Primär-Button — bleibt beim Scrollen oben. */}
+          <div className="sticky top-0 z-20 -mx-6 mt-6 border-b border-border bg-background/95 px-6 py-3 backdrop-blur">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <div className="h-2 w-full max-w-[180px] overflow-hidden rounded-full bg-input">
+                <div
+                  className="h-full rounded-full bg-primary transition-[width]"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <span className="text-sm font-semibold text-primary tabular-nums">
+                {done} / {views.length} Kapitel
+              </span>
+              {hasWrittenChapters ? (
+                <span
+                  className={`text-sm font-medium tabular-nums ${
+                    belowMinimum ? "text-clay-strong" : "text-muted-foreground"
+                  }`}
+                  title={`Mindestlänge ${lengthTier.minWords.toLocaleString("de-DE")} Wörter (${lengthTier.label}, ${lengthTier.seiten})`}
+                >
+                  ≈ {totalWords.toLocaleString("de-DE")} Wörter
+                  {belowMinimum ? " (unter Minimum)" : ""}
+                </span>
+              ) : null}
+              {generatingLabel ? (
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-clay-strong">
+                  <Spinner className="size-4" />
+                  {generatingLabel}
+                </span>
+              ) : null}
+              <div className="ml-auto">
+                {finished ? (
+                  <Button asChild>
+                    <Link href={`/projekte/${project.id}/cover`}>
+                      Weiter zum Cover
+                    </Link>
+                  </Button>
+                ) : unwrittenIds.length > 0 ? (
+                  <BatchWrite
+                    projectId={project.id}
+                    chapterIds={unwrittenIds}
+                    needsResearch={!hasResearch}
+                    researchStages={RESEARCH_TOTAL_STAGES}
+                    otherGenerating={anyGenerating}
+                  />
+                ) : null}
+              </div>
             </div>
-            <span className="text-sm font-semibold text-primary tabular-nums">
-              {done} / {views.length} Kapitel
-            </span>
-            {hasWrittenChapters ? (
-              <span
-                className={`text-sm font-medium tabular-nums ${
-                  belowMinimum ? "text-clay-strong" : "text-muted-foreground"
-                }`}
-                title={`Mindestlänge ${lengthTier.minWords.toLocaleString("de-DE")} Wörter (${lengthTier.label}, ${lengthTier.seiten})`}
-              >
-                ≈ {totalWords.toLocaleString("de-DE")} Wörter
-                {belowMinimum ? " (unter Minimum)" : ""}
-              </span>
-            ) : null}
-            {anyGenerating ? (
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-clay-strong">
-                <Spinner className="size-4" />
-                Kapitel wird geschrieben…
-              </span>
-            ) : null}
+            {/* Mobil: Kapitel-Chips direkt unter der Leiste */}
+            <div className="mt-3 lg:hidden">
+              <ChapterNavigator items={navigatorItems} />
+            </div>
           </div>
 
           <GenerationPoller active={anyGenerating} />
 
-          {unwrittenIds.length > 1 ? (
-            <div className="mt-8">
-              <BatchWrite
-                projectId={project.id}
-                chapterIds={unwrittenIds}
-                needsResearch={!hasResearch}
-                researchStages={RESEARCH_TOTAL_STAGES}
-                otherGenerating={anyGenerating}
-              />
-            </div>
-          ) : null}
+          <div className="mt-8 lg:grid lg:grid-cols-[240px_1fr] lg:gap-8">
+            {/* Desktop: Kapitel-Navigator als Seitenleiste */}
+            <aside className="hidden lg:block">
+              <div className="sticky top-20">
+                <p className="px-2.5 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Kapitel
+                </p>
+                <ChapterNavigator items={navigatorItems} />
+              </div>
+            </aside>
 
-          <div className="mt-8 space-y-4">
+            <div className="space-y-3">
             {views.map((chapter, index) => {
               const badge = chapter.isGenerating ? (
                 <StatusBadge intent="draft">
                   <Spinner className="size-3" />
-                  Wird geschrieben…
+                  {chapter.generation_step
+                    ? `Wird geschrieben — ${chapter.generation_step}…`
+                    : "Wird geschrieben…"}
                 </StatusBadge>
               ) : chapter.isStale && !chapter.content ? (
                 <StatusBadge intent="error">Fehlgeschlagen</StatusBadge>
@@ -216,27 +276,30 @@ export default async function SchreibenPage({
                 </ChapterCollapse>
               );
             })}
-          </div>
 
-          <div className="mt-10 border-t border-border pt-6">
-            {finished ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-sm font-medium text-success">
-                  ✓ Alle Kapitel geschrieben.
-                </p>
-                <Button asChild size="lg">
-                  <Link href={`/projekte/${project.id}/cover`}>
-                    Weiter zum Cover
-                  </Link>
-                </Button>
+              <div className="mt-8 border-t border-border pt-6">
+                {finished ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-medium text-success">
+                      ✓ Alle Kapitel geschrieben.
+                    </p>
+                    <Button asChild size="lg">
+                      <Link href={`/projekte/${project.id}/cover`}>
+                        Weiter zum Cover
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <Button asChild variant="outline">
+                    <Link href={`/projekte/${project.id}`}>
+                      ← Zurück zum Projekt
+                    </Link>
+                  </Button>
+                )}
               </div>
-            ) : (
-              <Button asChild variant="outline">
-                <Link href={`/projekte/${project.id}`}>← Zurück zum Projekt</Link>
-              </Button>
-            )}
+            </div>
           </div>
-        </>
+        </ChapterAccordion>
       )}
     </div>
   );
