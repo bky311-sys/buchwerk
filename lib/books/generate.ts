@@ -237,10 +237,20 @@ export async function generateChapterContent(
 
   // Mark as in progress. This commits immediately, so a concurrent poll (and a
   // page reload) sees the spinner even while the model call is still running.
-  await supabase
+  const { error: startError } = await supabase
     .from("chapters")
     .update({ status: "schreiben", generation_step: null })
     .eq("id", chapter.id);
+  if (startError) {
+    // Ein scheiterndes Start-Update (z. B. fehlender Spalten-Grant nach einer
+    // Migration, Prod-Befund 26.08.) hieße: Modell-Calls laufen und kein
+    // Ergebnis wird je gespeichert. Lieber sofort sichtbar abbrechen.
+    console.error("Kapitel-Start-Update fehlgeschlagen", startError);
+    return {
+      ok: false,
+      error: "Das Kapitel konnte nicht gestartet werden. Versuch es noch einmal.",
+    };
+  }
 
   // content is included so the prompt can list what sibling chapters already
   // cover (anti-repetition context) — server-side only, never sent to the UI.
