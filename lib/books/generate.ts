@@ -342,7 +342,7 @@ export async function generateChapterContent(
           }
         }
         // Checkpoint nach jedem Abschnitt — der letzte setzt "fertig".
-        await supabase
+        const { error: saveError } = await supabase
           .from("chapters")
           .update({
             content,
@@ -350,6 +350,10 @@ export async function generateChapterContent(
             ...(isLast ? { status: "fertig", generation_step: null } : {}),
           })
           .eq("id", chapter.id);
+        // Ein scheiterndes Speichern hieße: bezahlter Text ist verloren und
+        // der Lauf meldet trotzdem Erfolg (Prod-Befund 26.08.). Sichtbar
+        // abbrechen statt weitere Abschnitte ins Leere zu schreiben.
+        if (saveError) throw saveError;
       }
       return { ok: true };
     }
@@ -372,10 +376,11 @@ export async function generateChapterContent(
     // Checkpoint the first pass immediately as "fertig". If the (optional) deepen
     // pass below times out and the function is killed, we keep this text instead
     // of losing everything and paying to regenerate both.
-    await supabase
+    const { error: saveError } = await supabase
       .from("chapters")
       .update({ content, sources, status: "fertig" })
       .eq("id", chapter.id);
+    if (saveError) throw saveError;
 
     // Enforce the minimum length: one deepen pass if the chapter came in short.
     // The first pass is already saved as "fertig" above, so even if this deepen
@@ -402,8 +407,11 @@ export async function generateChapterContent(
     }
 
     return { ok: true };
-  } catch {
+  } catch (err) {
     // Keep any previously written content; only the status signals the failure.
+    // Geloggt, damit Speicher-/Rechtefehler in den Runtime-Logs auffindbar
+    // sind statt spurlos zu verschwinden (Prod-Befund 26.08.).
+    console.error("Kapitel-Generierung fehlgeschlagen", chapter.id, err);
     await supabase
       .from("chapters")
       .update({ status: "fehler", generation_step: null })
