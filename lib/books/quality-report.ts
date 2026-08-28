@@ -7,6 +7,7 @@ import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
 import { coerceSources, type BookSource } from "@/lib/books/sources";
 import { consumeRunSlot } from "@/lib/books/run-limits";
+import { chargeRun } from "@/lib/points/charge";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -180,6 +181,8 @@ export async function runQualityReport(
 
   // Stille Missbrauchsbremse — der QS-Lauf liest das ganze Manuskript und ist
   // damit der teuerste Einzel-Call (siehe lib/books/run-limits.ts).
+  const charge = await chargeRun("quality_report", projectId);
+  if (!charge.allowed) return { ok: false, error: charge.error };
   const slot = await consumeRunSlot(projectId, "quality_runs");
   if (!slot.allowed) return { ok: false, error: slot.error };
 

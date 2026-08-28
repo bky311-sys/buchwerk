@@ -14,6 +14,7 @@ import {
 } from "@/lib/books/quality-report";
 import { countWords, summarizeWrittenChapters } from "@/lib/books/generate";
 import { consumeRunSlot } from "@/lib/books/run-limits";
+import { chargeRun } from "@/lib/points/charge";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -150,6 +151,8 @@ export async function reviseFromQualityReport(
 
   // Missbrauchsbremse: gezählt wird der START einer Überarbeitungsrunde.
   if (open.length === byChapter.size) {
+    const charge = await chargeRun("auto_revision", projectId);
+    if (!charge.allowed) return { ok: false, error: charge.error };
     const slot = await consumeRunSlot(projectId, "quality_runs");
     if (!slot.allowed) return { ok: false, error: slot.error };
   }

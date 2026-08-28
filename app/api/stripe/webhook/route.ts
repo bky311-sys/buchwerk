@@ -3,6 +3,11 @@ import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { trackEvent } from "@/lib/analytics";
 import { renderBrandedEmail, type EmailContent } from "@/lib/email/template";
+import { creditPoints } from "@/lib/points/spend";
+import {
+  POINTS_PER_BOOK_PURCHASE,
+  POINTS_PER_SUBSCRIPTION_MONTH,
+} from "@/lib/points/costs";
 
 export const runtime = "nodejs";
 
@@ -131,6 +136,12 @@ export async function POST(request: Request) {
           },
           { onConflict: "stripe_checkout_session_id" },
         );
+        // Produktionspunkte zum Kauf (Punkte-Modell 28.08.).
+        await creditPoints(
+          meta.user_id,
+          POINTS_PER_BOOK_PURCHASE,
+          "purchase_book",
+        );
         await admin
           .from("book_unlocks")
           .upsert(
@@ -161,6 +172,11 @@ export async function POST(request: Request) {
         )) as unknown as StripeSubLike;
         await upsertSubscription(admin, meta.user_id, sub);
         await admin.from("profiles").update({ plan: "paid" }).eq("id", meta.user_id);
+        await creditPoints(
+          meta.user_id,
+          POINTS_PER_SUBSCRIPTION_MONTH,
+          "subscription_month",
+        );
         await sendConfirmationEmail(email, "Dein Buchwerk-Abo ist aktiv", {
           preheader: "Bis zu 10 Bücher pro Monat — dein Abo läuft.",
           heading: "Dein Abo ist aktiv!",

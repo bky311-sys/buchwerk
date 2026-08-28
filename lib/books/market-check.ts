@@ -6,6 +6,7 @@ import { claudeJson } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
 import { consumeRunSlot } from "@/lib/books/run-limits";
+import { chargeRun } from "@/lib/points/charge";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -144,6 +145,8 @@ export async function runMarketCheck(
   const admin = createAdminClient();
 
   // Stille Missbrauchsbremse (siehe lib/books/run-limits.ts).
+  const charge = await chargeRun("market_check", projectId);
+  if (!charge.allowed) return { ok: false, error: charge.error };
   const slot = await consumeRunSlot(projectId, "market_runs");
   if (!slot.allowed) return { ok: false, error: slot.error };
 

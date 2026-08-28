@@ -71,15 +71,22 @@ export function PointsPopover({
               : `Du hast ${points} ${points === 1 ? "Punkt" : "Punkte"}`}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Du bekommst {pointsPerReview} Punkte für jede Bewertung eines
-            Buchs, das du im Buchshop-Reader gelesen hast — immer gleich
-            viele, unabhängig von der Sternezahl.
+            Mit Punkten bezahlst du die Arbeit an deinem Buch: Kapitel
+            schreiben, Qualitätsbericht, automatische Überarbeitung, Cover und
+            Listing. Sie stecken im Kauf und im Abo — und du verdienst sie
+            dazu.
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Punkte gelten nur innerhalb von Buchwerk und lassen sich zum
-            Boosten deines eigenen Buchs im Shop einsetzen (auf dessen
-            Veröffentlichen-Seite). Sie sind nicht käuflich und nicht in Geld
-            umwandelbar.
+            {pointsPerReview} Punkte gibt es für jede Bewertung eines Buchs,
+            das du im Buchshop gelesen hast — immer gleich viele, unabhängig
+            von der Sternezahl und davon, ob der Autor die Bewertung
+            veröffentlicht.
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            <strong className="font-semibold text-foreground">
+              Dein fertiges Buch kannst du immer ohne Punkte exportieren
+            </strong>{" "}
+            — PDF, EPUB, Cover und Listing-Daten bleiben kostenlos.
           </p>
           <Link
             href="/buchshop"

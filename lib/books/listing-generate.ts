@@ -12,6 +12,7 @@ import {
 } from "@/lib/books/market-check";
 import { countWords } from "@/lib/books/generate";
 import { consumeRunSlot } from "@/lib/books/run-limits";
+import { chargeRun } from "@/lib/points/charge";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -55,6 +56,8 @@ export async function generateListing(
   if (!gate.ok) return { ok: false, error: gate.error };
 
   // Stille Missbrauchsbremse (siehe lib/books/run-limits.ts).
+  const charge = await chargeRun("listing", projectId);
+  if (!charge.allowed) return { ok: false, error: charge.error };
   const slot = await consumeRunSlot(projectId, "listing_runs");
   if (!slot.allowed) return { ok: false, error: slot.error };
 

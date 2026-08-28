@@ -11,6 +11,7 @@ import {
   chapterTypeInstructions,
 } from "@/lib/books/book-type";
 import { coerceLengthTier, LENGTH_TIERS } from "@/lib/books/length";
+import { chargeRun } from "@/lib/points/charge";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -190,6 +191,11 @@ export async function generateChapterContent(
         "Für dieses Kapitel ist das Limit an Neuversuchen erreicht. Wenn du hier wirklich nicht weiterkommst, schreib uns an welcome@buchwerk.info.",
     };
   }
+  // Punkte für den Kapitel-Lauf (Punkte-Modell 28.08.) — vor dem Modell-Call,
+  // denn ein abgebrochener Lauf kostet die Tokens trotzdem.
+  const charge = await chargeRun("chapter", chapter.project_id);
+  if (!charge.allowed) return { ok: false, error: charge.error };
+
   // Count the attempt BEFORE the model call. A run killed by the function time
   // limit costs us the tokens all the same, so it has to count — otherwise
   // aborting mid-generation would be an unlimited free retry.

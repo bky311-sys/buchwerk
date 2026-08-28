@@ -9,6 +9,7 @@ import {
   type Outline,
 } from "@/lib/books/schema";
 import { consumeRunSlot } from "@/lib/books/run-limits";
+import { chargeRun } from "@/lib/points/charge";
 import {
   coerceBookType,
   outlineTypeInstructions,
@@ -83,6 +84,8 @@ export async function regenerateOutline(
 
   // Stille Missbrauchsbremse (siehe lib/books/run-limits.ts) — die
   // Neu-Gliederung war bisher der einzige komplett ungedeckelte Claude-Call.
+  const charge = await chargeRun("outline", projectId);
+  if (!charge.allowed) return { ok: false, error: charge.error };
   const slot = await consumeRunSlot(projectId, "outline_runs");
   if (!slot.allowed) return { ok: false, error: slot.error };
 

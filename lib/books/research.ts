@@ -5,6 +5,7 @@ import { claudeText } from "@/lib/ai/anthropic";
 import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
 import { consumeRunSlot } from "@/lib/books/run-limits";
+import { chargeRun } from "@/lib/points/charge";
 
 const DEFAULT_AUDIENCE = "allgemein interessierte Erwachsene";
 
@@ -62,7 +63,9 @@ export async function generateResearchStage(
   if (stageIndex === 0) {
     // Stille Missbrauchsbremse — gezählt wird der Recherche-START, nicht jede
     // Etappe (ein Lauf = drei Web-Search-Etappen).
-    const slot = await consumeRunSlot(projectId, "research_runs");
+    const charge = await chargeRun("research", projectId);
+  if (!charge.allowed) return { ok: false, error: charge.error };
+  const slot = await consumeRunSlot(projectId, "research_runs");
     if (!slot.allowed) return { ok: false, error: slot.error };
 
     await supabase

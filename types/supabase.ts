@@ -678,6 +678,7 @@ export interface Database {
           delta: number;
           reason: string;
           review_id: string | null;
+          project_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -686,6 +687,7 @@ export interface Database {
           delta: number;
           reason: string;
           review_id?: string | null;
+          project_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -694,6 +696,7 @@ export interface Database {
           delta?: number;
           reason?: string;
           review_id?: string | null;
+          project_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
