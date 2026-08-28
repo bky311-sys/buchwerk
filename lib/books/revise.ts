@@ -7,7 +7,6 @@ import { loadPrompt } from "@/lib/ai/prompts";
 import { gateProduction } from "@/lib/billing/access";
 import { splitChapterSources } from "@/lib/books/sources";
 import { coerceBookType, chapterTypeInstructions } from "@/lib/books/book-type";
-import { coerceLengthTier, LENGTH_TIERS } from "@/lib/books/length";
 import {
   coerceQualityReport,
   type QualityFinding,
@@ -171,11 +170,6 @@ export async function reviseFromQualityReport(
     .select("book_type")
     .eq("id", projectId)
     .maybeSingle();
-  const { data: tierRow } = await supabase
-    .from("projects")
-    .select("length_tier")
-    .eq("id", projectId)
-    .maybeSingle();
   const { data: researchRow } = await supabase
     .from("projects")
     .select("research")
@@ -183,10 +177,6 @@ export async function reviseFromQualityReport(
     .maybeSingle();
 
   const bookType = coerceBookType(typeRow?.book_type);
-  const tier = LENGTH_TIERS[coerceLengthTier(tierRow?.length_tier)];
-  const perChapterTarget = Math.ceil(
-    tier.targetWords / Math.max(1, all.length),
-  );
   const gliederung = all
     .map((c) => `${c.position}. ${c.heading} — ${c.summary ?? ""}`)
     .join("\n");
@@ -211,7 +201,11 @@ export async function reviseFromQualityReport(
         ueberschrift: chapter.heading,
         aktueller_text: chapter.content,
         befunde: formatFindings(byChapter.get(position) ?? []),
-        mindestwoerter: String(Math.round(perChapterTarget * 0.85)),
+        // Untergrenze am AKTUELLEN Text, nicht am Zielumfang: Sonst zwingt
+        // sie jeden Lauf, gestrichene Wiederholungen wieder aufzufüllen —
+        // gemessen am Balkonkraftwerk-Test wurde das Buch dadurch länger
+        // statt straffer (28.08.).
+        mindestwoerter: String(Math.round(countWords(chapter.content) * 0.7)),
         buchtyp_anweisung: chapterTypeInstructions(bookType),
       });
 

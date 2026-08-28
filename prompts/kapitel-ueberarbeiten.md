@@ -31,7 +31,7 @@ So arbeitest du sie ab:
 
 Feste Regeln:
 - Behalte die Kapitelüberschrift („## {{ueberschrift}}") exakt bei und beginne damit.
-- Behalte Länge und Substanz: Das Kapitel darf durch gestrichene Floskeln etwas kürzer werden, aber **nicht unter {{mindestwoerter}} Wörter** fallen. Was du an Wiederholung streichst, ersetzt du durch konkrete, neue Substanz aus dem Dossier (Beispiele, Zahlen, Anwendungen) — nicht durch Umformulierungen desselben Gedankens.
+- **Kürzer ist hier richtig.** Wenn du Wiederholungen und Floskeln streichst, wird das Kapitel kürzer — das ist der Zweck dieser Überarbeitung, kein Mangel. Fülle die entstandene Lücke NICHT mit Ersatztext auf, und wiederhole erst recht nicht denselben Gedanken in neuen Worten. Nur wenn das Kapitel sein eigenes Versprechen aus der Überschrift nachweislich nicht mehr einlöst, ergänzt du gezielt fehlende Substanz aus dem Dossier. Harte Untergrenze: **{{mindestwoerter}} Wörter** — die gilt als Notbremse gegen ein zerschnittenes Kapitel, nicht als Zielgröße.
 - Behalte vorhandene Übungselemente (`[UEBUNG] …`, `- [ ] …`, `[NOTIZFELD n]`) samt exakter Syntax.
 - Kein Schlussfazit, keine Vorschau auf spätere Kapitel, keine Meta-Kommentare über die Überarbeitung.
 - Gib das **vollständige** überarbeitete Kapitel in Markdown zurück, sonst nichts.
