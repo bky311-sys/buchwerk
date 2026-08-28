@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/buchwerk/spinner";
+import { PointCost } from "@/components/buchwerk/point-cost";
 import { GenerationPoller } from "@/components/buchwerk/generation-poller";
 import { StatusBadge } from "@/components/buchwerk/status-badge";
 import type {
@@ -179,21 +180,27 @@ export function QualityReportPanel({
           {/* Primäraktion ist die Überarbeitung, sobald es Befunde gibt —
               den Bericht nur zu lesen behebt nichts. */}
           {report && chaptersWithFindings.size > 0 ? (
-            <Button
-              type="button"
-              onClick={revise}
-              size="lg"
-              disabled={revisionActive}
-            >
-              {revisionActive ? (
-                <>
-                  <Spinner className="size-4" />
-                  Überarbeitung läuft…
-                </>
-              ) : (
-                `Befunde automatisch beheben (${chaptersWithFindings.size} Kapitel)`
-              )}
-            </Button>
+            <span className="inline-flex items-center gap-2">
+              <Button
+                type="button"
+                onClick={revise}
+                size="lg"
+                disabled={revisionActive}
+              >
+                {revisionActive ? (
+                  <>
+                    <Spinner className="size-4" />
+                    Überarbeitung läuft…
+                  </>
+                ) : (
+                  <>
+                    Befunde automatisch beheben ({chaptersWithFindings.size}{" "}
+                    Kapitel)
+                  </>
+                )}
+              </Button>
+              <PointCost action="auto_revision" />
+            </span>
           ) : null}
           <Button
             type="button"
@@ -206,6 +213,7 @@ export function QualityReportPanel({
           >
             {report ? "Bericht neu erstellen" : "Qualitätsbericht erstellen"}
           </Button>
+          <PointCost action="quality_report" />
           {hasFailed && !report ? (
             <p className="text-sm text-destructive">
               Der letzte Lauf ist fehlgeschlagen — versuch es noch einmal.

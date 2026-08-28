@@ -349,8 +349,8 @@ function PricingSection() {
               </span>
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Bis zu 10 Bücher pro Monat freischalten. Monatlich kündbar. Punkte
-              aus Bewertungen inklusive.
+              150 Punkte pro Monat — rund vier Bücher. Monatlich kündbar,
+              Punkte aus Bewertungen kommen obendrauf.
             </p>
             <div className="mt-6">
               <Button asChild size="lg" variant="secondary" className="w-full">
@@ -416,7 +416,7 @@ const FAQS = [
     },
     {
       q: "Was kostet mich das wirklich?",
-      a: "Thema und Gliederung sind kostenlos. Die Produktion eines Buchs kostet einmalig 19,99 € — kein Abo-Zwang. Wer viel schreibt, nimmt das Abo für 29,99 €/Monat — bis zu 10 Bücher pro Monat (faire Nutzung).",
+      a: "Thema und Gliederung sind kostenlos. Ein Buch freizuschalten kostet einmalig 19,99 € und bringt 60 Punkte mit — davon bezahlst du das Schreiben, den Qualitätscheck und das Cover. Der Export deines fertigen Buchs kostet nie Punkte. Wer viel schreibt, nimmt das Abo für 29,99 €/Monat mit 150 Punkten monatlich (rund vier Bücher).",
     },
 ];
 

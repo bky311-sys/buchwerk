@@ -69,7 +69,7 @@ export function CheckoutForm({ projectId }: { projectId: string }) {
             </span>
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Bis zu 10 Bücher pro Monat freischalten. Monatlich kündbar.
+            150 Punkte pro Monat — rund vier Bücher. Monatlich kündbar.
           </p>
           <Button
             type="button"

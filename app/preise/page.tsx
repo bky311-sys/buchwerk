@@ -10,7 +10,7 @@ import { isSubscriber } from "@/lib/billing/access";
 export const metadata: Metadata = {
   title: "Preise — Buchwerk",
   description:
-    "Thema und Gliederung kostenlos. Ein Buch einmalig für 19,99 € produzieren — oder das Abo für 29,99 €/Monat mit bis zu 10 Büchern und Lesezugriff auf den Buchshop.",
+    "Thema und Gliederung kostenlos. Ein Buch einmalig für 19,99 € produzieren (inklusive 60 Punkte) — oder das Abo für 29,99 €/Monat mit 150 Punkten und Lesezugriff auf den Buchshop.",
 };
 
 // Öffentliche Preisseite. Bis zum 11.08. gab es das Abo NUR im
@@ -79,9 +79,10 @@ export default async function PreisePage() {
               </span>
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Bis zu 10 Bücher pro Monat freischalten (faire Nutzung). Dazu:
-              freigegebene Bücher im Buchshop vollständig lesen und bewerten —
-              jede Bewertung bringt Punkte. Monatlich kündbar.
+              150 Punkte pro Monat — genug für rund vier Bücher samt
+              Überarbeitung. Dazu: freigegebene Bücher im Buchshop vollständig
+              lesen und bewerten — jede Bewertung bringt weitere Punkte.
+              Monatlich kündbar.
             </p>
 
             {subscriber ? (

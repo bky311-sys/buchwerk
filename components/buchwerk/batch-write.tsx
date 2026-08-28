@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/buchwerk/spinner";
+import { PointCost } from "@/components/buchwerk/point-cost";
 
 // A chapter write is decoupled: the server keeps writing even if the HTTP
 // response is dropped (function near the time limit). Abort the client fetch
@@ -162,6 +163,7 @@ export function BatchWrite({
       <Button type="button" onClick={run}>
         Alle {total} Kapitel schreiben
       </Button>
+      <PointCost action="chapter" factor={total} />
       {error ? (
         <span role="alert" className="text-xs text-destructive">
           {error}
