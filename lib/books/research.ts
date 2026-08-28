@@ -27,9 +27,24 @@ const RESEARCH_STAGES = [
       "Erkläre kurz die wichtigsten Fachbegriffe und benenne verbreitete Irrtümer zum Thema — jeweils mit dem, was stattdessen stimmt.",
   },
   {
+    title: "Praxis: Beispiele, Fälle, Zahlenbeispiele",
+    auftrag:
+      "Recherchiere konkretes Anwendungsmaterial: typische Ausgangssituationen, durchgerechnete Beispiele mit echten Werten, Kosten- und Zeitangaben, regionale Unterschiede, Erfahrungswerte aus der Praxis. Je konkreter und je mehr unterscheidbare Fälle, desto besser — dieses Material trägt später die Kapitel.",
+  },
+  {
+    title: "Regeln, Normen, Fristen",
+    auftrag:
+      "Recherchiere rechtliche und normative Rahmenbedingungen: geltende Vorschriften mit Paragraf, Fristen, Zuständigkeiten, Pflichten, Ausnahmen, aktuelle Änderungen mit Datum. Nenne jeweils die Quelle.",
+  },
+  {
+    title: "Fehler, Grenzfälle und Abgrenzungen",
+    auftrag:
+      "Recherchiere häufige Fehler und was sie konkret kosten, Grenzfälle, Sonderkonstellationen sowie Abgrenzungen zu benachbarten Themen. Auch: Wann lohnt sich etwas NICHT? Belege mit Quellen.",
+  },
+  {
     title: "Material pro Kapitel & Quellen",
     auftrag:
-      "Gehe die Kapitel-Gliederung durch und notiere für jede Überschrift 2–3 Stichpunkte, welche Fakten, Beispiele oder Quellen dort hineingehören. Liste am Ende die tatsächlich genutzten Quellen (Titel — URL).",
+      "Gehe die Kapitel-Gliederung durch und notiere für JEDE Überschrift 4–6 Stichpunkte, welche Fakten, Zahlen und Beispiele genau dort hineingehören — und ausdrücklich NUR dort. Achte darauf, dass sich die Zuordnungen nicht überschneiden: Jedes Faktum bekommt genau ein Kapitel. Liste am Ende die tatsächlich genutzten Quellen (Titel — URL).",
   },
 ];
 
