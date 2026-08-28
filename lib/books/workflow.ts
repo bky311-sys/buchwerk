@@ -5,7 +5,10 @@ import type { WorkflowStep } from "@/components/buchwerk/workflow-stepper";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
-// Der geführte Ablauf: Schreiben → Cover → Listing → Veröffentlichen.
+// Der geführte Ablauf: Schreiben → Qualitätscheck → Cover → Listing →
+// Veröffentlichen. Der Qualitätscheck steht seit 27.08. VOR der Verpackung:
+// Findet er Faktenfehler oder Titel-Probleme, müssten Cover und Klappentext
+// sonst neu gebaut werden.
 // Ein Ort für die Schritt-Logik, damit Hub, Spoke-Seiten und Projektkarten
 // nie auseinanderlaufen (vorher lebte sie nur im Hub).
 
@@ -29,6 +32,16 @@ export function buildWorkflowSteps(flags: WorkflowFlags): WorkflowStep[] {
       optional: false,
     },
     {
+      // Eigener Schritt mit eigener Seite (27.08.) — direkt nach dem
+      // Schreiben, damit Korrekturen am Text passieren, bevor Cover und
+      // Listing darauf aufbauen.
+      label: "Qualitätscheck",
+      href: `/projekte/${flags.projectId}/qualitaet`,
+      cta: flags.hasQualityReport ? "Bericht ansehen" : "Qualitätscheck starten",
+      done: flags.hasQualityReport,
+      optional: true,
+    },
+    {
       label: "Cover",
       href: `/projekte/${flags.projectId}/cover`,
       cta: "Cover erstellen",
@@ -41,17 +54,6 @@ export function buildWorkflowSteps(flags: WorkflowFlags): WorkflowStep[] {
       cta: "Listing erstellen",
       done: flags.hasListing,
       optional: false,
-    },
-    {
-      // Sichtbarer eigener Schritt (Review-Maßnahme 12.08.): der QS-Lauf
-      // existierte, war aber auf der Veröffentlichen-Seite versteckt — als
-      // Verkaufsargument („Qualitätscheck vor jedem Export") muss er im
-      // Ablauf auftauchen. Das Panel lebt weiterhin auf /veroeffentlichen.
-      label: "Qualitätscheck",
-      href: `/projekte/${flags.projectId}/veroeffentlichen`,
-      cta: flags.hasQualityReport ? "Bericht ansehen" : "Qualitätscheck starten",
-      done: flags.hasQualityReport,
-      optional: true,
     },
     {
       label: "Veröffentlichen",

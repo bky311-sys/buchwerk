@@ -140,6 +140,9 @@ export interface Database {
           cover_runs: number;
           quality_runs: number;
           market_runs: number;
+          revision_status: string;
+          revision_updated_at: string | null;
+          revision_note: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -180,6 +183,9 @@ export interface Database {
           cover_runs?: number;
           quality_runs?: number;
           market_runs?: number;
+          revision_status?: string;
+          revision_updated_at?: string | null;
+          revision_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -220,6 +226,9 @@ export interface Database {
           cover_runs?: number;
           quality_runs?: number;
           market_runs?: number;
+          revision_status?: string;
+          revision_updated_at?: string | null;
+          revision_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -245,6 +254,7 @@ export interface Database {
           sources: Json;
           generation_count: number;
           generation_step: string | null;
+          revised_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -259,6 +269,7 @@ export interface Database {
           sources?: Json;
           generation_count?: number;
           generation_step?: string | null;
+          revised_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -273,6 +284,7 @@ export interface Database {
           sources?: Json;
           generation_count?: number;
           generation_step?: string | null;
+          revised_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

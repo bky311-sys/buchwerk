@@ -44,17 +44,79 @@ export function QualityReportPanel({
   report,
   isRunning,
   hasFailed,
+  revisionRunning = false,
+  revisionNote = null,
 }: {
   projectId: string;
   report: QualityReport | null;
   isRunning: boolean;
   hasFailed: boolean;
+  /** Ein Überarbeitungslauf läuft serverseitig (Status aus der DB). */
+  revisionRunning?: boolean;
+  /** Kurzbilanz der letzten Überarbeitung. */
+  revisionNote?: string | null;
 }) {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [revising, setRevising] = useState(false);
+  const [revisionProgress, setRevisionProgress] = useState<string | null>(null);
 
   const running = isRunning || starting;
+  const revisionActive = revising || revisionRunning;
+
+  // Kapitel, für die es überhaupt automatisch behebbare Befunde gibt.
+  const chaptersWithFindings = new Set(
+    (report?.befunde ?? [])
+      .map((b) => b.kapitel)
+      .filter((k): k is number => typeof k === "number"),
+  );
+
+  // Überarbeitung: Die Route behandelt pro Aufruf wenige Kapitel (Zeitlimit),
+  // also so lange erneut aufrufen, bis sie `done` meldet — wie beim
+  // etappenweisen Recherche-Lauf.
+  async function revise() {
+    if (
+      !window.confirm(
+        `Alle Befunde in ${chaptersWithFindings.size} Kapiteln automatisch beheben? Die Kapiteltexte werden dabei überschrieben. Das dauert einige Minuten — lass den Tab so lange offen.`,
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    setRevising(true);
+    setRevisionProgress("Überarbeitung startet…");
+    try {
+      for (let round = 0; round < 12; round += 1) {
+        const res = await fetch(`/api/projekte/${projectId}/revise`, {
+          method: "POST",
+        });
+        const body = (await res.json().catch(() => null)) as {
+          ok?: boolean;
+          error?: string;
+          revised?: number[];
+          done?: boolean;
+        } | null;
+        if (!res.ok || !body?.ok) {
+          setError(body?.error ?? "Die Überarbeitung ist fehlgeschlagen.");
+          break;
+        }
+        if (body.done) {
+          setRevisionProgress(
+            "Fertig — erstelle den Bericht neu, um das Ergebnis zu sehen.",
+          );
+          break;
+        }
+        setRevisionProgress(
+          `Kapitel ${(body.revised ?? []).join(", ")} überarbeitet — weiter…`,
+        );
+      }
+    } catch {
+      setError("Die Überarbeitung ist fehlgeschlagen.");
+    } finally {
+      setRevising(false);
+    }
+  }
 
   async function start() {
     setError(null);
@@ -114,7 +176,34 @@ export function QualityReportPanel({
         </p>
       ) : (
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button type="button" onClick={start} size="lg">
+          {/* Primäraktion ist die Überarbeitung, sobald es Befunde gibt —
+              den Bericht nur zu lesen behebt nichts. */}
+          {report && chaptersWithFindings.size > 0 ? (
+            <Button
+              type="button"
+              onClick={revise}
+              size="lg"
+              disabled={revisionActive}
+            >
+              {revisionActive ? (
+                <>
+                  <Spinner className="size-4" />
+                  Überarbeitung läuft…
+                </>
+              ) : (
+                `Befunde automatisch beheben (${chaptersWithFindings.size} Kapitel)`
+              )}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            onClick={start}
+            size="lg"
+            variant={
+              report && chaptersWithFindings.size > 0 ? "outline" : "default"
+            }
+            disabled={revisionActive}
+          >
             {report ? "Bericht neu erstellen" : "Qualitätsbericht erstellen"}
           </Button>
           {hasFailed && !report ? (
@@ -124,6 +213,21 @@ export function QualityReportPanel({
           ) : null}
         </div>
       )}
+      {revisionActive || revisionProgress ? (
+        <p className="mt-3 flex items-center gap-2 text-sm font-medium text-clay-strong">
+          {revisionActive ? <Spinner className="size-4" /> : null}
+          {revisionProgress ??
+            "Die Kapitel werden anhand der Befunde überarbeitet…"}
+        </p>
+      ) : revisionNote ? (
+        <p className="mt-3 text-sm text-muted-foreground">{revisionNote}</p>
+      ) : null}
+      <GenerationPoller active={revisionActive} />
+      {revisionActive ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Bitte den Tab offen lassen — pro Kapitel etwa eine Minute.
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className="mt-2 text-sm text-destructive">
           {error}
