@@ -39,13 +39,51 @@ export function chaptersWithFindings(
   findings: QualityFinding[],
 ): Map<number, QualityFinding[]> {
   const byChapter = new Map<number, QualityFinding[]>();
+  const add = (position: number, finding: QualityFinding) => {
+    const list = byChapter.get(position) ?? [];
+    list.push(finding);
+    byChapter.set(position, list);
+  };
+
   for (const f of findings) {
-    if (typeof f.kapitel !== "number" || !Number.isFinite(f.kapitel)) continue;
-    const list = byChapter.get(f.kapitel) ?? [];
-    list.push(f);
-    byChapter.set(f.kapitel, list);
+    if (typeof f.kapitel === "number" && Number.isFinite(f.kapitel)) {
+      add(f.kapitel, f);
+      continue;
+    }
+    // Kapitelübergreifende Befunde (Wiederholungen über mehrere Kapitel)
+    // kommen ohne Kapitelnummer — genau sie sind der Hauptmangel
+    // KI-geschriebener Bücher und wurden vorher übersprungen (Messbefund
+    // 28.08.: 10 von 10 Restbefunden hatten kapitel=null). Die betroffenen
+    // Kapitel stehen im Klartext der Beschreibung; das ERSTE genannte behält
+    // die Erklärung, alle weiteren bekommen den Auftrag zu kürzen.
+    const mentioned = mentionedChapters(`${f.beschreibung} ${f.zitat ?? ""}`);
+    if (mentioned.length < 2) continue;
+    const [keeper, ...trimmers] = mentioned;
+    for (const position of trimmers) {
+      add(position, {
+        ...f,
+        kapitel: position,
+        beschreibung: `${f.beschreibung}\n   → Auftrag für dieses Kapitel: Kapitel ${keeper} behält die vollständige Erklärung. Kürze sie hier auf das für dieses Kapitel Nötige zusammen und fülle den frei werdenden Platz NICHT wieder auf.`,
+      });
+    }
   }
   return new Map([...byChapter.entries()].sort((a, b) => a[0] - b[0]));
+}
+
+/**
+ * Kapitelnummern aus einem Befundtext („wird in Kapitel 2, 4 und 6 erklärt"),
+ * aufsteigend und ohne Dubletten.
+ */
+export function mentionedChapters(text: string): number[] {
+  const found = new Set<number>();
+  // „Kapitel 2, 4 und 6" / „Kapitel 3 und 5" / „Kapiteln 1, 2 sowie 7"
+  for (const m of text.matchAll(/Kapiteln?\s+([\d\s,.und&sowiebis-]+)/gi)) {
+    for (const num of m[1].matchAll(/\d+/g)) {
+      const n = Number(num[0]);
+      if (n >= 1 && n <= 60) found.add(n);
+    }
+  }
+  return [...found].sort((a, b) => a - b);
 }
 
 function formatFindings(findings: QualityFinding[]): string {

@@ -23,7 +23,7 @@ Diese Befunde hat das Lektorat für DIESES Kapitel gemeldet:
 {{befunde}}
 
 So arbeitest du sie ab:
-- **wiederholung:** Prüfe anhand der Befundbeschreibung, welche Kapitel sich überschneiden. Die **niedrigste genannte Kapitelnummer behält die vollständige Erklärung** — alle anderen kürzen sie auf einen knappen Verweis („wie in Kapitel X beschrieben") und nutzen den frei werdenden Platz für kapitelspezifische Substanz, nicht für Füllsätze. Ist dieses Kapitel das zuständige, lass die Erklärung stehen und schärfe sie.
+- **wiederholung:** Steht im Befund ein „Auftrag für dieses Kapitel", befolge ihn wörtlich. Sonst gilt: Das **erstgenannte Kapitel behält die vollständige Erklärung**, die anderen streichen sie. Wichtig beim Streichen: Setze **keinen** Meta-Verweis der Art „wie in Kapitel X beschrieben" ein — solche Rückverweise sind selbst ein KI-Muster und werden im Lektorat als Mangel gewertet. Schreib den Satz stattdessen so, dass er die Kenntnis voraussetzt („Weil der Eigenverbrauch die Ersparnis trägt, …"), oder streiche die Passage ganz. Höchstens EIN Kapitelverweis pro Kapitel, und nur wenn der Leser sonst wirklich verloren wäre.
 - **widerspruch / fakten:** Korrigiere auf den im Dossier belegten Wert. Steht dort nichts, nimm die Zahl, die die Liste der anderen Kapitel nennt — Konsistenz im Buch geht vor. Erfinde niemals eine neue Zahl.
 - **ki_floskel:** Streiche Meta-Kommentare, leere Übergänge und zusammenfassende Kapitelenden ersatzlos. Der Text wird dadurch kürzer und besser.
 - **stil / struktur:** Schreibe die betroffenen Passagen um, ohne den Gesamtaufbau des Kapitels zu zerstören.
