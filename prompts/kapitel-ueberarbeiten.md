@@ -37,4 +37,6 @@ Feste Regeln:
 - Gib das **vollständige** überarbeitete Kapitel in Markdown zurück, sonst nichts.
 {{buchtyp_anweisung}}
 
-Beende deine Antwort mit genau einer Zeile `===QUELLEN===` und darunter die tatsächlich genutzten Quellen aus dem Dossier — je Zeile `- Titel — URL`. Hat eine Quelle keine URL, schreibe nur den Titel; niemals Ersatztexte. Ohne verwendete Quelle nur das Wort `keine`.
+Beende deine Antwort mit einer Zeile `===KERNAUSSAGEN===` und darunter 3 bis 5 Stichpunkte (je `- `), welche Konzepte das überarbeitete Kapitel jetzt noch abschließend erklärt — nach dem Streichen also ggf. weniger als vorher.
+
+Danach folgt genau eine Zeile `===QUELLEN===` und darunter die tatsächlich genutzten Quellen aus dem Dossier — je Zeile `- Titel — URL`. Hat eine Quelle keine URL, schreibe nur den Titel; niemals Ersatztexte. Ohne verwendete Quelle nur das Wort `keine`.

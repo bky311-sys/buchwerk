@@ -25,4 +25,6 @@ Vorgaben für diesen Abschnitt:
 {{buchtyp_anweisung}}
 - Erstelle **kein** Quellenverzeichnis im Text.
 
-Beende deine Antwort mit genau einer Zeile `===QUELLEN===` und darunter ausschließlich die Quellen aus dem Dossier, auf die sich **dieser Abschnitt** tatsächlich stützt — je Zeile `- Titel — URL`. Hat eine Quelle keine URL, schreibe nur den Titel — niemals Ersatztexte wie „keine URL angegeben". Ohne verwendete Quelle schreibe nur das Wort `keine`.
+Ist dies der LETZTE Abschnitt, beende deine Antwort zuerst mit einer Zeile `===KERNAUSSAGEN===` und darunter 3 bis 5 Stichpunkte (je `- `), welche Konzepte dieses Kapitel abschließend erklärt hat — spätere Kapitel bekommen sie, um Wiederholungen zu vermeiden. In allen anderen Abschnitten lässt du diesen Block weg.
+
+Danach folgt genau eine Zeile `===QUELLEN===` und darunter ausschließlich die Quellen aus dem Dossier, auf die sich **dieser Abschnitt** tatsächlich stützt — je Zeile `- Titel — URL`. Hat eine Quelle keine URL, schreibe nur den Titel — niemals Ersatztexte wie „keine URL angegeben". Ohne verwendete Quelle schreibe nur das Wort `keine`.

@@ -255,6 +255,7 @@ export interface Database {
           generation_count: number;
           generation_step: string | null;
           revised_at: string | null;
+          key_points: Json;
           created_at: string;
           updated_at: string;
         };
@@ -270,6 +271,7 @@ export interface Database {
           generation_count?: number;
           generation_step?: string | null;
           revised_at?: string | null;
+          key_points?: Json;
           created_at?: string;
           updated_at?: string;
         };
@@ -285,6 +287,7 @@ export interface Database {
           generation_count?: number;
           generation_step?: string | null;
           revised_at?: string | null;
+          key_points?: Json;
           created_at?: string;
           updated_at?: string;
         };

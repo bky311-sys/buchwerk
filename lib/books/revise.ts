@@ -158,7 +158,7 @@ export async function reviseFromQualityReport(
 
   const { data: chapters } = await supabase
     .from("chapters")
-    .select("id, position, heading, summary, content, revised_at")
+    .select("id, position, heading, summary, content, revised_at, key_points")
     .eq("project_id", projectId)
     .order("position");
   const all = chapters ?? [];
@@ -251,7 +251,7 @@ export async function reviseFromQualityReport(
         messages: [{ role: "user", content: prompt }],
         maxTokens: 8000,
       });
-      const { body, sources } = splitChapterSources(raw);
+      const { body, sources, keyPoints } = splitChapterSources(raw);
 
       // Schutz vor Ausreißern: Eine Überarbeitung, die das Kapitel radikal
       // zusammenstreicht, wird verworfen — lieber der alte Text als ein
@@ -268,6 +268,7 @@ export async function reviseFromQualityReport(
           content: body,
           sources,
           revised_at: new Date().toISOString(),
+          ...(keyPoints.length ? { key_points: keyPoints } : {}),
         })
         .eq("id", chapter.id);
       if (saveError) throw saveError;

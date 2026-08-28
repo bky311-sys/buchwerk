@@ -88,6 +88,7 @@ export function summarizeWrittenChapters(
     position: number;
     heading: string;
     content?: string | null;
+    key_points?: unknown;
   }>,
   excludePosition: number,
 ): string {
@@ -98,10 +99,21 @@ export function summarizeWrittenChapters(
       .map((m) => m[1].trim())
       .slice(0, 12);
     const figures = extractKeyFigures(c.content);
+    // Kernaussagen sind das eigentliche Anti-Wiederholungs-Signal: Sie sagen,
+    // welche Konzepte anderswo ABSCHLIESSEND erklärt sind — Überschriften
+    // allein reichten dafür nicht (Messbefund 28.08.).
+    const points = Array.isArray(c.key_points)
+      ? c.key_points.filter((p): p is string => typeof p === "string").slice(0, 6)
+      : [];
     lines.push(
       `Kapitel ${c.position} „${c.heading}“` +
-        (subheads.length ? ` behandelt bereits: ${subheads.join("; ")}` : "") +
-        (figures.length ? ` — genannte Zahlen: ${figures.join(", ")}` : ""),
+        (points.length
+          ? `\n   erklärt bereits abschließend: ${points.join(" | ")}`
+          : "") +
+        (subheads.length
+          ? `\n   Zwischenüberschriften: ${subheads.join("; ")}`
+          : "") +
+        (figures.length ? `\n   genannte Zahlen: ${figures.join(", ")}` : ""),
     );
   }
   return lines.length
@@ -262,7 +274,7 @@ export async function generateChapterContent(
   // cover (anti-repetition context) — server-side only, never sent to the UI.
   const { data: allChapters } = await supabase
     .from("chapters")
-    .select("position, heading, summary, content")
+    .select("position, heading, summary, content, key_points")
     .eq("project_id", chapter.project_id)
     .order("position");
 
@@ -305,6 +317,7 @@ export async function generateChapterContent(
       const sectionCount = Math.min(3, Math.max(2, Math.ceil(wortziel / SECTION_WORDS)));
       const perSection = Math.ceil(wortziel / sectionCount);
       let content = `## ${chapter.heading}`;
+      let sectionKeyPoints: string[] = [];
       const seen = new Set<string>();
       const mergedSources: { title: string; url: string }[] = [];
 
@@ -338,8 +351,9 @@ export async function generateChapterContent(
           messages: [{ role: "user", content: prompt }],
           maxTokens: 8000,
         });
-        const { body, sources } = splitChapterSources(raw);
+        const { body, sources, keyPoints } = splitChapterSources(raw);
         content = `${content}\n\n${body.trim()}`;
+        if (keyPoints.length) sectionKeyPoints = keyPoints;
         for (const s of sources) {
           const key = (s.url || s.title).toLowerCase();
           if (key && !seen.has(key)) {
@@ -353,7 +367,13 @@ export async function generateChapterContent(
           .update({
             content,
             sources: mergedSources,
-            ...(isLast ? { status: "fertig", generation_step: null } : {}),
+            ...(isLast
+              ? {
+                  status: "fertig",
+                  generation_step: null,
+                  key_points: sectionKeyPoints,
+                }
+              : {}),
           })
           .eq("id", chapter.id);
         // Ein scheiterndes Speichern hieße: bezahlter Text ist verloren und
@@ -377,14 +397,14 @@ export async function generateChapterContent(
     });
     // Peel the model's used-sources block off the prose. Only the body is stored
     // as the chapter; the sources feed the grouped Quellenverzeichnis at book end.
-    const { body: content, sources } = splitChapterSources(firstRaw);
+    const { body: content, sources, keyPoints } = splitChapterSources(firstRaw);
 
     // Checkpoint the first pass immediately as "fertig". If the (optional) deepen
     // pass below times out and the function is killed, we keep this text instead
     // of losing everything and paying to regenerate both.
     const { error: saveError } = await supabase
       .from("chapters")
-      .update({ content, sources, status: "fertig" })
+      .update({ content, sources, status: "fertig", key_points: keyPoints })
       .eq("id", chapter.id);
     if (saveError) throw saveError;
 
@@ -401,13 +421,22 @@ export async function generateChapterContent(
         messages: [{ role: "user", content: deepenPrompt }],
         maxTokens: 8000,
       });
-      const { body: deepened, sources: deepenedSources } =
-        splitChapterSources(deepenedRaw);
+      const {
+        body: deepened,
+        sources: deepenedSources,
+        keyPoints: deepenedKeyPoints,
+      } = splitChapterSources(deepenedRaw);
       // Only replace if the deepen pass actually produced a longer chapter.
       if (countWords(deepened) > countWords(content)) {
         await supabase
           .from("chapters")
-          .update({ content: deepened, sources: deepenedSources })
+          .update({
+            content: deepened,
+            sources: deepenedSources,
+            ...(deepenedKeyPoints.length
+              ? { key_points: deepenedKeyPoints }
+              : {}),
+          })
           .eq("id", chapter.id);
       }
     }

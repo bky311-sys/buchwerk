@@ -43,16 +43,53 @@ export function coerceSources(value: unknown): BookSource[] {
 export function splitChapterSources(raw: string): {
   body: string;
   sources: BookSource[];
+  /** Konzepte, die dieses Kapitel abschließend erklärt (Anti-Wiederholung). */
+  keyPoints: string[];
 } {
   const matches = [...raw.matchAll(MARKER)];
-  if (matches.length === 0) return { body: raw.trim(), sources: [] };
+  if (matches.length === 0) {
+    const withoutKeys = stripKeyPoints(raw);
+    return {
+      body: withoutKeys.body,
+      sources: [],
+      keyPoints: withoutKeys.keyPoints,
+    };
+  }
   // Use the last marker: it's appended at the very end, and prose is extremely
   // unlikely to contain a later one.
   const last = matches[matches.length - 1];
   const idx = last.index ?? raw.length;
-  const body = raw.slice(0, idx).trim();
+  const beforeSources = raw.slice(0, idx);
   const block = raw.slice(idx + last[0].length);
-  return { body, sources: parseUsedSources(block) };
+  // Der Kernaussagen-Block steht vor dem Quellen-Block und darf ebenfalls
+  // nicht im Kapiteltext landen.
+  const { body, keyPoints } = stripKeyPoints(beforeSources);
+  return { body, sources: parseUsedSources(block), keyPoints };
+}
+
+const KEY_MARKER = /^[ \t]*={2,}\s*KERNAUSSAGEN\s*={2,}[ \t]*$/gim;
+
+/**
+ * Trennt den `===KERNAUSSAGEN===`-Block vom Kapiteltext. Die Stichpunkte
+ * gehen als Anti-Wiederholungs-Kontext an die folgenden Kapitel, erscheinen
+ * aber nie im Buch.
+ */
+export function stripKeyPoints(raw: string): {
+  body: string;
+  keyPoints: string[];
+} {
+  const matches = [...raw.matchAll(KEY_MARKER)];
+  if (matches.length === 0) return { body: raw.trim(), keyPoints: [] };
+  const last = matches[matches.length - 1];
+  const idx = last.index ?? raw.length;
+  const body = raw.slice(0, idx).trim();
+  const points = raw
+    .slice(idx + last[0].length)
+    .split("\n")
+    .map((l) => l.trim().replace(/^[-*•]\s*/, "").trim())
+    .filter((l) => l.length > 3 && l.length < 300)
+    .slice(0, 6);
+  return { body, keyPoints: points };
 }
 
 /**
