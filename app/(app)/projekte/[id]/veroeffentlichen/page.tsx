@@ -13,11 +13,8 @@ import { getPendingReviewsForAuthor } from "@/lib/shop/reviews";
 import { getPointsBalance } from "@/lib/shop/points";
 import { buildWorkflowSteps } from "@/lib/books/workflow";
 import { WorkflowStepper } from "@/components/buchwerk/workflow-stepper";
-import { QualityReportPanel } from "@/components/buchwerk/quality-report-panel";
-import {
-  coerceQualityReport,
-  QUALITY_STALE_MS,
-} from "@/lib/books/quality-report";
+import { StatusBadge } from "@/components/buchwerk/status-badge";
+import { coerceQualityReport } from "@/lib/books/quality-report";
 
 export const metadata: Metadata = {
   title: "Veröffentlichen — Buchwerk",
@@ -123,18 +120,6 @@ export default async function VeroeffentlichenPage({
     .eq("id", id)
     .maybeSingle();
   const qualityReport = coerceQualityReport(qualityRow?.quality_report ?? null);
-  // Server Component: per-request wall clock is intended — the poller
-  // re-renders this page, so staleness is re-evaluated (pattern from the hub).
-  // eslint-disable-next-line react-hooks/purity
-  const qualityNow = Date.now();
-  const qualityAgeMs = qualityRow?.quality_updated_at
-    ? qualityNow - new Date(qualityRow.quality_updated_at).getTime()
-    : Number.POSITIVE_INFINITY;
-  const qualityRunning =
-    qualityRow?.quality_status === "läuft" && qualityAgeMs < QUALITY_STALE_MS;
-  const qualityFailed =
-    qualityRow?.quality_status === "fehler" ||
-    (qualityRow?.quality_status === "läuft" && !qualityRunning);
   // Ohne Spalte (Migration fehlt) errored die Abfrage → Panel bleibt unsichtbar.
   const qualityAvailable = qualityRow != null;
 
@@ -228,15 +213,56 @@ export default async function VeroeffentlichenPage({
         </div>
       ) : null}
 
-      {/* Qualitätsbericht — der letzte Check vor dem Export. */}
+      {/* Qualitäts-Kurzstand. Das vollständige Panel (mit Bericht erstellen
+          und automatischer Überarbeitung) lebt seit 27.08. auf der eigenen
+          Seite /qualitaet — hier steht nur noch das Ergebnis, damit niemand
+          unbemerkt mit offenen Befunden exportiert. */}
       {finished && qualityAvailable ? (
-        <div className="mt-8">
-          <QualityReportPanel
-            projectId={project.id}
-            report={qualityReport}
-            isRunning={qualityRunning}
-            hasFailed={qualityFailed}
-          />
+        <div className="mt-8 rounded-2xl border border-border bg-card p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-display text-lg font-semibold tracking-tight">
+              Qualitätscheck
+            </h2>
+            {qualityReport ? (
+              qualityReport.export_empfehlung === "ok" ? (
+                <StatusBadge intent="done">
+                  ✓ Bereit zur Veröffentlichung
+                </StatusBadge>
+              ) : qualityReport.export_empfehlung === "mit_einschraenkungen" ? (
+                <StatusBadge intent="draft">Mit Einschränkungen</StatusBadge>
+              ) : (
+                <StatusBadge intent="error">Überarbeitung empfohlen</StatusBadge>
+              )
+            ) : null}
+          </div>
+          {qualityReport ? (
+            <>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Zuletzt {qualityReport.score} von 100 Punkten,{" "}
+                {qualityReport.befunde.length}{" "}
+                {qualityReport.befunde.length === 1 ? "Befund" : "Befunde"}.
+              </p>
+              <Button asChild variant="outline" className="mt-4">
+                <Link href={`/projekte/${project.id}/qualitaet`}>
+                  Bericht ansehen &amp; Befunde beheben
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Für dieses Buch gibt es noch keinen Qualitätsbericht. Er prüft
+                das ganze Manuskript auf Wiederholungen, Widersprüche,
+                Faktenlage und Stil — und behebt die Befunde auf Wunsch
+                automatisch.
+              </p>
+              <Button asChild className="mt-4">
+                <Link href={`/projekte/${project.id}/qualitaet`}>
+                  Zum Qualitätscheck
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
       ) : null}
 

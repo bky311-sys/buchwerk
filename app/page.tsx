@@ -173,15 +173,19 @@ function HowItWorksSection() {
     },
     {
       title: "Recherche & Kapitel",
-      body: "Buchwerk recherchiert im Web und schreibt die Kapitel darauf auf. Ton, Länge und Inhalt steuerst du mit.",
+      body: "Buchwerk recherchiert im Web und schreibt die Kapitel darauf auf. Du wählst den Umfang: rund 80, 130 oder 200 Seiten.",
+    },
+    {
+      title: "Qualitätscheck",
+      body: "Ein strenger Lektorats-Durchgang prüft das ganze Buch auf Wiederholungen, Widersprüche, Faktenlage und Stil — und behebt die Befunde auf Knopfdruck.",
     },
     {
       title: "Cover",
-      body: "Cover-Entwürfe mit sauberem Titelsatz. Du wählst eine Richtung, wir verfeinern bis zum finalen Cover.",
+      body: "Cover-Entwürfe mit sauberem Titelsatz. Du wählst Stil und Motiv, Schriftgröße, Farbe und Position bestimmst du selbst.",
     },
     {
       title: "Listing & Download",
-      body: "Klappentext, Stichwörter, Kategorien und Preisempfehlung — kopierfertig für KDP. Das Manuskript lädst du als PDF herunter.",
+      body: "Klappentext, Stichwörter, Kategorien und Preisempfehlung — kopierfertig für KDP. Das Manuskript lädst du als PDF und EPUB herunter.",
     },
   ];
 
@@ -189,9 +193,9 @@ function HowItWorksSection() {
     <section className="border-b border-border">
       <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
         <h2 className="font-display max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Vier Schritte bis zum fertigen Buch.
+          Fünf Schritte bis zum fertigen Buch.
         </h2>
-        <ol className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {steps.map((step, index) => (
             <li
               key={step.title}
