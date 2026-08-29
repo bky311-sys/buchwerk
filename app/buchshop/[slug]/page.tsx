@@ -232,6 +232,15 @@ export default async function BuchDetailPage({
                 <h2 className="font-display text-lg font-semibold">
                   Bewertungen
                 </h2>
+                {/* Transparenzpflicht (§ 5b UWG / Omnibus-Richtlinie): Wie
+                    Bewertungen zustande kommen, muss offengelegt werden —
+                    inklusive der Tatsache, dass Leser dafür Punkte
+                    erhalten. */}
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Bewerten kann nur, wer das Buch hier im Leser vollständig
+                  gelesen hat. Für eine abgegebene Bewertung gibt es Punkte —
+                  unabhängig davon, wie viele Sterne vergeben werden.
+                </p>
                 <ul className="mt-4 space-y-4">
                   {reviews.map((r) => (
                     <li
@@ -242,7 +251,7 @@ export default async function BuchDetailPage({
                         <Stars value={r.rating} />
                         {r.rewarded ? (
                           <StatusBadge intent="neutral">
-                            Punkte-Bewertung
+                            Gelesen · Punkte erhalten
                           </StatusBadge>
                         ) : null}
                       </div>
